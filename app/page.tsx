@@ -439,7 +439,7 @@ export default function Page() {
 
   async function addDof() {
     if (!newDof.companyId || !newDof.title) return;
-    const data = { companyId: newDof.companyId, observerId: newDof.observerId, title: newDof.title, description: newDof.description, lawReference: newDof.lawReference, priority: newDof.priority, responsible: newDof.responsible, dueDate: newDof.dueDate, status: newDof.status, location: newDof.location, beforePhoto: newDof.beforePhoto || null, afterPhoto: newDof.afterPhoto || null };
+    const data: Omit<DofRecord, "id"> = { companyId: newDof.companyId, observerId: newDof.observerId, title: newDof.title, description: newDof.description, lawReference: newDof.lawReference, priority: newDof.priority, responsible: newDof.responsible, dueDate: newDof.dueDate, status: newDof.status, location: newDof.location, beforePhoto: newDof.beforePhoto || undefined, afterPhoto: newDof.afterPhoto || undefined };
     const ref = await addDoc(collection(db, "dofs"), data);
     setDofs(prev => [...prev, { id: ref.id, ...data }]);
     setNewDof({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta", responsible: "", dueDate: "", status: "Açık", location: "", beforePhoto: "", afterPhoto: "" });

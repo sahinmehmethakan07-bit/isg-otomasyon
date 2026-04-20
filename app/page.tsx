@@ -193,33 +193,130 @@ function checklistCompletion(checklist: EmployeeChecklist) {
 async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
   const { default: jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
+
   const today = new Date().toLocaleDateString("tr-TR");
-  const byCompany = companies.map(c => ({ company: c, risks: risks.filter(r => r.companyId === c.id) })).filter(g => g.risks.length > 0);
+  const byCompany = companies
+    .map((c) => ({ company: c, risks: risks.filter((r) => r.companyId === c.id) }))
+    .filter((g) => g.risks.length > 0);
+
   const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3" });
+
+  const pw = pdf.internal.pageSize.width;   // 420 mm
+  const ph = pdf.internal.pageSize.height;  // 297 mm
+
+  // ── İmza bloğu sabitleri ──────────────────────────────────────────────────
+  const SIG_BLOCK_HEIGHT = 26;
+  const SIG_BLOCK_MARGIN = 6;
+  const SIG_TOP = ph - SIG_BLOCK_HEIGHT - SIG_BLOCK_MARGIN;
+  const TABLE_BOTTOM_MARGIN = SIG_BLOCK_HEIGHT + SIG_BLOCK_MARGIN + 4;
+
+  // ── İmza kişileri ─────────────────────────────────────────────────────────
+  const signatories = [
+    { label: "İş Güvenliği Uzmanı",        name: "SERHAN ÜZÜMCÜ",               always: true  },
+    { label: "İşveren / İşveren Vekili",   name: "EMRE AYDIN",                  always: true  },
+    { label: "İşyeri Hekimi",              name: "DR. DİLARA ERVERDİ DEMİRAL",  always: false },
+    { label: "Çalışan Temsilcisi",         name: "ÖZHAN DENİZ",                 always: true  },
+  ];
+
+  // ── İmza bloğunu çizen yardımcı ──────────────────────────────────────────
+  function drawSignatureBlock(serviceType: ServiceType) {
+    const activeSigs = signatories.filter(
+      (s) => s.always || serviceType === "İş Güvenliği + İşyeri Hekimliği"
+    );
+    const colWidth = 55;
+    const startX = 14;
+    const lineWidth = 50;
+
+    pdf.setFillColor(245, 245, 245);
+    pdf.rect(10, SIG_TOP - 2, pw - 20, SIG_BLOCK_HEIGHT + 2, "F");
+
+    pdf.setDrawColor(100, 100, 100);
+    pdf.setLineWidth(0.3);
+    pdf.line(10, SIG_TOP - 2, pw - 10, SIG_TOP - 2);
+
+    activeSigs.forEach((sig, i) => {
+      const x = startX + i * colWidth;
+      const lineY = SIG_TOP + 14;
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(6.5);
+      pdf.setTextColor(30, 41, 59);
+      pdf.text(sig.label, x, SIG_TOP + 4);
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(6);
+      pdf.setTextColor(60, 60, 60);
+      pdf.text(sig.name, x, SIG_TOP + 9);
+
+      pdf.setDrawColor(30, 41, 59);
+      pdf.setLineWidth(0.4);
+      pdf.line(x, lineY, x + lineWidth, lineY);
+
+      pdf.setFont("helvetica", "italic");
+      pdf.setFontSize(5.5);
+      pdf.setTextColor(120, 120, 120);
+      pdf.text("İmza", x, lineY + 4);
+    });
+
+    pdf.setTextColor(0, 0, 0);
+  }
+
+  // ── Her firma için sayfa(lar) ─────────────────────────────────────────────
   let isFirst = true;
 
   for (const group of byCompany) {
     if (!isFirst) pdf.addPage();
     isFirst = false;
+
     const { company, risks: companyRisks } = group;
-    const pw = pdf.internal.pageSize.width;
 
-    pdf.setFontSize(12);
+    // Üst başlık çubuğu
+    pdf.setFillColor(30, 41, 59);
+    pdf.rect(0, 0, pw, 18, "F");
+
     pdf.setFont("helvetica", "bold");
-    pdf.text(company.officialName.toUpperCase(), pw / 2, 13, { align: "center" });
-    pdf.setFontSize(10);
-    pdf.text("RİSK DEĞERLENDİRME RAPORU", pw / 2, 19, { align: "center" });
+    pdf.setFontSize(13);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(company.officialName.toUpperCase(), pw / 2, 8, { align: "center" });
 
-    pdf.setFontSize(7.5);
+    pdf.setFontSize(9);
     pdf.setFont("helvetica", "normal");
-    const iy = 25;
-    pdf.text(`İşyeri Ünvanı : ${company.officialName}`, 14, iy);
-    pdf.text(`İşyeri SGK Sicil No. : ${company.sgkSicil}`, pw / 2 + 5, iy);
-    pdf.text(`İşyeri Bölümü : GENEL`, 14, iy + 5);
-    pdf.text(`Analizin Yapıldığı Tarih : ${today}`, pw / 2 + 5, iy + 5);
-    pdf.text(`NACE Kodu : ${company.naceCode}   |   Tehlike Sınıfı : ${company.dangerClass}`, 14, iy + 10);
-    pdf.text(`Geçerlilik Tarihi : ${company.contractEnd}`, pw / 2 + 5, iy + 10);
+    pdf.text("RİSK DEĞERLENDİRME RAPORU", pw / 2, 14, { align: "center" });
 
+    // Bilgi satırları
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(7.5);
+
+    const infoY = 24;
+    const col1X = 14;
+    const col2X = pw / 2 + 10;
+    const rowGap = 6;
+
+    const drawInfoRow = (label: string, value: string, x: number, y: number) => {
+      pdf.setFont("helvetica", "bold");
+      pdf.text(label, x, y);
+      pdf.setFont("helvetica", "normal");
+      const lw = pdf.getTextWidth(label);
+      pdf.text(` ${value}`, x + lw, y);
+    };
+
+    drawInfoRow("İşyeri Ünvanı      :", company.officialName, col1X, infoY);
+    drawInfoRow("SGK Sicil No.       :", company.sgkSicil, col2X, infoY);
+    drawInfoRow("İşyeri Bölümü      :", "GENEL", col1X, infoY + rowGap);
+    drawInfoRow("Analiz Tarihi         :", today, col2X, infoY + rowGap);
+    drawInfoRow("NACE Kodu           :", company.naceCode, col1X, infoY + rowGap * 2);
+    drawInfoRow("Tehlike Sınıfı        :", company.dangerClass, col2X, infoY + rowGap * 2);
+    drawInfoRow("Çalışan Sayısı      :", String(company.employeeCount), col1X, infoY + rowGap * 3);
+    drawInfoRow("Geçerlilik Tarihi  :", company.contractEnd, col2X, infoY + rowGap * 3);
+    drawInfoRow("Hizmet Türü         :", company.serviceType, col1X, infoY + rowGap * 4);
+
+    pdf.setDrawColor(100, 116, 139);
+    pdf.setLineWidth(0.4);
+    pdf.line(10, infoY + rowGap * 4 + 4, pw - 10, infoY + rowGap * 4 + 4);
+
+    const tableStartY = infoY + rowGap * 4 + 8; // ≈ 62 mm
+
+    // ── Tablo verisi — col 10: Sorumlu, col 11: Termin (AYRILDI) ─────────
     const tableData = companyRisks.map((r, i) => [
       i + 1,
       r.section || "",
@@ -231,7 +328,8 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
       r.score,
       r.actionToTake || "",
       r.affectedPersons || "Tüm çalışanlar",
-      `${r.responsible || ""}\n${r.dueDate || ""}`,
+      r.responsible || "",   // col 10 — ayrı
+      r.dueDate || "",       // col 11 — ayrı
       r.controlDate || "",
       r.residualProbability,
       r.residualSeverity,
@@ -240,71 +338,104 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
     ]);
 
     autoTable(pdf, {
-      startY: iy + 16,
-      head: [["No", "Bölüm /\nFaaliyet", "Tehlike Kaynağı /\nMevcut Durum", "Tehlike", "Risk", "O", "Ş", "RS", "Öneriler /\nAlınacak Önlemler", "Etkilenecek\nKişiler", "Süreç Sorumlusu /\nTermin", "Kontrol\nTarihi", "O", "Ş", "RS", "İlgili Mevzuat"]],
+      startY: tableStartY,
+      margin: {
+        top: 10,
+        left: 10,
+        right: 10,
+        bottom: TABLE_BOTTOM_MARGIN,
+      },
+      head: [[
+        "No",
+        "Bölüm /\nFaaliyet",
+        "Tehlike Kaynağı /\nMevcut Durum",
+        "Mevcut\nÖnlem",
+        "Tehlike /\nRisk",
+        "O", "Ş", "RS",
+        "Öneriler /\nAlınacak Önlemler",
+        "Etkilenecek\nKişiler",
+        "Süreç\nSorumlusu",
+        "Termin",
+        "Kontrol\nTarihi",
+        "O", "Ş", "RS",
+        "İlgili Mevzuat",
+      ]],
       body: tableData,
-      styles: { fontSize: 6, cellPadding: 1.5, valign: "middle", overflow: "linebreak" },
-      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 6.5, fontStyle: "bold", halign: "center", valign: "middle" },
+      styles: {
+        fontSize: 5.5,
+        cellPadding: 1.5,
+        valign: "middle",
+        overflow: "linebreak",
+        lineWidth: 0.2,
+        lineColor: [180, 180, 180],
+      },
+      headStyles: {
+        fillColor: [30, 41, 59],
+        textColor: [255, 255, 255],
+        fontSize: 6,
+        fontStyle: "bold",
+        halign: "center",
+        valign: "middle",
+        minCellHeight: 8,
+      },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: {
-        0: { cellWidth: 7, halign: "center" },
-        1: { cellWidth: 16 },
-        2: { cellWidth: 28 },
-        3: { cellWidth: 22 },
-        4: { cellWidth: 22 },
-        5: { cellWidth: 7, halign: "center" },
-        6: { cellWidth: 7, halign: "center" },
-        7: { cellWidth: 8, halign: "center" },
-        8: { cellWidth: 30 },
-        9: { cellWidth: 20 },
+        0:  { cellWidth: 7,  halign: "center" },
+        1:  { cellWidth: 18 },
+        2:  { cellWidth: 30 },
+        3:  { cellWidth: 24 },
+        4:  { cellWidth: 24 },
+        5:  { cellWidth: 7,  halign: "center" },
+        6:  { cellWidth: 7,  halign: "center" },
+        7:  { cellWidth: 8,  halign: "center" },
+        8:  { cellWidth: 32 },
+        9:  { cellWidth: 20 },
         10: { cellWidth: 22 },
-        11: { cellWidth: 14, halign: "center" },
-        12: { cellWidth: 7, halign: "center" },
-        13: { cellWidth: 7, halign: "center" },
-        14: { cellWidth: 8, halign: "center" },
-        15: { cellWidth: 33 },
+        11: { cellWidth: 16, halign: "center" },
+        12: { cellWidth: 15, halign: "center" },
+        13: { cellWidth: 7,  halign: "center" },
+        14: { cellWidth: 7,  halign: "center" },
+        15: { cellWidth: 8,  halign: "center" },
+        16: { cellWidth: "auto" as any },
       },
       didParseCell: (data) => {
-        if (data.section === "body" && [7, 14].includes(data.column.index)) {
+        if (data.section === "body" && [7, 15].includes(data.column.index)) {
           const val = Number(data.cell.raw);
           if (val >= 15) { data.cell.styles.fillColor = [220, 38, 38]; data.cell.styles.textColor = [255, 255, 255]; data.cell.styles.fontStyle = "bold"; }
           else if (val >= 8) { data.cell.styles.fillColor = [217, 119, 6]; data.cell.styles.textColor = [255, 255, 255]; data.cell.styles.fontStyle = "bold"; }
           else if (val > 0) { data.cell.styles.fillColor = [22, 163, 74]; data.cell.styles.textColor = [255, 255, 255]; data.cell.styles.fontStyle = "bold"; }
         }
       },
-      didDrawPage: (data) => {
-        pdf.setFontSize(7);
+      didDrawPage: () => {
+        // Sayfa numarası
         pdf.setFont("helvetica", "normal");
-        pdf.text(`Sayfa ${data.pageNumber}`, pw - 20, pdf.internal.pageSize.height - 6);
+        pdf.setFontSize(7);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(
+          `Sayfa ${(pdf as any).internal.getCurrentPageInfo().pageNumber}`,
+          pw - 20,
+          ph - 4
+        );
+        // İmza bloğu — her sayfada sabit
+        drawSignatureBlock(company.serviceType);
       },
     });
-
-    const finalY: number = (pdf as any).lastAutoTable.finalY + 8;
-    const ph = pdf.internal.pageSize.height;
-    if (finalY < ph - 35) {
-      pdf.setFontSize(7);
-      pdf.setFont("helvetica", "bold");
-      const cols = [14, 72, 140, 210, 278];
-      const labels = ["İş Güvenliği Uzmanı", "İşyeri Hekimi", "İşveren / İşveren Vekili", "Çalışan Temsilcisi", "Destek Elemanı"];
-      labels.forEach((label, i) => {
-        if (i === 1 && company.serviceType === "İş Güvenliği") return;
-        if (cols[i] > pw - 20) return;
-        pdf.text(label, cols[i], finalY);
-        pdf.line(cols[i], finalY + 14, Math.min(cols[i] + 55, pw - 10), finalY + 14);
-        pdf.setFont("helvetica", "normal");
-        pdf.text("Ad Soyad / İmza", cols[i], finalY + 18);
-        pdf.setFont("helvetica", "bold");
-      });
-    }
   }
 
-  // Risk matrix legend page
+  // ── Risk matrisi lejant sayfası — KORUNDU ────────────────────────────────
   pdf.addPage();
-  pdf.setFontSize(10);
+
+  pdf.setFillColor(30, 41, 59);
+  pdf.rect(0, 0, pw, 12, "F");
   pdf.setFont("helvetica", "bold");
-  pdf.text("Risk Değerlendirmesi Karar Matris Metodolojisi", 14, 15);
+  pdf.setFontSize(10);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text("Risk Değerlendirmesi Karar Matris Metodolojisi", pw / 2, 8, { align: "center" });
+  pdf.setTextColor(0, 0, 0);
 
   autoTable(pdf, {
-    startY: 20,
+    startY: 16,
+    margin: { left: 14 },
     head: [["Puan", "Zararın Gerçekleşme Olasılığı", "Derecelendirme Basamakları"]],
     body: [
       ["1", "Çok Küçük", "Hemen hemen hiç"],
@@ -315,12 +446,12 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
     ],
     styles: { fontSize: 8 },
     headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255] },
-    tableWidth: 130,
+    tableWidth: 140,
   });
 
   autoTable(pdf, {
-    startY: 20,
-    margin: { left: 150 },
+    startY: 16,
+    margin: { left: 165 },
     head: [["Puan", "İhtimal", "Derecelendirme"]],
     body: [
       ["1", "Çok Hafif", "İş saati kaybı yok, hemen giderilebilen"],
@@ -331,11 +462,12 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
     ],
     styles: { fontSize: 8 },
     headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255] },
-    tableWidth: 130,
+    tableWidth: 140,
   });
 
   autoTable(pdf, {
     startY: 82,
+    margin: { left: 14 },
     head: [["Risk Skoru", "Anlamı", "Açıklama"]],
     body: [
       ["25", "Kabul Edilemez", "Risk kabul edilebilir seviyeye düşürülünceye kadar iş başlatılmamalıdır."],
@@ -346,7 +478,30 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
     ],
     styles: { fontSize: 8 },
     headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255] },
-    columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 40 } },
+    columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 45 } },
+  });
+
+  // Renk lejantı
+  const legendY = 145;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(8);
+  pdf.setTextColor(0, 0, 0);
+  pdf.text("Risk Seviyesi Renk Skalası:", 14, legendY);
+
+  const colorLegend: { color: [number, number, number]; label: string }[] = [
+    { color: [220, 38, 38],  label: "Yüksek Risk (≥15) — Kabul edilemez / Ciddi" },
+    { color: [217, 119, 6],  label: "Orta Risk (8–14) — Faaliyetler 6 ay içinde" },
+    { color: [22, 163, 74],  label: "Düşük Risk (<8) — Mevcut kontroller yeterli" },
+  ];
+
+  colorLegend.forEach((item, i) => {
+    const x = 14 + i * 120;
+    pdf.setFillColor(...item.color);
+    pdf.rect(x, legendY + 3, 8, 5, "F");
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(item.label, x + 10, legendY + 7);
   });
 
   pdf.save(`Risk_Degerlendirme_Raporu_${today.replace(/\./g, "_")}.pdf`);

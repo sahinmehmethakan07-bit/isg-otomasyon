@@ -101,6 +101,9 @@ type RiskRecord = {
   responsible: string;
   dueDate: string;
   status: "Açık" | "Kontrol Altında" | "Kapandı";
+  affectedPersons?: string;
+  lawReference?: string;
+  controlDate?: string;
 };
 
 const emptyChecklist: EmployeeChecklist = {
@@ -115,36 +118,17 @@ const emptyChecklist: EmployeeChecklist = {
 };
 
 const sgkCompanyRegistry: Record<string, { officialName: string; naceCode: string }> = {
-  "2612345678901234567890": {
-    officialName: "Örnek Turizm Otelcilik İnşaat Sanayi ve Ticaret A.Ş.",
-    naceCode: "55.10.01",
-  },
-  "2611111111111111111111": {
-    officialName: "Mavi Deniz Gıda Dağıtım Lojistik Limited Şirketi",
-    naceCode: "46.38.01",
-  },
+  "2612345678901234567890": { officialName: "Örnek Turizm Otelcilik İnşaat Sanayi ve Ticaret A.Ş.", naceCode: "55.10.01" },
+  "2611111111111111111111": { officialName: "Mavi Deniz Gıda Dağıtım Lojistik Limited Şirketi", naceCode: "46.38.01" },
 };
 
-const requiredCompanyDocs = [
-  "Risk Değerlendirme Raporu",
-  "Acil Durum Eylem Planı",
-  "Yıllık Eğitim Planı",
-  "Yıllık Çalışma Planı",
-];
+const requiredCompanyDocs = ["Risk Değerlendirme Raporu", "Acil Durum Eylem Planı", "Yıllık Eğitim Planı", "Yıllık Çalışma Planı"];
 
 const documentTemplates = [
-  "Risk Değerlendirme Raporu",
-  "DÖF Formu",
-  "Acil Durum Eylem Planı",
-  "Yıllık Eğitim Planı",
-  "Yıllık Çalışma Planı",
-  "Yıllık Değerlendirme Raporu",
-  "Çalışan Temsilcisi Atama Tutanağı",
-  "Eğitim Katılım Tutanağı",
-  "İSG Kurul Toplantı Tutanağı",
-  "İşe Giriş Sağlık Muayene Formu",
-  "İSG Sertifikası",
-  "EK-2",
+  "Risk Değerlendirme Raporu", "DÖF Formu", "Acil Durum Eylem Planı", "Yıllık Eğitim Planı",
+  "Yıllık Çalışma Planı", "Yıllık Değerlendirme Raporu", "Çalışan Temsilcisi Atama Tutanağı",
+  "Eğitim Katılım Tutanağı", "İSG Kurul Toplantı Tutanağı", "İşe Giriş Sağlık Muayene Formu",
+  "İSG Sertifikası", "EK-2",
 ];
 
 function daysUntil(dateString: string) {
@@ -206,8 +190,169 @@ function checklistCompletion(checklist: EmployeeChecklist) {
   return { completed, total: items.length, missing: items.length - completed };
 }
 
-// ── UI primitives ─────────────────────────────────────────────────────────────
+async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
+  const { default: jsPDF } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
+  const today = new Date().toLocaleDateString("tr-TR");
+  const byCompany = companies.map(c => ({ company: c, risks: risks.filter(r => r.companyId === c.id) })).filter(g => g.risks.length > 0);
+  const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3" });
+  let isFirst = true;
 
+  for (const group of byCompany) {
+    if (!isFirst) pdf.addPage();
+    isFirst = false;
+    const { company, risks: companyRisks } = group;
+    const pw = pdf.internal.pageSize.width;
+
+    pdf.setFontSize(12);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(company.officialName.toUpperCase(), pw / 2, 13, { align: "center" });
+    pdf.setFontSize(10);
+    pdf.text("RİSK DEĞERLENDİRME RAPORU", pw / 2, 19, { align: "center" });
+
+    pdf.setFontSize(7.5);
+    pdf.setFont("helvetica", "normal");
+    const iy = 25;
+    pdf.text(`İşyeri Ünvanı : ${company.officialName}`, 14, iy);
+    pdf.text(`İşyeri SGK Sicil No. : ${company.sgkSicil}`, pw / 2 + 5, iy);
+    pdf.text(`İşyeri Bölümü : GENEL`, 14, iy + 5);
+    pdf.text(`Analizin Yapıldığı Tarih : ${today}`, pw / 2 + 5, iy + 5);
+    pdf.text(`NACE Kodu : ${company.naceCode}   |   Tehlike Sınıfı : ${company.dangerClass}`, 14, iy + 10);
+    pdf.text(`Geçerlilik Tarihi : ${company.contractEnd}`, pw / 2 + 5, iy + 10);
+
+    const tableData = companyRisks.map((r, i) => [
+      i + 1,
+      r.section || "",
+      r.hazard || "",
+      r.currentMeasure || "",
+      r.risk || "",
+      r.probability,
+      r.severity,
+      r.score,
+      r.actionToTake || "",
+      r.affectedPersons || "Tüm çalışanlar",
+      `${r.responsible || ""}\n${r.dueDate || ""}`,
+      r.controlDate || "",
+      r.residualProbability,
+      r.residualSeverity,
+      r.residualScore,
+      r.lawReference || "",
+    ]);
+
+    autoTable(pdf, {
+      startY: iy + 16,
+      head: [["No", "Bölüm /\nFaaliyet", "Tehlike Kaynağı /\nMevcut Durum", "Tehlike", "Risk", "O", "Ş", "RS", "Öneriler /\nAlınacak Önlemler", "Etkilenecek\nKişiler", "Süreç Sorumlusu /\nTermin", "Kontrol\nTarihi", "O", "Ş", "RS", "İlgili Mevzuat"]],
+      body: tableData,
+      styles: { fontSize: 6, cellPadding: 1.5, valign: "middle", overflow: "linebreak" },
+      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 6.5, fontStyle: "bold", halign: "center", valign: "middle" },
+      columnStyles: {
+        0: { cellWidth: 7, halign: "center" },
+        1: { cellWidth: 16 },
+        2: { cellWidth: 28 },
+        3: { cellWidth: 22 },
+        4: { cellWidth: 22 },
+        5: { cellWidth: 7, halign: "center" },
+        6: { cellWidth: 7, halign: "center" },
+        7: { cellWidth: 8, halign: "center" },
+        8: { cellWidth: 30 },
+        9: { cellWidth: 20 },
+        10: { cellWidth: 22 },
+        11: { cellWidth: 14, halign: "center" },
+        12: { cellWidth: 7, halign: "center" },
+        13: { cellWidth: 7, halign: "center" },
+        14: { cellWidth: 8, halign: "center" },
+        15: { cellWidth: 33 },
+      },
+      didParseCell: (data) => {
+        if (data.section === "body" && [7, 14].includes(data.column.index)) {
+          const val = Number(data.cell.raw);
+          if (val >= 15) { data.cell.styles.fillColor = [220, 38, 38]; data.cell.styles.textColor = [255, 255, 255]; data.cell.styles.fontStyle = "bold"; }
+          else if (val >= 8) { data.cell.styles.fillColor = [217, 119, 6]; data.cell.styles.textColor = [255, 255, 255]; data.cell.styles.fontStyle = "bold"; }
+          else if (val > 0) { data.cell.styles.fillColor = [22, 163, 74]; data.cell.styles.textColor = [255, 255, 255]; data.cell.styles.fontStyle = "bold"; }
+        }
+      },
+      didDrawPage: (data) => {
+        pdf.setFontSize(7);
+        pdf.setFont("helvetica", "normal");
+        pdf.text(`Sayfa ${data.pageNumber}`, pw - 20, pdf.internal.pageSize.height - 6);
+      },
+    });
+
+    const finalY: number = (pdf as any).lastAutoTable.finalY + 8;
+    const ph = pdf.internal.pageSize.height;
+    if (finalY < ph - 35) {
+      pdf.setFontSize(7);
+      pdf.setFont("helvetica", "bold");
+      const cols = [14, 72, 140, 210, 278];
+      const labels = ["İş Güvenliği Uzmanı", "İşyeri Hekimi", "İşveren / İşveren Vekili", "Çalışan Temsilcisi", "Destek Elemanı"];
+      labels.forEach((label, i) => {
+        if (i === 1 && company.serviceType === "İş Güvenliği") return;
+        if (cols[i] > pw - 20) return;
+        pdf.text(label, cols[i], finalY);
+        pdf.line(cols[i], finalY + 14, Math.min(cols[i] + 55, pw - 10), finalY + 14);
+        pdf.setFont("helvetica", "normal");
+        pdf.text("Ad Soyad / İmza", cols[i], finalY + 18);
+        pdf.setFont("helvetica", "bold");
+      });
+    }
+  }
+
+  // Risk matrix legend page
+  pdf.addPage();
+  pdf.setFontSize(10);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Risk Değerlendirmesi Karar Matris Metodolojisi", 14, 15);
+
+  autoTable(pdf, {
+    startY: 20,
+    head: [["Puan", "Zararın Gerçekleşme Olasılığı", "Derecelendirme Basamakları"]],
+    body: [
+      ["1", "Çok Küçük", "Hemen hemen hiç"],
+      ["2", "Küçük", "Çok az (yılda bir kez), sadece anormal durumlarda"],
+      ["3", "Orta", "Az (yılda bir kaç kez)"],
+      ["4", "Yüksek", "Sıklıkla (ayda bir)"],
+      ["5", "Çok Yüksek", "Çok sıklıkla (haftada bir, her gün)"],
+    ],
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255] },
+    tableWidth: 130,
+  });
+
+  autoTable(pdf, {
+    startY: 20,
+    margin: { left: 150 },
+    head: [["Puan", "İhtimal", "Derecelendirme"]],
+    body: [
+      ["1", "Çok Hafif", "İş saati kaybı yok, hemen giderilebilen"],
+      ["2", "Hafif", "İş günü kaybı yok, kalıcı etkisi olmayan"],
+      ["3", "Orta", "Hafif yaralanma, yatarak tedavi"],
+      ["4", "Ciddi", "Ciddi yaralanma, meslek hastalığı"],
+      ["5", "Çok Ciddi", "Ölüm, sürekli iş göremezlik"],
+    ],
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255] },
+    tableWidth: 130,
+  });
+
+  autoTable(pdf, {
+    startY: 82,
+    head: [["Risk Skoru", "Anlamı", "Açıklama"]],
+    body: [
+      ["25", "Kabul Edilemez", "Risk kabul edilebilir seviyeye düşürülünceye kadar iş başlatılmamalıdır."],
+      ["15, 16, 20", "Ciddi", "Riskleri düşürmek için faaliyetler kısa zamanda başlatılmalıdır."],
+      ["8, 9, 10, 12", "Orta", "Riskleri düşürmek için faaliyetler en az 6 ay içinde tamamlanmalıdır."],
+      ["2, 3, 4, 5, 6", "Düşük (Katlanılabilir)", "Mevcut kontroller sürdürülmelidir."],
+      ["1", "Önemsiz", "Önlem öncelikli değildir."],
+    ],
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255] },
+    columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 40 } },
+  });
+
+  pdf.save(`Risk_Degerlendirme_Raporu_${today.replace(/\./g, "_")}.pdf`);
+}
+
+// ── Styles ────────────────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
   app: { minHeight: "100vh", backgroundColor: "#0f172a", color: "#e2e8f0", fontFamily: "'IBM Plex Sans', system-ui, sans-serif" },
   header: { backgroundColor: "#1e293b", borderBottom: "1px solid #334155", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 },
@@ -222,6 +367,7 @@ const styles: Record<string, React.CSSProperties> = {
   btnPrimary: { backgroundColor: "#0ea5e9", color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
   btnDanger: { backgroundColor: "#dc2626", color: "#fff", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer" },
   btnSecondary: { backgroundColor: "#334155", color: "#e2e8f0", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer" },
+  btnSuccess: { backgroundColor: "#16a34a", color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
   badge: { display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600 },
   table: { width: "100%", borderCollapse: "collapse" as const, fontSize: 13 },
   th: { textAlign: "left" as const, padding: "8px 12px", borderBottom: "1px solid #334155", color: "#94a3b8", fontWeight: 600, fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" },
@@ -242,10 +388,10 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-
 export default function Page() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -265,9 +411,12 @@ export default function Page() {
   const [newDocument, setNewDocument] = useState({ companyId: "", employeeId: "", type: "Risk Değerlendirme Raporu", issueDate: "", expiryDate: "" });
   const [newObserver, setNewObserver] = useState({ fullName: "", title: "", certificateNo: "", phone: "" });
   const [newDof, setNewDof] = useState({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta" as "Düşük" | "Orta" | "Yüksek", responsible: "", dueDate: "", status: "Açık" as "Açık" | "Devam Ediyor" | "Kapandı", location: "", beforePhoto: "", afterPhoto: "" });
-  const [newRisk, setNewRisk] = useState({ companyId: "", section: "", hazard: "", risk: "", currentMeasure: "", actionToTake: "", probability: "1", severity: "1", residualProbability: "1", residualSeverity: "1", responsible: "", dueDate: "", status: "Açık" as "Açık" | "Kontrol Altında" | "Kapandı" });
-
-  // ── Firestore load ────────────────────────────────────────────────────────
+  const [newRisk, setNewRisk] = useState({
+    companyId: "", section: "", hazard: "", risk: "", currentMeasure: "", actionToTake: "",
+    probability: "1", severity: "1", residualProbability: "1", residualSeverity: "1",
+    responsible: "", dueDate: "", status: "Açık" as "Açık" | "Kontrol Altında" | "Kapandı",
+    affectedPersons: "", lawReference: "", controlDate: "",
+  });
 
   async function loadAll() {
     setLoading(true);
@@ -296,14 +445,10 @@ export default function Page() {
 
   useEffect(() => { loadAll(); }, []);
 
-  // ── Derived ───────────────────────────────────────────────────────────────
-
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) ?? null;
   const selectedEmployeeCompany = selectedEmployee ? companies.find(c => c.id === selectedEmployee.companyId) ?? null : null;
 
-  function getCompanyDocuments(companyId: string) {
-    return documents.filter(d => d.companyId === companyId && d.employeeId === null);
-  }
+  function getCompanyDocuments(companyId: string) { return documents.filter(d => d.companyId === companyId && d.employeeId === null); }
 
   function getCompanyDocSummary(companyId: string) {
     const companyDocs = getCompanyDocuments(companyId);
@@ -330,41 +475,18 @@ export default function Page() {
 
   function printEmployeeCertificate(employee: Employee, company: Company | null) {
     if (!company || !employee.checklist.isgCertificateDate) return;
-    const signatures = company.serviceType === "İş Güvenliği + İşyeri Hekimliği"
-      ? ["İşveren / İşveren Vekili", "İş Güvenliği Uzmanı", "İşyeri Hekimi"]
-      : ["İşveren / İşveren Vekili", "İş Güvenliği Uzmanı"];
+    const signatures = company.serviceType === "İş Güvenliği + İşyeri Hekimliği" ? ["İşveren / İşveren Vekili", "İş Güvenliği Uzmanı", "İşyeri Hekimi"] : ["İşveren / İşveren Vekili", "İş Güvenliği Uzmanı"];
     const html = `<html><head><title>İSG Sertifikası</title><style>body{font-family:Arial,sans-serif;padding:40px}.box{border:2px solid #000;padding:30px}h1{text-align:center;margin-bottom:30px}.line{margin-bottom:12px;font-size:18px}.signatures{margin-top:60px;display:flex;justify-content:space-between;gap:20px}.sig{width:30%;text-align:center}.topline{border-top:1px solid #000;padding-top:10px;margin-top:50px}</style></head><body><div class="box"><h1>İSG EĞİTİM SERTİFİKASI</h1><div class="line"><strong>Personel:</strong> ${employee.firstName} ${employee.lastName}</div><div class="line"><strong>T.C. Kimlik No:</strong> ${employee.tcNo}</div><div class="line"><strong>Unvan:</strong> ${employee.title}</div><div class="line"><strong>Firma:</strong> ${company.officialName}</div><div class="line"><strong>Hizmet Türü:</strong> ${company.serviceType}</div><div class="line"><strong>Eğitim / Sertifika Tarihi:</strong> ${employee.checklist.isgCertificateDate}</div><div class="signatures">${signatures.map(s => `<div class="sig"><div class="topline">${s}</div></div>`).join("")}</div></div></body></html>`;
     const win = window.open("", "_blank", "width=900,height=700");
     if (!win) return;
     win.document.open(); win.document.write(html); win.document.close(); win.focus(); win.print();
   }
 
-  // ── Filtered ──────────────────────────────────────────────────────────────
-
   const filteredCompanies = useMemo(() => companies.filter(c => `${c.nickName} ${c.officialName} ${c.sgkSicil} ${c.naceCode}`.toLowerCase().includes(search.toLowerCase())), [companies, search]);
-  const filteredEmployees = useMemo(() => employees.filter(e => {
-    const company = companies.find(c => c.id === e.companyId);
-    const matchesCompany = selectedCompanyId === "all" || e.companyId === selectedCompanyId;
-    return matchesCompany && `${e.firstName} ${e.lastName} ${e.tcNo} ${e.title} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
-  }), [employees, companies, selectedCompanyId, search]);
-  const filteredDocuments = useMemo(() => documents.filter(d => {
-    const company = companies.find(c => c.id === d.companyId);
-    const employee = employees.find(e => e.id === d.employeeId);
-    const matchesCompany = selectedCompanyId === "all" || d.companyId === selectedCompanyId;
-    return matchesCompany && `${d.type} ${company?.nickName || ""} ${employee?.firstName || ""} ${employee?.lastName || ""}`.toLowerCase().includes(search.toLowerCase());
-  }), [documents, companies, employees, selectedCompanyId, search]);
-  const filteredDofs = useMemo(() => dofs.filter(d => {
-    const company = companies.find(c => c.id === d.companyId);
-    const matchesCompany = selectedCompanyId === "all" || d.companyId === selectedCompanyId;
-    return matchesCompany && `${d.title} ${d.description} ${d.location} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
-  }), [dofs, companies, selectedCompanyId, search]);
-  const filteredRisks = useMemo(() => risks.filter(r => {
-    const company = companies.find(c => c.id === r.companyId);
-    const matchesCompany = selectedCompanyId === "all" || r.companyId === selectedCompanyId;
-    return matchesCompany && `${r.section} ${r.hazard} ${r.risk} ${r.actionToTake} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
-  }), [risks, companies, selectedCompanyId, search]);
-
-  // ── CRUD ─────────────────────────────────────────────────────────────────
+  const filteredEmployees = useMemo(() => employees.filter(e => { const company = companies.find(c => c.id === e.companyId); const matchesCompany = selectedCompanyId === "all" || e.companyId === selectedCompanyId; return matchesCompany && `${e.firstName} ${e.lastName} ${e.tcNo} ${e.title} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [employees, companies, selectedCompanyId, search]);
+  const filteredDocuments = useMemo(() => documents.filter(d => { const company = companies.find(c => c.id === d.companyId); const employee = employees.find(e => e.id === d.employeeId); const matchesCompany = selectedCompanyId === "all" || d.companyId === selectedCompanyId; return matchesCompany && `${d.type} ${company?.nickName || ""} ${employee?.firstName || ""} ${employee?.lastName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [documents, companies, employees, selectedCompanyId, search]);
+  const filteredDofs = useMemo(() => dofs.filter(d => { const company = companies.find(c => c.id === d.companyId); const matchesCompany = selectedCompanyId === "all" || d.companyId === selectedCompanyId; return matchesCompany && `${d.title} ${d.description} ${d.location} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [dofs, companies, selectedCompanyId, search]);
+  const filteredRisks = useMemo(() => risks.filter(r => { const company = companies.find(c => c.id === r.companyId); const matchesCompany = selectedCompanyId === "all" || r.companyId === selectedCompanyId; return matchesCompany && `${r.section} ${r.hazard} ${r.risk} ${r.actionToTake} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [risks, companies, selectedCompanyId, search]);
 
   async function addCompany() {
     if (!newCompany.nickName || !newCompany.sgkSicil) return;
@@ -461,18 +583,24 @@ export default function Page() {
     const sev = parseInt(newRisk.severity);
     const rProb = parseInt(newRisk.residualProbability);
     const rSev = parseInt(newRisk.residualSeverity);
-    const data = { companyId: newRisk.companyId, sourceDofId: null, section: newRisk.section, hazard: newRisk.hazard, risk: newRisk.risk, currentMeasure: newRisk.currentMeasure, actionToTake: newRisk.actionToTake, probability: prob, severity: sev, score: prob * sev, residualProbability: rProb, residualSeverity: rSev, residualScore: rProb * rSev, responsible: newRisk.responsible, dueDate: newRisk.dueDate, status: newRisk.status };
+    const data = {
+      companyId: newRisk.companyId, sourceDofId: null,
+      section: newRisk.section, hazard: newRisk.hazard, risk: newRisk.risk,
+      currentMeasure: newRisk.currentMeasure, actionToTake: newRisk.actionToTake,
+      probability: prob, severity: sev, score: prob * sev,
+      residualProbability: rProb, residualSeverity: rSev, residualScore: rProb * rSev,
+      responsible: newRisk.responsible, dueDate: newRisk.dueDate, status: newRisk.status,
+      affectedPersons: newRisk.affectedPersons, lawReference: newRisk.lawReference, controlDate: newRisk.controlDate,
+    };
     const ref = await addDoc(collection(db, "risks"), data);
     setRisks(prev => [...prev, { id: ref.id, ...data }]);
-    setNewRisk({ companyId: "", section: "", hazard: "", risk: "", currentMeasure: "", actionToTake: "", probability: "1", severity: "1", residualProbability: "1", residualSeverity: "1", responsible: "", dueDate: "", status: "Açık" });
+    setNewRisk({ companyId: "", section: "", hazard: "", risk: "", currentMeasure: "", actionToTake: "", probability: "1", severity: "1", residualProbability: "1", residualSeverity: "1", responsible: "", dueDate: "", status: "Açık", affectedPersons: "", lawReference: "", controlDate: "" });
   }
 
   async function deleteRisk(id: string) {
     await deleteDoc(doc(db, "risks", id));
     setRisks(prev => prev.filter(r => r.id !== id));
   }
-
-  // ── Tabs ──────────────────────────────────────────────────────────────────
 
   const tabs = [
     { id: "ozet", label: "📊 Özet" },
@@ -493,8 +621,6 @@ export default function Page() {
     );
   }
 
-  // ── Dashboard stats ───────────────────────────────────────────────────────
-
   const totalExpiredDocs = documents.filter(d => getDateStatus(d.expiryDate) === "Süresi Dolmuş").length;
   const totalSoonDocs = documents.filter(d => getDateStatus(d.expiryDate) === "Yaklaşıyor").length;
   const openDofs = dofs.filter(d => d.status !== "Kapandı").length;
@@ -503,7 +629,6 @@ export default function Page() {
 
   return (
     <div style={styles.app}>
-      {/* Header */}
       <header style={styles.header}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 700, fontSize: 17, color: "#f1f5f9" }}>
           <span style={{ fontSize: 20 }}>🦺</span>
@@ -512,7 +637,6 @@ export default function Page() {
         <button style={{ ...styles.btnSecondary, fontSize: 11 }} onClick={loadAll}>🔄 Yenile</button>
       </header>
 
-      {/* Nav */}
       <nav style={styles.nav}>
         {tabs.map(tab => (
           <button key={tab.id} style={{ padding: "8px 16px", borderRadius: "6px 6px 0 0", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, whiteSpace: "nowrap" as const, backgroundColor: activeTab === tab.id ? "#0ea5e9" : "transparent", color: activeTab === tab.id ? "#fff" : "#94a3b8" }}
@@ -524,7 +648,6 @@ export default function Page() {
 
       <main style={styles.content}>
 
-        {/* ── ÖZET ── */}
         {activeTab === "ozet" && (
           <div>
             <p style={{ ...styles.sectionTitle, marginBottom: 20 }}>Genel Durum</p>
@@ -567,7 +690,6 @@ export default function Page() {
           </div>
         )}
 
-        {/* ── FİRMALAR ── */}
         {activeTab === "firmalar" && (
           <div>
             <div style={styles.card}>
@@ -616,7 +738,6 @@ export default function Page() {
           </div>
         )}
 
-        {/* ── PERSONEL ── */}
         {activeTab === "personel" && (
           <div style={{ display: "grid", gridTemplateColumns: selectedEmployee ? "1fr 340px" : "1fr", gap: 20 }}>
             <div>
@@ -668,7 +789,6 @@ export default function Page() {
                 </table>
               </div>
             </div>
-
             {selectedEmployee && (
               <div>
                 <div style={styles.card}>
@@ -679,27 +799,19 @@ export default function Page() {
                   <p style={{ ...styles.sectionTitle, marginTop: 16 }}>Kontrol Listesi</p>
                   {[{ key: "isgCertificateDate", label: "İSG Sertifikası Tarihi" }, { key: "ek2Date", label: "EK-2 Tarihi" }, { key: "orientationDate", label: "Oryantasyon Tarihi" }].map(({ key, label }) => (
                     <FormField key={key} label={label}>
-                      <input style={{ ...styles.input, marginBottom: 8 }} type="date"
-                        value={(selectedEmployee.checklist as any)[key]}
-                        onChange={e => {
-                          const updated = { ...selectedEmployee.checklist, [key]: e.target.value };
-                          updateEmployeeChecklist(selectedEmployee.id, updated);
-                        }} />
+                      <input style={{ ...styles.input, marginBottom: 8 }} type="date" value={(selectedEmployee.checklist as any)[key]}
+                        onChange={e => { const updated = { ...selectedEmployee.checklist, [key]: e.target.value }; updateEmployeeChecklist(selectedEmployee.id, updated); }} />
                     </FormField>
                   ))}
                   {[{ key: "preTest", label: "Ön Test" }, { key: "postTest", label: "Son Test" }, { key: "undertaking", label: "Taahhütname" }, { key: "kkdMinutes", label: "KKD Tutanağı" }, { key: "attendanceDoc", label: "Katılım Belgesi" }].map(({ key, label }) => (
                     <label key={key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, cursor: "pointer", fontSize: 13 }}>
                       <input type="checkbox" checked={(selectedEmployee.checklist as any)[key]}
-                        onChange={e => {
-                          const updated = { ...selectedEmployee.checklist, [key]: e.target.checked };
-                          updateEmployeeChecklist(selectedEmployee.id, updated);
-                        }} />
+                        onChange={e => { const updated = { ...selectedEmployee.checklist, [key]: e.target.checked }; updateEmployeeChecklist(selectedEmployee.id, updated); }} />
                       {label}
                     </label>
                   ))}
                   <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, cursor: "pointer", fontSize: 13 }}>
-                    <input type="checkbox" checked={selectedEmployee.trainingComplete}
-                      onChange={e => updateEmployeeTraining(selectedEmployee.id, e.target.checked)} />
+                    <input type="checkbox" checked={selectedEmployee.trainingComplete} onChange={e => updateEmployeeTraining(selectedEmployee.id, e.target.checked)} />
                     Eğitim Tamamlandı
                   </label>
                   {selectedEmployee.checklist.isgCertificateDate && (
@@ -713,7 +825,6 @@ export default function Page() {
           </div>
         )}
 
-        {/* ── BELGELER ── */}
         {activeTab === "belgeler" && (
           <div>
             <div style={styles.card}>
@@ -759,7 +870,6 @@ export default function Page() {
           </div>
         )}
 
-        {/* ── GÖZLEMCİLER ── */}
         {activeTab === "gozlemciler" && (
           <div>
             <div style={styles.card}>
@@ -786,7 +896,6 @@ export default function Page() {
           </div>
         )}
 
-        {/* ── DÖF ── */}
         {activeTab === "dof" && (
           <div>
             <div style={styles.card}>
@@ -866,37 +975,68 @@ export default function Page() {
           </div>
         )}
 
-        {/* ── RİSK ── */}
         {activeTab === "risk" && (
           <div>
             <div style={styles.card}>
               <p style={styles.sectionTitle}>Yeni Risk Kaydı</p>
               <div style={styles.formGrid}>
                 <FormField label="Firma *"><select style={styles.select} value={newRisk.companyId} onChange={e => setNewRisk({ ...newRisk, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
-                <FormField label="Bölüm"><input style={styles.input} value={newRisk.section} onChange={e => setNewRisk({ ...newRisk, section: e.target.value })} /></FormField>
-                <FormField label="Tehlike *"><input style={styles.input} value={newRisk.hazard} onChange={e => setNewRisk({ ...newRisk, hazard: e.target.value })} /></FormField>
-                <FormField label="Risk"><input style={styles.input} value={newRisk.risk} onChange={e => setNewRisk({ ...newRisk, risk: e.target.value })} /></FormField>
+                <FormField label="Bölüm / Faaliyet"><input style={styles.input} value={newRisk.section} onChange={e => setNewRisk({ ...newRisk, section: e.target.value })} /></FormField>
+                <FormField label="Tehlike Kaynağı / Mevcut Durum *"><input style={styles.input} value={newRisk.hazard} onChange={e => setNewRisk({ ...newRisk, hazard: e.target.value })} /></FormField>
+                <FormField label="Tehlike"><input style={styles.input} value={newRisk.risk} onChange={e => setNewRisk({ ...newRisk, risk: e.target.value })} /></FormField>
                 <FormField label="Mevcut Önlem"><input style={styles.input} value={newRisk.currentMeasure} onChange={e => setNewRisk({ ...newRisk, currentMeasure: e.target.value })} /></FormField>
-                <FormField label="Alınacak Önlem"><input style={styles.input} value={newRisk.actionToTake} onChange={e => setNewRisk({ ...newRisk, actionToTake: e.target.value })} /></FormField>
+                <FormField label="Öneriler / Alınacak Önlemler"><input style={styles.input} value={newRisk.actionToTake} onChange={e => setNewRisk({ ...newRisk, actionToTake: e.target.value })} /></FormField>
                 <FormField label="Olasılık (1-5)"><input style={styles.input} type="number" min={1} max={5} value={newRisk.probability} onChange={e => setNewRisk({ ...newRisk, probability: e.target.value })} /></FormField>
                 <FormField label="Şiddet (1-5)"><input style={styles.input} type="number" min={1} max={5} value={newRisk.severity} onChange={e => setNewRisk({ ...newRisk, severity: e.target.value })} /></FormField>
                 <FormField label="Kalıntı Olasılık"><input style={styles.input} type="number" min={1} max={5} value={newRisk.residualProbability} onChange={e => setNewRisk({ ...newRisk, residualProbability: e.target.value })} /></FormField>
                 <FormField label="Kalıntı Şiddet"><input style={styles.input} type="number" min={1} max={5} value={newRisk.residualSeverity} onChange={e => setNewRisk({ ...newRisk, residualSeverity: e.target.value })} /></FormField>
+                <FormField label="Etkilenecek Kişiler"><input style={styles.input} value={newRisk.affectedPersons} onChange={e => setNewRisk({ ...newRisk, affectedPersons: e.target.value })} placeholder="Tüm çalışanlar" /></FormField>
                 <FormField label="Sorumlu"><input style={styles.input} value={newRisk.responsible} onChange={e => setNewRisk({ ...newRisk, responsible: e.target.value })} /></FormField>
                 <FormField label="Termin"><input style={styles.input} type="date" value={newRisk.dueDate} onChange={e => setNewRisk({ ...newRisk, dueDate: e.target.value })} /></FormField>
+                <FormField label="Kontrol Tarihi"><input style={styles.input} type="date" value={newRisk.controlDate} onChange={e => setNewRisk({ ...newRisk, controlDate: e.target.value })} /></FormField>
                 <FormField label="Durum"><select style={styles.select} value={newRisk.status} onChange={e => setNewRisk({ ...newRisk, status: e.target.value as any })}><option>Açık</option><option>Kontrol Altında</option><option>Kapandı</option></select></FormField>
+                <FormField label="İlgili Mevzuat">
+                  <input style={styles.input} value={newRisk.lawReference} onChange={e => setNewRisk({ ...newRisk, lawReference: e.target.value })} placeholder="6331 sayılı İSG Kanunu..." />
+                </FormField>
               </div>
-              <div style={{ marginTop: 8, fontSize: 13, color: "#94a3b8" }}>Risk Skoru = {parseInt(newRisk.probability) * parseInt(newRisk.severity)} · Kalıntı = {parseInt(newRisk.residualProbability) * parseInt(newRisk.residualSeverity)}</div>
+              <div style={{ marginTop: 8, fontSize: 13, color: "#94a3b8" }}>
+                Risk Skoru = <strong style={{ color: riskScoreColor(parseInt(newRisk.probability) * parseInt(newRisk.severity)) }}>{parseInt(newRisk.probability) * parseInt(newRisk.severity)}</strong>
+                {" · "}Kalıntı Skoru = <strong style={{ color: riskScoreColor(parseInt(newRisk.residualProbability) * parseInt(newRisk.residualSeverity)) }}>{parseInt(newRisk.residualProbability) * parseInt(newRisk.residualSeverity)}</strong>
+              </div>
               <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addRisk}>Risk Ekle</button></div>
             </div>
+
             <div style={styles.searchBar}>
               <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
               <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
               <span style={{ color: "#64748b", fontSize: 13 }}>{filteredRisks.length} kayıt</span>
+              <button
+                style={{ ...styles.btnSuccess, marginLeft: "auto", opacity: pdfLoading || risks.length === 0 ? 0.6 : 1 }}
+                disabled={pdfLoading || risks.length === 0}
+                onClick={async () => {
+                  setPdfLoading(true);
+                  try {
+                    const risksToExport = selectedCompanyId === "all" ? risks : risks.filter(r => r.companyId === selectedCompanyId);
+                    const companiesToExport = selectedCompanyId === "all" ? companies : companies.filter(c => c.id === selectedCompanyId);
+                    await generateRiskPDF(risksToExport, companiesToExport);
+                  } finally {
+                    setPdfLoading(false);
+                  }
+                }}
+              >
+                {pdfLoading ? "⏳ Hazırlanıyor..." : "📄 PDF Rapor İndir"}
+              </button>
             </div>
+
             <div style={{ ...styles.card, padding: 0, overflow: "auto" }}>
               <table style={styles.table}>
-                <thead><tr>{["Firma", "Bölüm", "Tehlike", "Risk", "Mevcut Önlem", "Alınacak Önlem", "Skor", "Kalıntı", "Sorumlu", "Termin", "Durum", "İşlem"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+                <thead>
+                  <tr>
+                    {["Firma", "Bölüm", "Tehlike Kaynağı", "Tehlike", "Mevcut Önlem", "Öneriler", "O", "Ş", "RS", "KO", "KŞ", "KRS", "Etkilenecek", "Sorumlu", "Termin", "K.Tarihi", "Durum", "Mevzuat", "İşlem"].map(h => (
+                      <th key={h} style={styles.th}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
                 <tbody>
                   {filteredRisks.map(r => {
                     const company = companies.find(c => c.id === r.companyId);
@@ -908,11 +1048,18 @@ export default function Page() {
                         <td style={{ ...styles.td, fontSize: 12, color: "#94a3b8" }}>{r.risk}</td>
                         <td style={{ ...styles.td, fontSize: 11, color: "#64748b" }}>{r.currentMeasure}</td>
                         <td style={{ ...styles.td, fontSize: 11, color: "#64748b" }}>{r.actionToTake}</td>
-                        <td style={styles.td}><span style={{ fontWeight: 700, color: riskScoreColor(r.score), fontSize: 15 }}>{r.score}</span><div style={{ fontSize: 10, color: "#64748b" }}>{r.probability}×{r.severity}</div></td>
-                        <td style={styles.td}><span style={{ fontWeight: 700, color: riskScoreColor(r.residualScore), fontSize: 15 }}>{r.residualScore}</span><div style={{ fontSize: 10, color: "#64748b" }}>{r.residualProbability}×{r.residualSeverity}</div></td>
+                        <td style={{ ...styles.td, textAlign: "center" as const, fontSize: 12 }}>{r.probability}</td>
+                        <td style={{ ...styles.td, textAlign: "center" as const, fontSize: 12 }}>{r.severity}</td>
+                        <td style={styles.td}><span style={{ fontWeight: 700, color: riskScoreColor(r.score), fontSize: 14 }}>{r.score}</span></td>
+                        <td style={{ ...styles.td, textAlign: "center" as const, fontSize: 12 }}>{r.residualProbability}</td>
+                        <td style={{ ...styles.td, textAlign: "center" as const, fontSize: 12 }}>{r.residualSeverity}</td>
+                        <td style={styles.td}><span style={{ fontWeight: 700, color: riskScoreColor(r.residualScore), fontSize: 14 }}>{r.residualScore}</span></td>
+                        <td style={{ ...styles.td, fontSize: 11 }}>{r.affectedPersons || "—"}</td>
                         <td style={{ ...styles.td, fontSize: 12 }}>{r.responsible}</td>
                         <td style={{ ...styles.td, fontSize: 12 }}>{r.dueDate}</td>
+                        <td style={{ ...styles.td, fontSize: 12 }}>{r.controlDate || "—"}</td>
                         <td style={styles.td}><Badge text={r.status} color={r.status === "Kapandı" ? "#16a34a" : r.status === "Kontrol Altında" ? "#d97706" : "#dc2626"} /></td>
+                        <td style={{ ...styles.td, fontSize: 11, color: "#94a3b8", maxWidth: 140 }}>{r.lawReference || "—"}</td>
                         <td style={styles.td}><button style={styles.btnDanger} onClick={() => deleteRisk(r.id)}>Sil</button></td>
                       </tr>
                     );

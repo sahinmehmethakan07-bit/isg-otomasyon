@@ -27,3 +27,11 @@ body.light {
   --isg-nav: #f8fafc;
   --isg-btn-secondary: #e2e8f0;
 }
+
+body, body.dark {
+  --isg-today-bg: #1e3a5f;
+}
+
+body.light {
+  --isg-today-bg: #dbeafe;
+}

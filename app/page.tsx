@@ -217,7 +217,7 @@ function tr(text: string): string {
     .replace(/Ç/g, "C").replace(/ç/g, "c");
 }
 
-async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
+async function generateRiskPDF(risks: RiskRecord[], companies: Company[], observers: Observer[]) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -325,6 +325,40 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
         fillColor: (rowIndex: number) => rowIndex === 0 ? "#1e293b" : rowIndex % 2 === 0 ? "#f8fafc" : null,
       },
     });
+
+    // İmza bloğu — gözlemciler yan yana
+    if (observers.length > 0) {
+      const sigCols = observers.map(o => ({
+        stack: [
+          { text: o.fullName, fontSize: 8, bold: true, alignment: "center" },
+          { text: o.title || "", fontSize: 7, alignment: "center", color: "#64748b" },
+          { text: `Sertifika No: ${o.certificateNo || "-"}`, fontSize: 7, alignment: "center", color: "#64748b" },
+          { canvas: [{ type: "line", x1: 0, y1: 20, x2: 100, y2: 20, lineWidth: 0.5, lineColor: "#334155" }], margin: [0, 8, 0, 4] },
+          { text: "İmza", fontSize: 7, alignment: "center", color: "#94a3b8" },
+        ],
+        width: "*",
+        margin: [4, 0, 4, 0],
+      }));
+
+      content.push({
+        margin: [0, 16, 0, 0],
+        table: {
+          widths: observers.map(() => "*"),
+          body: [[...observers.map(o => ({
+            stack: [
+              { text: o.fullName, fontSize: 8, bold: true, alignment: "center" as const },
+              { text: o.title || "", fontSize: 7, alignment: "center" as const, color: "#64748b" },
+              { text: `Sertifika: ${o.certificateNo || "-"}`, fontSize: 7, alignment: "center" as const, color: "#64748b" },
+              { canvas: [{ type: "line" as const, x1: 10, y1: 18, x2: 110, y2: 18, lineWidth: 0.5, lineColor: "#000000" }], margin: [0, 6, 0, 2] },
+              { text: "Ad Soyad / İmza", fontSize: 6, alignment: "center" as const, color: "#94a3b8" },
+            ],
+            margin: [8, 8, 8, 8],
+            border: [true, true, true, true],
+          }))]]
+        },
+        layout: { defaultBorder: true },
+      });
+    }
   }
 
   const docDef: any = {
@@ -1110,7 +1144,7 @@ export default function Page() {
                   try {
                     const risksToExport = selectedCompanyId === "all" ? risks : risks.filter(r => r.companyId === selectedCompanyId);
                     const companiesToExport = selectedCompanyId === "all" ? companies : companies.filter(c => c.id === selectedCompanyId);
-                    await generateRiskPDF(risksToExport, companiesToExport);
+                    await generateRiskPDF(risksToExport, companiesToExport, observers);
                   } finally {
                     setPdfLoading(false);
                   }

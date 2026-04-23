@@ -310,11 +310,11 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
     pdf.setFont(fontName, "normal");
     pdf.setFontSize(12);
     pdf.setTextColor(255, 255, 255);
-    pdf.text(company.officialName.toUpperCase(), pw / 2, 8, { align: "center" });
+    pdf.text(tr(company.officialName.toUpperCase()), pw / 2, 8, { align: "center" });
 
     pdf.setFontSize(9);
     pdf.setFont(fontName, "normal");
-    pdf.text("RİSK DEĞERLENDİRME RAPORU", pw / 2, 14, { align: "center" });
+    pdf.text(tr("RİSK DEĞERLENDİRME RAPORU"), pw / 2, 14, { align: "center" });
 
     // Bilgi satırları
     pdf.setTextColor(0, 0, 0);
@@ -327,9 +327,9 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
 
     const drawInfoRow = (label: string, value: string, x: number, y: number) => {
       pdf.setFont(fontName, "normal");
-      pdf.text(label, x, y);
+      pdf.text(tr(label), x, y);
       const lw = pdf.getTextWidth(label);
-      pdf.text(" " + value, x + lw, y);
+      pdf.text(tr(" " + value), x + lw, y);
     };
 
     drawInfoRow("İşyeri Ünvanı      :", company.officialName, col1X, infoY);
@@ -454,7 +454,7 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
   pdf.setFont(fontName, "normal");
   pdf.setFontSize(10);
   pdf.setTextColor(255, 255, 255);
-  pdf.text("Risk Değerlendirmesi Karar Matris Metodolojisi", pw / 2, 8, { align: "center" });
+  pdf.text(tr("Risk Değerlendirmesi Karar Matris Metodolojisi"), pw / 2, 8, { align: "center" });
   pdf.setTextColor(0, 0, 0);
 
   autoTable(pdf, {

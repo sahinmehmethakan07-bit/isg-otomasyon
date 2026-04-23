@@ -391,6 +391,94 @@ const styles: Record<string, React.CSSProperties> = {
   statLabel: { fontSize: 12, color: "#94a3b8" },
 };
 
+function DatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const now = value ? new Date(value) : new Date();
+  const [viewYear, setViewYear] = useState(now.getFullYear());
+  const [viewMonth, setViewMonth] = useState(now.getMonth());
+
+  const months = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const firstDay = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7; // Pazartesi başlat
+
+  const selectedDate = value ? new Date(value) : null;
+
+  const select = (day: number) => {
+    const d = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    onChange(d);
+    setOpen(false);
+  };
+
+  const displayValue = value
+    ? new Date(value).toLocaleDateString("tr-TR")
+    : "Tarih seçin...";
+
+  return (
+    <div style={{ position: "relative" }}>
+      <div
+        onClick={() => setOpen(!open)}
+        style={{ ...styles.input, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+      >
+        <span style={{ color: value ? "#e2e8f0" : "#64748b" }}>{displayValue}</span>
+        <span style={{ fontSize: 14 }}>📅</span>
+      </div>
+      {open && (
+        <div style={{ position: "absolute", zIndex: 1000, top: "calc(100% + 4px)", left: 0, backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: 12, width: 240, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+          {/* Ay/Yıl navigasyon */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <button onClick={() => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); }} style={{ ...styles.btnSecondary, padding: "2px 8px" }}>‹</button>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <select value={viewMonth} onChange={e => setViewMonth(Number(e.target.value))} style={{ ...styles.select, width: "auto", padding: "2px 6px", fontSize: 12 }}>
+                {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
+              </select>
+              <select value={viewYear} onChange={e => setViewYear(Number(e.target.value))} style={{ ...styles.select, width: "auto", padding: "2px 6px", fontSize: 12 }}>
+                {Array.from({ length: 20 }, (_, i) => 2020 + i).map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <button onClick={() => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); }} style={{ ...styles.btnSecondary, padding: "2px 8px" }}>›</button>
+          </div>
+          {/* Gün başlıkları */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+            {["Pt","Sa","Ça","Pe","Cu","Ct","Pz"].map(d => (
+              <div key={d} style={{ textAlign: "center", fontSize: 10, color: "#64748b", padding: "2px 0" }}>{d}</div>
+            ))}
+          </div>
+          {/* Günler */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+            {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
+            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
+              const isSelected = selectedDate &&
+                selectedDate.getFullYear() === viewYear &&
+                selectedDate.getMonth() === viewMonth &&
+                selectedDate.getDate() === day;
+              return (
+                <button
+                  key={day}
+                  onClick={() => select(day)}
+                  style={{
+                    backgroundColor: isSelected ? "#0ea5e9" : "transparent",
+                    color: isSelected ? "#fff" : "#e2e8f0",
+                    border: "none",
+                    borderRadius: 4,
+                    padding: "4px 0",
+                    fontSize: 12,
+                    cursor: "pointer",
+                    textAlign: "center",
+                  }}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+          {/* Temizle */}
+          <button onClick={() => { onChange(""); setOpen(false); }} style={{ ...styles.btnSecondary, width: "100%", marginTop: 8, fontSize: 11 }}>Temizle</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Badge({ text, color }: { text: string; color: string }) {
   return <span style={{ ...styles.badge, backgroundColor: color + "22", color, border: `1px solid ${color}44` }}>{text}</span>;
 }
@@ -810,7 +898,7 @@ export default function Page() {
                 <FormField label="NACE Kodu"><input style={styles.input} value={newCompany.naceCode} onChange={e => setNewCompany({ ...newCompany, naceCode: e.target.value, dangerClass: dangerFromNace(e.target.value) })} /></FormField>
                 <FormField label="Tehlike Sınıfı"><select style={styles.select} value={newCompany.dangerClass} onChange={e => setNewCompany({ ...newCompany, dangerClass: e.target.value as DangerClass })}><option>Az Tehlikeli</option><option>Tehlikeli</option><option>Çok Tehlikeli</option></select></FormField>
                 <FormField label="Çalışan Sayısı"><input style={styles.input} type="number" value={newCompany.employeeCount} onChange={e => setNewCompany({ ...newCompany, employeeCount: e.target.value })} /></FormField>
-                <FormField label="Sözleşme Bitiş"><input style={styles.input} type="date" value={newCompany.contractEnd} onChange={e => setNewCompany({ ...newCompany, contractEnd: e.target.value })} /></FormField>
+                <FormField label="Sözleşme Bitiş"><DatePicker value={newCompany.contractEnd} onChange={v => setNewCompany({ ...newCompany, contractEnd: v })} /></FormField>
                 <FormField label="Hizmet Türü"><select style={styles.select} value={newCompany.serviceType} onChange={e => setNewCompany({ ...newCompany, serviceType: e.target.value as ServiceType })}><option>İş Güvenliği</option><option>İş Güvenliği + İşyeri Hekimliği</option></select></FormField>
               </div>
               <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addCompany}>Firma Ekle</button></div>
@@ -858,7 +946,7 @@ export default function Page() {
                   <FormField label="Soyad"><input style={styles.input} value={newEmployee.lastName} onChange={e => setNewEmployee({ ...newEmployee, lastName: e.target.value })} /></FormField>
                   <FormField label="TC No"><input style={styles.input} value={newEmployee.tcNo} onChange={e => setNewEmployee({ ...newEmployee, tcNo: e.target.value })} /></FormField>
                   <FormField label="Unvan"><input style={styles.input} value={newEmployee.title} onChange={e => setNewEmployee({ ...newEmployee, title: e.target.value })} /></FormField>
-                  <FormField label="İşe Giriş"><input style={styles.input} type="date" value={newEmployee.hireDate} onChange={e => setNewEmployee({ ...newEmployee, hireDate: e.target.value })} /></FormField>
+                  <FormField label="İşe Giriş"><DatePicker value={newEmployee.hireDate} onChange={v => setNewEmployee({ ...newEmployee, hireDate: v })} /></FormField>
                 </div>
                 <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addEmployee}>Personel Ekle</button></div>
               </div>
@@ -942,8 +1030,8 @@ export default function Page() {
                 <FormField label="Firma *"><select style={styles.select} value={newDocument.companyId} onChange={e => setNewDocument({ ...newDocument, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
                 <FormField label="Belge Türü *"><select style={styles.select} value={newDocument.type} onChange={e => setNewDocument({ ...newDocument, type: e.target.value })}>{documentTemplates.map(t => <option key={t}>{t}</option>)}</select></FormField>
                 <FormField label="Personel (opsiyonel)"><select style={styles.select} value={newDocument.employeeId} onChange={e => setNewDocument({ ...newDocument, employeeId: e.target.value })}><option value="">Firma Belgesi</option>{employees.filter(e => !newDocument.companyId || e.companyId === newDocument.companyId).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}</select></FormField>
-                <FormField label="Düzenleme Tarihi *"><input style={styles.input} type="date" value={newDocument.issueDate} onChange={e => setNewDocument({ ...newDocument, issueDate: e.target.value })} /></FormField>
-                <FormField label="Geçerlilik Tarihi"><input style={styles.input} type="date" value={newDocument.expiryDate} onChange={e => setNewDocument({ ...newDocument, expiryDate: e.target.value })} /></FormField>
+                <FormField label="Düzenleme Tarihi *"><DatePicker value={newDocument.issueDate} onChange={v => setNewDocument({ ...newDocument, issueDate: v })} /></FormField>
+                <FormField label="Geçerlilik Tarihi"><DatePicker value={newDocument.expiryDate} onChange={v => setNewDocument({ ...newDocument, expiryDate: v })} /></FormField>
               </div>
               <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addDocument}>Belge Ekle</button></div>
             </div>
@@ -1016,7 +1104,7 @@ export default function Page() {
                 <FormField label="Konum"><input style={styles.input} value={newDof.location} onChange={e => setNewDof({ ...newDof, location: e.target.value })} /></FormField>
                 <FormField label="Öncelik"><select style={styles.select} value={newDof.priority} onChange={e => setNewDof({ ...newDof, priority: e.target.value as any })}><option>Düşük</option><option>Orta</option><option>Yüksek</option></select></FormField>
                 <FormField label="Sorumlu"><input style={styles.input} value={newDof.responsible} onChange={e => setNewDof({ ...newDof, responsible: e.target.value })} /></FormField>
-                <FormField label="Termin"><input style={styles.input} type="date" value={newDof.dueDate} onChange={e => setNewDof({ ...newDof, dueDate: e.target.value })} /></FormField>
+                <FormField label="Termin"><DatePicker value={newDof.dueDate} onChange={v => setNewDof({ ...newDof, dueDate: v })} /></FormField>
                 <FormField label="Durum"><select style={styles.select} value={newDof.status} onChange={e => setNewDof({ ...newDof, status: e.target.value as any })}><option>Açık</option><option>Devam Ediyor</option><option>Kapandı</option></select></FormField>
               </div>
               <div style={{ marginTop: 10 }}>
@@ -1104,8 +1192,8 @@ export default function Page() {
                 <FormField label="Kalıntı Şiddet"><input style={styles.input} type="number" min={1} max={5} value={newRisk.residualSeverity} onChange={e => setNewRisk({ ...newRisk, residualSeverity: e.target.value })} /></FormField>
                 <FormField label="Etkilenecek Kişiler"><input style={styles.input} value={newRisk.affectedPersons} onChange={e => setNewRisk({ ...newRisk, affectedPersons: e.target.value })} placeholder="Tüm çalışanlar" /></FormField>
                 <FormField label="Sorumlu"><input style={styles.input} value={newRisk.responsible} onChange={e => setNewRisk({ ...newRisk, responsible: e.target.value })} /></FormField>
-                <FormField label="Termin"><input style={styles.input} type="date" value={newRisk.dueDate} onChange={e => setNewRisk({ ...newRisk, dueDate: e.target.value })} /></FormField>
-                <FormField label="Kontrol Tarihi"><input style={styles.input} type="date" value={newRisk.controlDate} onChange={e => setNewRisk({ ...newRisk, controlDate: e.target.value })} /></FormField>
+                <FormField label="Termin"><DatePicker value={newRisk.dueDate} onChange={v => setNewRisk({ ...newRisk, dueDate: v })} /></FormField>
+                <FormField label="Kontrol Tarihi"><DatePicker value={newRisk.controlDate} onChange={v => setNewRisk({ ...newRisk, controlDate: v })} /></FormField>
                 <FormField label="Durum"><select style={styles.select} value={newRisk.status} onChange={e => setNewRisk({ ...newRisk, status: e.target.value as any })}><option>Açık</option><option>Kontrol Altında</option><option>Kapandı</option></select></FormField>
                 <FormField label="İlgili Mevzuat">
                   <input style={styles.input} value={newRisk.lawReference} onChange={e => setNewRisk({ ...newRisk, lawReference: e.target.value })} placeholder="6331 sayılı İSG Kanunu..." />
@@ -1217,7 +1305,7 @@ export default function Page() {
                     </select>
                   </FormField>
                   <FormField label="Tarih *">
-                    <input style={styles.input} type="date" value={newShift.date} onChange={e => setNewShift({ ...newShift, date: e.target.value })} />
+                    <DatePicker value={newShift.date} onChange={v => setNewShift({ ...newShift, date: v })} />
                   </FormField>
                   <FormField label="Vardiya Türü">
                     <select style={styles.select} value={newShift.shiftType} onChange={e => setNewShift({ ...newShift, shiftType: e.target.value as ShiftType, startTime: e.target.value === "Gündüz" ? "08:00" : e.target.value === "Akşam" ? "16:00" : "00:00", endTime: e.target.value === "Gündüz" ? "16:00" : e.target.value === "Akşam" ? "00:00" : "08:00" })}>

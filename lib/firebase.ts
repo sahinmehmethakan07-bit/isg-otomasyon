@@ -3,12 +3,12 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCZyjCkZCSfZTi9puaSf1hbicN08jNbmOk",
-  authDomain: "paket-track.firebaseapp.com",
-  projectId: "paket-track",
-  storageBucket: "paket-track.appspot.com",
-  messagingSenderId: "133120311842",
-  appId: "1:133120311842:web:bad3bb1b5c20605ae6007b",
+  apiKey: "AIzaSyDCCKqJLR7V_VN9n4NPM5_ZlPlc-O1alAk",
+  authDomain: "isg-otomasyon.firebaseapp.com",
+  projectId: "isg-otomasyon",
+  storageBucket: "isg-otomasyon.firebasestorage.app",
+  messagingSenderId: "664404617229",
+  appId: "1:664404617229:web:12cba547e7cbebf46b4d44",
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];

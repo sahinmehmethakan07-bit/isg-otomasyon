@@ -1,18 +1,10 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
 }
 
-/* ISG Theme Variables */
-body.dark {
+body, body.dark {
   --isg-bg: #0f172a;
   --isg-card: #1e293b;
   --isg-border: #334155;
@@ -21,8 +13,7 @@ body.dark {
   --isg-input-bg: #0f172a;
   --isg-header: #1e293b;
   --isg-nav: #0f172a;
-  --isg-label: #94a3b8;
-  --isg-td-border: #1e293b;
+  --isg-btn-secondary: #334155;
 }
 
 body.light {
@@ -34,18 +25,5 @@ body.light {
   --isg-input-bg: #f8fafc;
   --isg-header: #ffffff;
   --isg-nav: #f8fafc;
-  --isg-label: #64748b;
-  --isg-td-border: #e2e8f0;
+  --isg-btn-secondary: #e2e8f0;
 }
-
-.isg-app { background-color: var(--isg-bg) !important; color: var(--isg-text) !important; }
-.isg-header { background-color: var(--isg-header) !important; border-color: var(--isg-border) !important; }
-.isg-nav { background-color: var(--isg-nav) !important; border-color: var(--isg-border) !important; }
-.isg-card { background-color: var(--isg-card) !important; border-color: var(--isg-border) !important; color: var(--isg-text) !important; }
-.isg-input { background-color: var(--isg-input-bg) !important; border-color: var(--isg-border) !important; color: var(--isg-text) !important; }
-.isg-label { color: var(--isg-label) !important; }
-.isg-text { color: var(--isg-text) !important; }
-.isg-text-muted { color: var(--isg-text-muted) !important; }
-.isg-td { border-color: var(--isg-td-border) !important; color: var(--isg-text) !important; }
-.isg-th { border-color: var(--isg-border) !important; color: var(--isg-text-muted) !important; }
-.isg-stat-card { background-color: var(--isg-card) !important; border-color: var(--isg-border) !important; }

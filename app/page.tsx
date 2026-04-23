@@ -366,29 +366,29 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], observ
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
-  app: { minHeight: "100vh", backgroundColor: "#0f172a", color: "#e2e8f0", fontFamily: "'IBM Plex Sans', system-ui, sans-serif" },
-  header: { backgroundColor: "#1e293b", borderBottom: "1px solid #334155", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 },
-  nav: { display: "flex", gap: 2, padding: "12px 24px 0", borderBottom: "1px solid #1e293b", backgroundColor: "#0f172a", overflowX: "auto" as const },
+  app: { minHeight: "100vh", backgroundColor: "var(--isg-bg)", color: "var(--isg-text)", fontFamily: "'IBM Plex Sans', system-ui, sans-serif" },
+  header: { backgroundColor: "var(--isg-header)", borderBottom: "1px solid var(--isg-border)", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 },
+  nav: { display: "flex", gap: 2, padding: "12px 24px 0", borderBottom: "1px solid var(--isg-border)", backgroundColor: "var(--isg-nav)", overflowX: "auto" as const },
   content: { padding: 24, maxWidth: 1400, margin: "0 auto" },
-  card: { backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: 10, padding: 20, marginBottom: 16 },
-  sectionTitle: { fontSize: 13, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 16 },
-  input: { width: "100%", backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 6, color: "#e2e8f0", padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" as const },
-  select: { width: "100%", backgroundColor: "#0f172a", border: "1px solid #334155", borderRadius: 6, color: "#e2e8f0", padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" as const },
-  label: { fontSize: 12, color: "#94a3b8", marginBottom: 4, display: "block" },
+  card: { backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 10, padding: 20, marginBottom: 16 },
+  sectionTitle: { fontSize: 13, fontWeight: 600, color: "var(--isg-text-muted)", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 16 },
+  input: { width: "100%", backgroundColor: "var(--isg-input-bg)", border: "1px solid var(--isg-border)", borderRadius: 6, color: "var(--isg-text)", padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" as const },
+  select: { width: "100%", backgroundColor: "var(--isg-input-bg)", border: "1px solid var(--isg-border)", borderRadius: 6, color: "var(--isg-text)", padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" as const },
+  label: { fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 4, display: "block" },
   formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 },
   btnPrimary: { backgroundColor: "#0ea5e9", color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
   btnDanger: { backgroundColor: "#dc2626", color: "#fff", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer" },
-  btnSecondary: { backgroundColor: "#334155", color: "#e2e8f0", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer" },
+  btnSecondary: { backgroundColor: "var(--isg-btn-secondary)", color: "var(--isg-text)", border: "1px solid var(--isg-border)", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer" },
   btnSuccess: { backgroundColor: "#16a34a", color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
   badge: { display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600 },
   table: { width: "100%", borderCollapse: "collapse" as const, fontSize: 13 },
-  th: { textAlign: "left" as const, padding: "8px 12px", borderBottom: "1px solid #334155", color: "#94a3b8", fontWeight: 600, fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" },
-  td: { padding: "10px 12px", borderBottom: "1px solid #1e293b", verticalAlign: "top" as const },
+  th: { textAlign: "left" as const, padding: "8px 12px", borderBottom: "1px solid var(--isg-border)", color: "var(--isg-text-muted)", fontWeight: 600, fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" },
+  td: { padding: "10px 12px", borderBottom: "1px solid var(--isg-border)", verticalAlign: "top" as const, color: "var(--isg-text)" },
   searchBar: { display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" as const },
   statGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12, marginBottom: 20 },
-  statCard: { backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: 16 },
+  statCard: { backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 8, padding: 16 },
   statValue: { fontSize: 28, fontWeight: 700, lineHeight: 1, marginBottom: 4 },
-  statLabel: { fontSize: 12, color: "#94a3b8" },
+  statLabel: { fontSize: 12, color: "var(--isg-text-muted)" },
 };
 
 function DatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -481,9 +481,9 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
 
 function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
-  const [h, m] = value ? value.split(":").map(Number) : [8, 0];
-  const [hour, setHour] = useState(h);
-  const [minute, setMinute] = useState(m);
+  const parts = value ? value.split(":") : ["8", "0"];
+  const [hour, setHour] = useState(parseInt(parts[0]) || 8);
+  const [minute, setMinute] = useState(parseInt(parts[1]) || 0);
 
   const apply = (newH: number, newM: number) => {
     onChange(`${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`);

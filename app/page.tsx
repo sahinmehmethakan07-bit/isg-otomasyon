@@ -1,7 +1,9 @@
 "use client";
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
-import { db } from "../lib/firebase";
+import { db, auth } from "../lib/firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
 import {
   collection,
   getDocs,
@@ -561,6 +563,19 @@ export default function Page() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.push("/login");
+      } else {
+        setAuthReady(true);
+      }
+    });
+    return () => unsub();
+  }, [router]);
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -781,11 +796,11 @@ export default function Page() {
     { id: "risk", label: "🛡 Risk" },
   ];
 
-  if (!mounted || loading) {
+  if (!authReady || !mounted || loading) {
     return (
       <div style={{ ...styles.app, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
         <div style={{ fontSize: 32 }}>🦺</div>
-        <div style={{ color: "#94a3b8", fontSize: 14 }}>Veriler yükleniyor...</div>
+        <div style={{ color: "#94a3b8", fontSize: 14 }}>Yükleniyor...</div>
       </div>
     );
   }
@@ -803,7 +818,10 @@ export default function Page() {
           <span style={{ fontSize: 20 }}>🦺</span>
           <span>İSG <span style={{ color: "#38bdf8" }}>Otomasyon</span></span>
         </div>
-        <button style={{ ...styles.btnSecondary, fontSize: 11 }} onClick={loadAll}>🔄 Yenile</button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button style={{ ...styles.btnSecondary, fontSize: 11 }} onClick={loadAll}>🔄 Yenile</button>
+          <button style={{ ...styles.btnSecondary, fontSize: 11 }} onClick={() => signOut(auth).then(() => router.push("/login"))}>🚪 Çıkış</button>
+        </div>
       </header>
 
       <nav style={styles.nav}>

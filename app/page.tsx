@@ -218,10 +218,10 @@ function tr(text: string): string {
 }
 
 async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
-  const { default: jsPDF } = await import("jspdf");
-  const { default: autoTable } = await import("jspdf-autotable");
+  const pdfMake = (await import("pdfmake/build/pdfmake")).default;
+  const pdfFonts = (await import("pdfmake/build/vfs_fonts")).default;
+  pdfMake.vfs = pdfFonts.vfs;
 
-  // Tüm eski kod silindi, temiz versiyon:
   const today = new Date().toLocaleDateString("tr-TR");
   const byCompany = companies
     .map((c) => ({ company: c, risks: risks.filter((r) => r.companyId === c.id) }))
@@ -229,131 +229,117 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
 
   if (byCompany.length === 0) return;
 
-  const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3" });
+  const scoreColor = (s: number) => s >= 15 ? "#dc2626" : s >= 8 ? "#d97706" : "#16a34a";
 
-  // NotoSans Türkçe font yükle
-  pdf.addFileToVFS("NotoSans-Regular.ttf", NOTO_SANS_BASE64);
-  pdf.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
-  pdf.addFileToVFS("NotoSans-Bold.ttf", NOTO_SANS_BASE64);
-  pdf.addFont("NotoSans-Bold.ttf", "NotoSans", "bold");
-  pdf.setFont("NotoSans", "normal");
+  const content: any[] = [];
 
-  const pw = pdf.internal.pageSize.width;
-  const ph = pdf.internal.pageSize.height;
-
-  let isFirst = true;
-  for (const { company, risks: companyRisks } of byCompany) {
-    if (!isFirst) pdf.addPage();
-    isFirst = false;
+  for (const { company, risks: cr } of byCompany) {
+    if (content.length > 0) content.push({ text: "", pageBreak: "before" });
 
     // Başlık
-    pdf.setFillColor(30, 41, 59);
-    pdf.rect(0, 0, pw, 18, "F");
-    pdf.setFont("NotoSans", "bold");
-    pdf.setFontSize(12);
-    pdf.setTextColor(255, 255, 255);
-    pdf.text(company.officialName.toUpperCase(), pw / 2, 8, { align: "center" });
-    pdf.setFontSize(9);
-    pdf.setFont("NotoSans", "normal");
-    pdf.text("RISK DEGERLENDIRME RAPORU", pw / 2, 14, { align: "center" });
+    content.push({
+      table: {
+        widths: ["*"],
+        body: [[{
+          stack: [
+            { text: company.officialName.toUpperCase(), style: "header", alignment: "center" },
+            { text: "RİSK DEĞERLENDİRME RAPORU", style: "subheader", alignment: "center" },
+          ],
+          fillColor: "#1e293b", color: "white", margin: [0, 8, 0, 8],
+        }]],
+      },
+      layout: "noBorders",
+      margin: [0, 0, 0, 8],
+    });
 
     // Bilgi satırları
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFontSize(7.5);
-    pdf.setFont("NotoSans", "normal");
-    const infoY = 24;
-    const col2X = pw / 2 + 10;
-    const gap = 6;
+    content.push({
+      columns: [
+        { width: "*", stack: [
+          { text: [{ text: "İşyeri Ünvanı: ", bold: true }, company.officialName], fontSize: 8, margin: [0, 1] },
+          { text: [{ text: "NACE Kodu: ", bold: true }, company.naceCode], fontSize: 8, margin: [0, 1] },
+          { text: [{ text: "Tehlike Sınıfı: ", bold: true }, company.dangerClass], fontSize: 8, margin: [0, 1] },
+          { text: [{ text: "Çalışan Sayısı: ", bold: true }, String(company.employeeCount)], fontSize: 8, margin: [0, 1] },
+          { text: [{ text: "Hizmet Türü: ", bold: true }, company.serviceType], fontSize: 8, margin: [0, 1] },
+        ]},
+        { width: "*", stack: [
+          { text: [{ text: "SGK Sicil No: ", bold: true }, company.sgkSicil], fontSize: 8, margin: [0, 1] },
+          { text: [{ text: "Analiz Tarihi: ", bold: true }, today], fontSize: 8, margin: [0, 1] },
+          { text: [{ text: "Geçerlilik Tarihi: ", bold: true }, new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toLocaleDateString("tr-TR")], fontSize: 8, margin: [0, 1] },
+        ]},
+      ],
+      margin: [0, 0, 0, 8],
+    });
 
-    const info = (label: string, value: string, x: number, y: number) => {
-      pdf.setFont("NotoSans", "bold");
-      pdf.text(label, x, y);
-      pdf.setFont("NotoSans", "normal");
-      pdf.text(value, x + pdf.getTextWidth(label) + 2, y);
-    };
+    // Tablo
+    const tableBody: any[] = [[
+      { text: "No", style: "tableHeader" },
+      { text: "Bölüm", style: "tableHeader" },
+      { text: "Tehlike Kaynağı", style: "tableHeader" },
+      { text: "Tehlike/Risk", style: "tableHeader" },
+      { text: "Mevcut Önlem", style: "tableHeader" },
+      { text: "Öneriler", style: "tableHeader" },
+      { text: "O", style: "tableHeader" },
+      { text: "Ş", style: "tableHeader" },
+      { text: "RS", style: "tableHeader" },
+      { text: "KO", style: "tableHeader" },
+      { text: "KŞ", style: "tableHeader" },
+      { text: "KRS", style: "tableHeader" },
+      { text: "Etkilenecek", style: "tableHeader" },
+      { text: "Sorumlu", style: "tableHeader" },
+      { text: "Termin", style: "tableHeader" },
+      { text: "Durum", style: "tableHeader" },
+    ]];
 
-    info("Isyeri Unvani    :", company.officialName, 14, infoY);
-    info("SGK Sicil No.    :", company.sgkSicil, col2X, infoY);
-    info("NACE Kodu        :", company.naceCode, 14, infoY + gap);
-    info("Analiz Tarihi    :", today, col2X, infoY + gap);
-    info("Tehlike Sinifi   :", company.dangerClass, 14, infoY + gap * 2);
-    info("Gecerlilik Tarihi:", new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toLocaleDateString("tr-TR"), col2X, infoY + gap * 2);
-    info("Calisan Sayisi   :", String(company.employeeCount), 14, infoY + gap * 3);
-    info("Hizmet Turu      :", company.serviceType, col2X, infoY + gap * 3);
+    cr.forEach((r, i) => {
+      tableBody.push([
+        { text: String(i + 1), fontSize: 7, alignment: "center" },
+        { text: r.section || "", fontSize: 7 },
+        { text: r.hazard || "", fontSize: 7 },
+        { text: r.risk || "", fontSize: 7 },
+        { text: r.currentMeasure || "", fontSize: 7 },
+        { text: r.actionToTake || "", fontSize: 7 },
+        { text: String(r.probability), fontSize: 7, alignment: "center" },
+        { text: String(r.severity), fontSize: 7, alignment: "center" },
+        { text: String(r.score), fontSize: 7, alignment: "center", bold: true, color: "white", fillColor: scoreColor(r.score) },
+        { text: String(r.residualProbability), fontSize: 7, alignment: "center" },
+        { text: String(r.residualSeverity), fontSize: 7, alignment: "center" },
+        { text: String(r.residualScore), fontSize: 7, alignment: "center", bold: true, color: "white", fillColor: scoreColor(r.residualScore) },
+        { text: r.affectedPersons || "-", fontSize: 7 },
+        { text: r.responsible || "", fontSize: 7 },
+        { text: r.dueDate || "", fontSize: 7 },
+        { text: r.status || "", fontSize: 7 },
+      ]);
+    });
 
-    // Risk tablosu
-    const head = [["No", "Bolum", "Tehlike Kaynagi", "Tehlike/Risk", "Mevcut Onlem", "Oneriler", "O", "S", "RS", "KO", "KS", "KRS", "Etkilenecek", "Sorumlu", "Termin", "Durum"]];
-    const body = companyRisks.map((r, i) => [
-      String(i + 1),
-      r.section || "",
-      r.hazard || "",
-      r.risk || "",
-      r.currentMeasure || "",
-      r.actionToTake || "",
-      String(r.probability),
-      String(r.severity),
-      String(r.score),
-      String(r.residualProbability),
-      String(r.residualSeverity),
-      String(r.residualScore),
-      r.affectedPersons || "-",
-      r.responsible || "",
-      r.dueDate || "",
-      r.status || "",
-    ]);
-
-    autoTable(pdf, {
-      startY: infoY + gap * 4 + 2,
-      margin: { left: 14, right: 14, bottom: 20 },
-      head,
-      body,
-      styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak", font: "NotoSans" },
-      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: "normal", fontSize: 7 },
-      columnStyles: {
-        0: { cellWidth: 8 },
-        1: { cellWidth: 22 },
-        2: { cellWidth: 30 },
-        3: { cellWidth: 28 },
-        4: { cellWidth: 28 },
-        5: { cellWidth: 30 },
-        6: { cellWidth: 8 },
-        7: { cellWidth: 8 },
-        8: { cellWidth: 10 },
-        9: { cellWidth: 8 },
-        10: { cellWidth: 8 },
-        11: { cellWidth: 10 },
-        12: { cellWidth: 24 },
-        13: { cellWidth: 20 },
-        14: { cellWidth: 18 },
-        15: { cellWidth: 20 },
+    content.push({
+      table: {
+        headerRows: 1,
+        widths: [14, 36, 46, 40, 40, 46, 12, 12, 14, 12, 12, 14, 36, 30, 26, 30],
+        body: tableBody,
       },
-      didDrawCell: (data: any) => {
-        if (data.section === "body" && data.column.index === 8) {
-          const score = parseInt(data.cell.text[0]);
-          const color = score >= 15 ? [220, 38, 38] : score >= 8 ? [217, 119, 6] : [22, 163, 74];
-          pdf.setFillColor(color[0], color[1], color[2]);
-          pdf.rect(data.cell.x + 1, data.cell.y + 1, data.cell.width - 2, data.cell.height - 2, "F");
-          pdf.setTextColor(255, 255, 255);
-          pdf.setFont("NotoSans", "bold");
-          pdf.setFontSize(7);
-          pdf.text(data.cell.text[0], data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2 + 1, { align: "center" });
-        }
-        if (data.section === "body" && data.column.index === 11) {
-          const score = parseInt(data.cell.text[0]);
-          const color = score >= 15 ? [220, 38, 38] : score >= 8 ? [217, 119, 6] : [22, 163, 74];
-          pdf.setFillColor(color[0], color[1], color[2]);
-          pdf.rect(data.cell.x + 1, data.cell.y + 1, data.cell.width - 2, data.cell.height - 2, "F");
-          pdf.setTextColor(255, 255, 255);
-          pdf.setFont("NotoSans", "bold");
-          pdf.setFontSize(7);
-          pdf.text(data.cell.text[0], data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2 + 1, { align: "center" });
-        }
+      layout: {
+        fillColor: (rowIndex: number) => rowIndex === 0 ? "#1e293b" : rowIndex % 2 === 0 ? "#f8fafc" : null,
       },
     });
   }
 
-  pdf.save(`Risk_Degerlendirme_Raporu_${today.replace(/\./g, "_")}.pdf`);
+  const docDef: any = {
+    pageOrientation: "landscape",
+    pageSize: "A3",
+    pageMargins: [14, 14, 14, 14],
+    content,
+    styles: {
+      header: { fontSize: 13, bold: true, color: "white" },
+      subheader: { fontSize: 9, color: "white", margin: [0, 2, 0, 0] },
+      tableHeader: { fontSize: 7, bold: true, color: "white", fillColor: "#1e293b", alignment: "center" },
+    },
+    defaultStyle: { font: "Roboto" },
+  };
+
+  pdfMake.createPdf(docDef).download(`Risk_Degerlendirme_Raporu_${today.replace(/\./g, "_")}.pdf`);
 }
+
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {

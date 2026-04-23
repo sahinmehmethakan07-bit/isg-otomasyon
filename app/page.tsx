@@ -100,6 +100,7 @@ type Shift = {
 };
 
 type RiskRecord = {
+  id: string;
   companyId: string;
   sourceDofId: string | null;
   section: string;

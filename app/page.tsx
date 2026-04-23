@@ -1,7 +1,9 @@
 "use client";
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
-import { db } from "../lib/firebase";
+import { db, auth } from "../lib/firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
 import { NOTO_SANS_BASE64 } from "../lib/notoSansFont";
 import {
   collection,
@@ -84,8 +86,20 @@ type DofRecord = {
   afterPhoto?: string;
 };
 
-type RiskRecord = {
+type ShiftType = "Gündüz" | "Akşam" | "Gece";
+
+type Shift = {
   id: string;
+  companyId: string;
+  employeeId: string;
+  date: string;
+  shiftType: ShiftType;
+  startTime: string;
+  endTime: string;
+  note: string;
+};
+
+type RiskRecord = {
   companyId: string;
   sourceDofId: string | null;
   section: string;
@@ -553,6 +567,7 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Page() {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -582,16 +597,21 @@ export default function Page() {
     affectedPersons: "", lawReference: "", controlDate: "",
   });
 
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [newShift, setNewShift] = useState({ companyId: "", employeeId: "", date: "", shiftType: "Gündüz" as ShiftType, startTime: "08:00", endTime: "16:00", note: "" });
+  const [shiftWeekOffset, setShiftWeekOffset] = useState(0);
+
   async function loadAll() {
     setLoading(true);
     try {
-      const [compSnap, empSnap, docSnap, obsSnap, dofSnap, riskSnap] = await Promise.all([
+      const [compSnap, empSnap, docSnap, obsSnap, dofSnap, riskSnap, shiftSnap] = await Promise.all([
         getDocs(collection(db, "companies")),
         getDocs(collection(db, "employees")),
         getDocs(collection(db, "documents")),
         getDocs(collection(db, "observers")),
         getDocs(collection(db, "dofs")),
         getDocs(collection(db, "risks")),
+        getDocs(collection(db, "shifts")),
       ]);
       setCompanies(compSnap.docs.map(d => ({ id: d.id, ...d.data() } as Company)));
       setEmployees(empSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
@@ -599,6 +619,7 @@ export default function Page() {
       setObservers(obsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Observer)));
       setDofs(dofSnap.docs.map(d => ({ id: d.id, ...d.data() } as DofRecord)));
       setRisks(riskSnap.docs.map(d => ({ id: d.id, ...d.data() } as RiskRecord)));
+      setShifts(shiftSnap.docs.map(d => ({ id: d.id, ...d.data() } as Shift)));
     } catch (e) {
       console.error("Firestore yükleme hatası", e);
     } finally {
@@ -607,7 +628,16 @@ export default function Page() {
     }
   }
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.push("/login");
+      } else {
+        loadAll();
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) ?? null;
   const selectedEmployeeCompany = selectedEmployee ? companies.find(c => c.id === selectedEmployee.companyId) ?? null : null;
@@ -664,7 +694,18 @@ export default function Page() {
 
   async function deleteCompany(id: string) {
     if (!confirm("Bu firmayı silmek istediğinizden emin misiniz?")) return;
-    await deleteDoc(doc(db, "companies", id));
+    // Firestore'dan cascade sil
+    const relatedEmployees = employees.filter(e => e.companyId === id);
+    const relatedDocs = documents.filter(d => d.companyId === id);
+    const relatedDofs = dofs.filter(d => d.companyId === id);
+    const relatedRisks = risks.filter(r => r.companyId === id);
+    await Promise.all([
+      deleteDoc(doc(db, "companies", id)),
+      ...relatedEmployees.map(e => deleteDoc(doc(db, "employees", e.id))),
+      ...relatedDocs.map(d => deleteDoc(doc(db, "documents", d.id))),
+      ...relatedDofs.map(d => deleteDoc(doc(db, "dofs", d.id))),
+      ...relatedRisks.map(r => deleteDoc(doc(db, "risks", r.id))),
+    ]);
     setCompanies(prev => prev.filter(c => c.id !== id));
     setEmployees(prev => prev.filter(e => e.companyId !== id));
     setDocuments(prev => prev.filter(d => d.companyId !== id));
@@ -797,6 +838,37 @@ export default function Page() {
     setRisks(prev => prev.filter(r => r.id !== id));
   }
 
+  async function addShift() {
+    if (!newShift.companyId || !newShift.employeeId || !newShift.date) return;
+    const data = { ...newShift };
+    const ref = await addDoc(collection(db, "shifts"), data);
+    setShifts(prev => [...prev, { id: ref.id, ...data }]);
+    setNewShift({ companyId: newShift.companyId, employeeId: "", date: "", shiftType: "Gündüz", startTime: "08:00", endTime: "16:00", note: "" });
+  }
+
+  async function deleteShift(id: string) {
+    await deleteDoc(doc(db, "shifts", id));
+    setShifts(prev => prev.filter(s => s.id !== id));
+  }
+
+  // Haftalık takvim için yardımcı fonksiyonlar
+  function getWeekDays(offset: number): Date[] {
+    const now = new Date();
+    const monday = new Date(now);
+    const day = now.getDay() === 0 ? 6 : now.getDay() - 1;
+    monday.setDate(now.getDate() - day + offset * 7);
+    monday.setHours(0, 0, 0, 0);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d;
+    });
+  }
+
+  function formatDateKey(d: Date) {
+    return d.toISOString().slice(0, 10);
+  }
+
   const tabs = [
     { id: "ozet", label: "📊 Özet" },
     { id: "firmalar", label: "🏢 Firmalar" },
@@ -805,6 +877,7 @@ export default function Page() {
     { id: "gozlemciler", label: "🔍 Gözlemciler" },
     { id: "dof", label: "⚠️ DÖF" },
     { id: "risk", label: "🛡 Risk" },
+    { id: "vardiya", label: "🕐 Vardiya" },
   ];
 
   if (!mounted || loading) {
@@ -829,7 +902,14 @@ export default function Page() {
           <span style={{ fontSize: 20 }}>🦺</span>
           <span>İSG <span style={{ color: "#38bdf8" }}>Otomasyon</span></span>
         </div>
-        <button style={{ ...styles.btnSecondary, fontSize: 11 }} onClick={loadAll}>🔄 Yenile</button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button style={{ ...styles.btnSecondary, fontSize: 11 }} onClick={loadAll}>🔄 Yenile</button>
+          <button style={{ ...styles.btnDanger, fontSize: 11 }} onClick={async () => {
+            await signOut(auth);
+            document.cookie = "isg_session=; path=/; max-age=0";
+            router.push("/login");
+          }}>Çıkış</button>
+        </div>
       </header>
 
       <nav style={styles.nav}>
@@ -1267,6 +1347,157 @@ export default function Page() {
             </div>
           </div>
         )}
+
+        {activeTab === "vardiya" && (() => {
+          const weekDays = getWeekDays(shiftWeekOffset);
+          const dayNames = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+          const companyEmployees = newShift.companyId
+            ? employees.filter(e => e.companyId === newShift.companyId && e.isActive)
+            : [];
+          const filteredShifts = selectedCompanyId === "all"
+            ? shifts
+            : shifts.filter(s => s.companyId === selectedCompanyId);
+
+          const shiftColor: Record<ShiftType, string> = {
+            "Gündüz": "#0ea5e9",
+            "Akşam": "#d97706",
+            "Gece": "#7c3aed",
+          };
+
+          return (
+            <div>
+              {/* Form */}
+              <div style={styles.card}>
+                <p style={styles.sectionTitle}>Vardiya Ekle</p>
+                <div style={styles.formGrid}>
+                  <FormField label="Firma *">
+                    <select style={styles.select} value={newShift.companyId} onChange={e => setNewShift({ ...newShift, companyId: e.target.value, employeeId: "" })}>
+                      <option value="">Seçin...</option>
+                      {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
+                    </select>
+                  </FormField>
+                  <FormField label="Personel *">
+                    <select style={styles.select} value={newShift.employeeId} onChange={e => setNewShift({ ...newShift, employeeId: e.target.value })}>
+                      <option value="">Seçin...</option>
+                      {companyEmployees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
+                    </select>
+                  </FormField>
+                  <FormField label="Tarih *">
+                    <input style={styles.input} type="date" value={newShift.date} onChange={e => setNewShift({ ...newShift, date: e.target.value })} />
+                  </FormField>
+                  <FormField label="Vardiya Türü">
+                    <select style={styles.select} value={newShift.shiftType} onChange={e => setNewShift({ ...newShift, shiftType: e.target.value as ShiftType, startTime: e.target.value === "Gündüz" ? "08:00" : e.target.value === "Akşam" ? "16:00" : "00:00", endTime: e.target.value === "Gündüz" ? "16:00" : e.target.value === "Akşam" ? "00:00" : "08:00" })}>
+                      <option>Gündüz</option>
+                      <option>Akşam</option>
+                      <option>Gece</option>
+                    </select>
+                  </FormField>
+                  <FormField label="Başlangıç">
+                    <input style={styles.input} type="time" value={newShift.startTime} onChange={e => setNewShift({ ...newShift, startTime: e.target.value })} />
+                  </FormField>
+                  <FormField label="Bitiş">
+                    <input style={styles.input} type="time" value={newShift.endTime} onChange={e => setNewShift({ ...newShift, endTime: e.target.value })} />
+                  </FormField>
+                  <FormField label="Not">
+                    <input style={styles.input} value={newShift.note} onChange={e => setNewShift({ ...newShift, note: e.target.value })} placeholder="Opsiyonel..." />
+                  </FormField>
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <button style={styles.btnPrimary} onClick={addShift}>Vardiya Ekle</button>
+                </div>
+              </div>
+
+              {/* Haftalık Takvim */}
+              <div style={styles.card}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+                  <p style={{ ...styles.sectionTitle, margin: 0 }}>Haftalık Takvim</p>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}>
+                      <option value="all">Tüm Firmalar</option>
+                      {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
+                    </select>
+                    <button style={styles.btnSecondary} onClick={() => setShiftWeekOffset(prev => prev - 1)}>← Önceki</button>
+                    <button style={{ ...styles.btnSecondary, minWidth: 60 }} onClick={() => setShiftWeekOffset(0)}>Bu Hafta</button>
+                    <button style={styles.btnSecondary} onClick={() => setShiftWeekOffset(prev => prev + 1)}>Sonraki →</button>
+                  </div>
+                </div>
+
+                {/* Takvim grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
+                  {weekDays.map((day, i) => {
+                    const key = formatDateKey(day);
+                    const dayShifts = filteredShifts.filter(s => s.date === key);
+                    const isToday = formatDateKey(new Date()) === key;
+                    return (
+                      <div key={key} style={{ backgroundColor: isToday ? "#1e3a5f" : "#0f172a", border: `1px solid ${isToday ? "#0ea5e9" : "#334155"}`, borderRadius: 8, padding: 8, minHeight: 120 }}>
+                        <div style={{ fontSize: 11, color: isToday ? "#38bdf8" : "#64748b", fontWeight: 600, marginBottom: 2 }}>{dayNames[i]}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: isToday ? "#e2e8f0" : "#94a3b8", marginBottom: 8 }}>{day.getDate()}.{String(day.getMonth() + 1).padStart(2, "0")}</div>
+                        {dayShifts.map(s => {
+                          const emp = employees.find(e => e.id === s.employeeId);
+                          return (
+                            <div key={s.id} style={{ backgroundColor: shiftColor[s.shiftType] + "22", border: `1px solid ${shiftColor[s.shiftType]}44`, borderRadius: 4, padding: "4px 6px", marginBottom: 4, fontSize: 11 }}>
+                              <div style={{ color: shiftColor[s.shiftType], fontWeight: 600 }}>{s.shiftType}</div>
+                              <div style={{ color: "#e2e8f0" }}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</div>
+                              <div style={{ color: "#64748b" }}>{s.startTime}–{s.endTime}</div>
+                              {s.note && <div style={{ color: "#94a3b8", fontSize: 10, marginTop: 2 }}>{s.note}</div>}
+                              <button style={{ ...styles.btnDanger, fontSize: 10, padding: "2px 6px", marginTop: 4 }} onClick={() => deleteShift(s.id)}>Sil</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Legend */}
+                <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
+                  {(["Gündüz", "Akşam", "Gece"] as ShiftType[]).map(t => (
+                    <div key={t} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: shiftColor[t] }} />
+                      <span style={{ fontSize: 12, color: "#94a3b8" }}>{t}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Liste görünümü */}
+              <div style={styles.card}>
+                <p style={styles.sectionTitle}>Tüm Vardiyalar</p>
+                <div style={{ ...styles.card, padding: 0, overflow: "auto", margin: 0 }}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        {["Firma", "Personel", "Tarih", "Tür", "Saat", "Not", "İşlem"].map(h => (
+                          <th key={h} style={styles.th}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredShifts.sort((a, b) => b.date.localeCompare(a.date)).map(s => {
+                        const emp = employees.find(e => e.id === s.employeeId);
+                        const company = companies.find(c => c.id === s.companyId);
+                        return (
+                          <tr key={s.id}>
+                            <td style={{ ...styles.td, fontSize: 12 }}>{company?.nickName || "—"}</td>
+                            <td style={styles.td}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</td>
+                            <td style={{ ...styles.td, fontSize: 12 }}>{s.date}</td>
+                            <td style={styles.td}><Badge text={s.shiftType} color={shiftColor[s.shiftType]} /></td>
+                            <td style={{ ...styles.td, fontSize: 12 }}>{s.startTime}–{s.endTime}</td>
+                            <td style={{ ...styles.td, fontSize: 12, color: "#94a3b8" }}>{s.note || "—"}</td>
+                            <td style={styles.td}><button style={styles.btnDanger} onClick={() => deleteShift(s.id)}>Sil</button></td>
+                          </tr>
+                        );
+                      })}
+                      {filteredShifts.length === 0 && (
+                        <tr><td colSpan={7} style={{ ...styles.td, textAlign: "center", color: "#64748b" }}>Vardiya kaydı yok</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
       </main>
     </div>

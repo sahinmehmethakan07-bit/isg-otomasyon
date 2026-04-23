@@ -516,10 +516,10 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
               </div>
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4, marginBottom: 8 }}>
-            {["00:00","08:00","09:00","10:00","12:00","16:00","17:00","18:00","20:00","22:00","23:00","23:59"].map(t => (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 3, marginBottom: 8, maxHeight: 140, overflowY: "auto" }}>
+            {Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`).map(t => (
               <button key={t} onClick={() => { const [hh, mm] = t.split(":").map(Number); setHour(hh); setMinute(mm); apply(hh, mm); setOpen(false); }}
-                style={{ ...styles.btnSecondary, fontSize: 10, padding: "3px 0", backgroundColor: value === t ? "#0ea5e9" : "#334155", color: value === t ? "#fff" : "#e2e8f0" }}>{t}</button>
+                style={{ ...styles.btnSecondary, fontSize: 10, padding: "3px 0", backgroundColor: value === t ? "#0ea5e9" : undefined, color: value === t ? "#fff" : undefined }}>{t}</button>
             ))}
           </div>
           <button onClick={() => setOpen(false)} style={{ ...styles.btnPrimary, width: "100%", fontSize: 12 }}>Tamam</button>
@@ -1411,9 +1411,9 @@ export default function Page() {
                     const dayShifts = filteredShifts.filter(s => s.date === key);
                     const isToday = formatDateKey(new Date()) === key;
                     return (
-                      <div key={key} style={{ backgroundColor: isToday ? "#1e3a5f" : "#0f172a", border: `1px solid ${isToday ? "#0ea5e9" : "#334155"}`, borderRadius: 8, padding: 8, minHeight: 120 }}>
-                        <div style={{ fontSize: 11, color: isToday ? "#38bdf8" : "#64748b", fontWeight: 600, marginBottom: 2 }}>{dayNames[i]}</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: isToday ? "#e2e8f0" : "#94a3b8", marginBottom: 8 }}>{day.getDate()}.{String(day.getMonth() + 1).padStart(2, "0")}</div>
+                      <div key={key} style={{ backgroundColor: isToday ? "var(--isg-today-bg, #1e3a5f)" : "var(--isg-input-bg)", border: `1px solid ${isToday ? "#0ea5e9" : "var(--isg-border)"}`, borderRadius: 8, padding: 8, minHeight: 120 }}>
+                        <div style={{ fontSize: 11, color: isToday ? "#38bdf8" : "var(--isg-text-muted)", fontWeight: 600, marginBottom: 2 }}>{dayNames[i]}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: isToday ? "var(--isg-text)" : "var(--isg-text-muted)", marginBottom: 8 }}>{day.getDate()}.{String(day.getMonth() + 1).padStart(2, "0")}</div>
                         {dayShifts.map(s => {
                           const emp = employees.find(e => e.id === s.employeeId);
                           return (

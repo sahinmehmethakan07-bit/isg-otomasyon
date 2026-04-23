@@ -419,11 +419,11 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
         onClick={() => setOpen(!open)}
         style={{ ...styles.input, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
       >
-        <span style={{ color: value ? "#e2e8f0" : "#64748b" }}>{displayValue}</span>
+        <span style={{ color: value ? "var(--isg-text)" : "var(--isg-text-muted)" }}>{displayValue}</span>
         <span style={{ fontSize: 14 }}>📅</span>
       </div>
       {open && (
-        <div style={{ position: "absolute", zIndex: 1000, top: "calc(100% + 4px)", left: 0, backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: 12, width: 240, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+        <div style={{ position: "absolute", zIndex: 1000, top: "calc(100% + 4px)", left: 0, backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 8, padding: 12, width: 240, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
           {/* Ay/Yıl navigasyon */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <button onClick={() => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); }} style={{ ...styles.btnSecondary, padding: "2px 8px" }}>‹</button>
@@ -440,7 +440,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
           {/* Gün başlıkları */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
             {["Pt","Sa","Ça","Pe","Cu","Ct","Pz"].map(d => (
-              <div key={d} style={{ textAlign: "center", fontSize: 10, color: "#64748b", padding: "2px 0" }}>{d}</div>
+              <div key={d} style={{ textAlign: "center", fontSize: 10, color: "var(--isg-text-muted)", padding: "2px 0" }}>{d}</div>
             ))}
           </div>
           {/* Günler */}
@@ -457,7 +457,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
                   onClick={() => select(day)}
                   style={{
                     backgroundColor: isSelected ? "#0ea5e9" : "transparent",
-                    color: isSelected ? "#fff" : "#e2e8f0",
+                    color: isSelected ? "#fff" : "var(--isg-text)",
                     border: "none",
                     borderRadius: 4,
                     padding: "4px 0",
@@ -496,22 +496,22 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
         <span style={{ fontSize: 14 }}>🕐</span>
       </div>
       {open && (
-        <div style={{ position: "absolute", zIndex: 1000, top: "calc(100% + 4px)", left: 0, backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: 16, width: 200, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+        <div style={{ position: "absolute", zIndex: 1000, top: "calc(100% + 4px)", left: 0, backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 8, padding: 16, width: 200, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>Saat</div>
+              <div style={{ fontSize: 11, color: "var(--isg-text-muted)", marginBottom: 4 }}>Saat</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 <button onClick={() => { const n = (hour + 1) % 24; setHour(n); apply(n, minute); }} style={{ ...styles.btnSecondary, padding: "2px 12px" }}>▲</button>
-                <div style={{ fontSize: 24, fontWeight: 700, color: "#e2e8f0", textAlign: "center", minWidth: 40 }}>{String(hour).padStart(2, "0")}</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--isg-text)", textAlign: "center", minWidth: 40 }}>{String(hour).padStart(2, "0")}</div>
                 <button onClick={() => { const n = (hour - 1 + 24) % 24; setHour(n); apply(n, minute); }} style={{ ...styles.btnSecondary, padding: "2px 12px" }}>▼</button>
               </div>
             </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: "#94a3b8", paddingTop: 8 }}>:</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: "var(--isg-text-muted)", paddingTop: 8 }}>:</div>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>Dakika</div>
+              <div style={{ fontSize: 11, color: "var(--isg-text-muted)", marginBottom: 4 }}>Dakika</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 <button onClick={() => { const n = (minute + 15) % 60; setMinute(n); apply(hour, n); }} style={{ ...styles.btnSecondary, padding: "2px 12px" }}>▲</button>
-                <div style={{ fontSize: 24, fontWeight: 700, color: "#e2e8f0", textAlign: "center", minWidth: 40 }}>{String(minute).padStart(2, "0")}</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--isg-text)", textAlign: "center", minWidth: 40 }}>{String(minute).padStart(2, "0")}</div>
                 <button onClick={() => { const n = (minute - 15 + 60) % 60; setMinute(n); apply(hour, n); }} style={{ ...styles.btnSecondary, padding: "2px 12px" }}>▼</button>
               </div>
             </div>
@@ -519,7 +519,7 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 3, marginBottom: 8, maxHeight: 140, overflowY: "auto" }}>
             {Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`).map(t => (
               <button key={t} onClick={() => { const [hh, mm] = t.split(":").map(Number); setHour(hh); setMinute(mm); apply(hh, mm); setOpen(false); }}
-                style={{ ...styles.btnSecondary, fontSize: 10, padding: "3px 0", backgroundColor: value === t ? "#0ea5e9" : undefined, color: value === t ? "#fff" : undefined }}>{t}</button>
+                style={{ ...styles.btnSecondary, fontSize: 10, padding: "3px 0", backgroundColor: value === t ? "#0ea5e9" : "var(--isg-input-bg)", color: value === t ? "#fff" : "var(--isg-text)" }}>{t}</button>
             ))}
           </div>
           <button onClick={() => setOpen(false)} style={{ ...styles.btnPrimary, width: "100%", fontSize: 12 }}>Tamam</button>
@@ -863,7 +863,7 @@ export default function Page() {
     return (
       <div style={{ ...styles.app, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
         <div style={{ fontSize: 32 }}>🦺</div>
-        <div style={{ color: "#94a3b8", fontSize: 14 }}>Veriler yükleniyor...</div>
+        <div style={{ color: "var(--isg-text-muted)", fontSize: 14 }}>Veriler yükleniyor...</div>
       </div>
     );
   }
@@ -896,7 +896,7 @@ export default function Page() {
 
       <nav style={styles.nav} className="isg-nav">
         {tabs.map(tab => (
-          <button key={tab.id} style={{ padding: "8px 16px", borderRadius: "6px 6px 0 0", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, whiteSpace: "nowrap" as const, backgroundColor: activeTab === tab.id ? "#0ea5e9" : "transparent", color: activeTab === tab.id ? "#fff" : "#94a3b8" }}
+          <button key={tab.id} style={{ padding: "8px 16px", borderRadius: "6px 6px 0 0", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, whiteSpace: "nowrap" as const, backgroundColor: activeTab === tab.id ? "#0ea5e9" : "transparent", color: activeTab === tab.id ? "#fff" : "var(--isg-text-muted)" }}
             onClick={() => { setActiveTab(tab.id); setSearch(""); }}>
             {tab.label}
           </button>
@@ -933,7 +933,7 @@ export default function Page() {
                 <div key={c.id} style={{ ...styles.card, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <div>
                     <div style={{ fontWeight: 600, marginBottom: 4 }}>{c.nickName}</div>
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>{empCount} personel · Sözleşme: {c.contractEnd} · <Badge text={c.dangerClass} color={c.dangerClass === "Çok Tehlikeli" ? "#dc2626" : c.dangerClass === "Tehlikeli" ? "#d97706" : "#16a34a"} /></div>
+                    <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>{empCount} personel · Sözleşme: {c.contractEnd} · <Badge text={c.dangerClass} color={c.dangerClass === "Çok Tehlikeli" ? "#dc2626" : c.dangerClass === "Tehlikeli" ? "#d97706" : "#16a34a"} /></div>
                   </div>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {summary.missingCount > 0 && <Badge text={`${summary.missingCount} Eksik`} color="#dc2626" />}
@@ -977,8 +977,8 @@ export default function Page() {
                     return (
                       <tr key={c.id}>
                         <td style={styles.td} className="isg-td"><span style={{ fontWeight: 600 }}>{c.nickName}</span></td>
-                        <td style={{ ...styles.td, maxWidth: 180, fontSize: 12, color: "#94a3b8" }}>{c.officialName}</td>
-                        <td style={{ ...styles.td, fontSize: 11, color: "#64748b" }}>{c.sgkSicil}</td>
+                        <td style={{ ...styles.td, maxWidth: 180, fontSize: 12, color: "var(--isg-text-muted)" }}>{c.officialName}</td>
+                        <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)" }}>{c.sgkSicil}</td>
                         <td style={styles.td} className="isg-td">{c.naceCode}</td>
                         <td style={styles.td} className="isg-td"><Badge text={c.dangerClass} color={c.dangerClass === "Çok Tehlikeli" ? "#dc2626" : c.dangerClass === "Tehlikeli" ? "#d97706" : "#16a34a"} /></td>
                         <td style={styles.td} className="isg-td">{c.employeeCount}</td>
@@ -1025,17 +1025,17 @@ export default function Page() {
                       return (
                         <tr key={emp.id} style={{ cursor: "pointer", backgroundColor: selectedEmployeeId === emp.id ? "#1a2942" : "transparent" }} onClick={() => setSelectedEmployeeId(emp.id)}>
                           <td style={styles.td} className="isg-td"><span style={{ fontWeight: 600 }}>{emp.firstName} {emp.lastName}</span></td>
-                          <td style={{ ...styles.td, fontSize: 12, color: "#94a3b8" }}>{emp.tcNo}</td>
+                          <td style={{ ...styles.td, fontSize: 12, color: "var(--isg-text-muted)" }}>{emp.tcNo}</td>
                           <td style={styles.td} className="isg-td">{emp.title}</td>
                           <td style={{ ...styles.td, fontSize: 12 }}>{company?.nickName}</td>
                           <td style={{ ...styles.td, fontSize: 12 }}>{emp.hireDate}</td>
                           <td style={styles.td} className="isg-td"><Badge text={emp.trainingComplete ? "Tamamlandı" : "Eksik"} color={emp.trainingComplete ? "#16a34a" : "#d97706"} /></td>
                           <td style={styles.td} className="isg-td">
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <div style={{ height: 6, width: 80, backgroundColor: "#0f172a", borderRadius: 3, overflow: "hidden" }}>
+                              <div style={{ height: 6, width: 80, backgroundColor: "var(--isg-bg)", borderRadius: 3, overflow: "hidden" }}>
                                 <div style={{ height: "100%", width: `${(cl.completed / cl.total) * 100}%`, backgroundColor: cl.missing === 0 ? "#16a34a" : "#d97706" }} />
                               </div>
-                              <span style={{ fontSize: 11, color: "#94a3b8" }}>{cl.completed}/{cl.total}</span>
+                              <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{cl.completed}/{cl.total}</span>
                             </div>
                           </td>
                           <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={e => { e.stopPropagation(); deleteEmployee(emp.id); }}>Sil</button></td>
@@ -1051,7 +1051,7 @@ export default function Page() {
                 <div style={styles.card} className="isg-card">
                   <p style={styles.sectionTitle} className="isg-text-muted">Personel Detayı</p>
                   <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 2 }}>{selectedEmployee.firstName} {selectedEmployee.lastName}</div>
-                  <div style={{ fontSize: 12, color: "#94a3b8" }}>{selectedEmployee.title}</div>
+                  <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>{selectedEmployee.title}</div>
                   <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{selectedEmployeeCompany?.nickName}</div>
                   <p style={{ ...styles.sectionTitle, marginTop: 16 }}>Kontrol Listesi</p>
                   {[{ key: "isgCertificateDate", label: "İSG Sertifikası Tarihi" }, { key: "ek2Date", label: "EK-2 Tarihi" }, { key: "orientationDate", label: "Oryantasyon Tarihi" }].map(({ key, label }) => (
@@ -1113,7 +1113,7 @@ export default function Page() {
                       <tr key={d.id}>
                         <td style={{ ...styles.td, fontWeight: 500 }}>{d.type}</td>
                         <td style={styles.td} className="isg-td">{company?.nickName}</td>
-                        <td style={{ ...styles.td, fontSize: 12, color: "#94a3b8" }}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</td>
+                        <td style={{ ...styles.td, fontSize: 12, color: "var(--isg-text-muted)" }}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</td>
                         <td style={{ ...styles.td, fontSize: 12 }}>{d.issueDate}</td>
                         <td style={{ ...styles.td, fontSize: 12 }}>{d.expiryDate || "—"}</td>
                         <td style={styles.td} className="isg-td">{d.expiryDate ? <div><Badge text={ds} color={statusColor(ds)} />{days !== null && days >= 0 && <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{days} gün</div>}</div> : "—"}</td>
@@ -1144,8 +1144,8 @@ export default function Page() {
                 <div key={obs.id} style={styles.card} className="isg-card">
                   <div style={{ fontWeight: 700, marginBottom: 4 }}>{obs.fullName}</div>
                   <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 2 }}>{obs.title}</div>
-                  <div style={{ fontSize: 12, color: "#64748b" }}>Sertifika: {obs.certificateNo}</div>
-                  <div style={{ fontSize: 12, color: "#64748b" }}>Tel: {obs.phone}</div>
+                  <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Sertifika: {obs.certificateNo}</div>
+                  <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Tel: {obs.phone}</div>
                   <div style={{ marginTop: 12 }}><button style={styles.btnDanger} onClick={() => deleteObserver(obs.id)}>Sil</button></div>
                 </div>
               ))}
@@ -1176,8 +1176,8 @@ export default function Page() {
                 <input style={styles.input} className="isg-input" value={newDof.lawReference} onChange={e => setNewDof({ ...newDof, lawReference: e.target.value })} />
               </div>
               <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div><label style={styles.label} className="isg-label">Öncesi Fotoğraf</label><input type="file" accept="image/*" style={{ fontSize: 12, color: "#94a3b8" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, beforePhoto: b64 }))} /></div>
-                <div><label style={styles.label} className="isg-label">Sonrası Fotoğraf</label><input type="file" accept="image/*" style={{ fontSize: 12, color: "#94a3b8" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, afterPhoto: b64 }))} /></div>
+                <div><label style={styles.label} className="isg-label">Öncesi Fotoğraf</label><input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, beforePhoto: b64 }))} /></div>
+                <div><label style={styles.label} className="isg-label">Sonrası Fotoğraf</label><input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, afterPhoto: b64 }))} /></div>
               </div>
               <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addDof}>DÖF Ekle</button></div>
             </div>
@@ -1199,14 +1199,14 @@ export default function Page() {
                     </div>
                     <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>{dof.description}</div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-                      <span style={{ fontSize: 11, color: "#64748b" }}>📍 {dof.location}</span>
-                      <span style={{ fontSize: 11, color: "#64748b" }}>👤 {dof.responsible}</span>
-                      <span style={{ fontSize: 11, color: "#64748b" }}>📅 {dof.dueDate}</span>
+                      <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>📍 {dof.location}</span>
+                      <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>👤 {dof.responsible}</span>
+                      <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>📅 {dof.dueDate}</span>
                     </div>
                     <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
                       <Badge text={dof.status} color={dof.status === "Kapandı" ? "#16a34a" : dof.status === "Devam Ediyor" ? "#d97706" : "#dc2626"} />
-                      <span style={{ fontSize: 11, color: "#64748b" }}>{company?.nickName}</span>
-                      {observer && <span style={{ fontSize: 11, color: "#64748b" }}>{observer.fullName}</span>}
+                      <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{company?.nickName}</span>
+                      {observer && <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{observer.fullName}</span>}
                     </div>
                     {(dof.beforePhoto || dof.afterPhoto) && (
                       <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
@@ -1259,7 +1259,7 @@ export default function Page() {
                   <input style={styles.input} className="isg-input" value={newRisk.lawReference} onChange={e => setNewRisk({ ...newRisk, lawReference: e.target.value })} placeholder="6331 sayılı İSG Kanunu..." />
                 </FormField>
               </div>
-              <div style={{ marginTop: 8, fontSize: 13, color: "#94a3b8" }}>
+              <div style={{ marginTop: 8, fontSize: 13, color: "var(--isg-text-muted)" }}>
                 Risk Skoru = <strong style={{ color: riskScoreColor(parseInt(newRisk.probability) * parseInt(newRisk.severity)) }}>{parseInt(newRisk.probability) * parseInt(newRisk.severity)}</strong>
                 {" · "}Kalıntı Skoru = <strong style={{ color: riskScoreColor(parseInt(newRisk.residualProbability) * parseInt(newRisk.residualSeverity)) }}>{parseInt(newRisk.residualProbability) * parseInt(newRisk.residualSeverity)}</strong>
               </div>
@@ -1305,9 +1305,9 @@ export default function Page() {
                         <td style={{ ...styles.td, fontSize: 12 }}>{company?.nickName}</td>
                         <td style={styles.td} className="isg-td">{r.section}</td>
                         <td style={{ ...styles.td, fontWeight: 500 }}>{r.hazard}</td>
-                        <td style={{ ...styles.td, fontSize: 12, color: "#94a3b8" }}>{r.risk}</td>
-                        <td style={{ ...styles.td, fontSize: 11, color: "#64748b" }}>{r.currentMeasure}</td>
-                        <td style={{ ...styles.td, fontSize: 11, color: "#64748b" }}>{r.actionToTake}</td>
+                        <td style={{ ...styles.td, fontSize: 12, color: "var(--isg-text-muted)" }}>{r.risk}</td>
+                        <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)" }}>{r.currentMeasure}</td>
+                        <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)" }}>{r.actionToTake}</td>
                         <td style={{ ...styles.td, textAlign: "center" as const, fontSize: 12 }}>{r.probability}</td>
                         <td style={{ ...styles.td, textAlign: "center" as const, fontSize: 12 }}>{r.severity}</td>
                         <td style={styles.td} className="isg-td"><span style={{ fontWeight: 700, color: riskScoreColor(r.score), fontSize: 14 }}>{r.score}</span></td>
@@ -1419,9 +1419,9 @@ export default function Page() {
                           return (
                             <div key={s.id} style={{ backgroundColor: shiftColor[s.shiftType] + "22", border: `1px solid ${shiftColor[s.shiftType]}44`, borderRadius: 4, padding: "4px 6px", marginBottom: 4, fontSize: 11 }}>
                               <div style={{ color: shiftColor[s.shiftType], fontWeight: 600 }}>{s.shiftType}</div>
-                              <div style={{ color: "#e2e8f0" }}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</div>
-                              <div style={{ color: "#64748b" }}>{s.startTime}–{s.endTime}</div>
-                              {s.note && <div style={{ color: "#94a3b8", fontSize: 10, marginTop: 2 }}>{s.note}</div>}
+                              <div style={{ color: "var(--isg-text)" }}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</div>
+                              <div style={{ color: "var(--isg-text-muted)" }}>{s.startTime}–{s.endTime}</div>
+                              {s.note && <div style={{ color: "var(--isg-text-muted)", fontSize: 10, marginTop: 2 }}>{s.note}</div>}
                               <button style={{ ...styles.btnDanger, fontSize: 10, padding: "2px 6px", marginTop: 4 }} onClick={() => deleteShift(s.id)}>Sil</button>
                             </div>
                           );
@@ -1436,7 +1436,7 @@ export default function Page() {
                   {(["Gündüz", "Akşam", "Gece"] as ShiftType[]).map(t => (
                     <div key={t} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <div style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: shiftColor[t] }} />
-                      <span style={{ fontSize: 12, color: "#94a3b8" }}>{t}</span>
+                      <span style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>{t}</span>
                     </div>
                   ))}
                 </div>
@@ -1465,13 +1465,13 @@ export default function Page() {
                             <td style={{ ...styles.td, fontSize: 12 }}>{s.date}</td>
                             <td style={styles.td} className="isg-td"><Badge text={s.shiftType} color={shiftColor[s.shiftType]} /></td>
                             <td style={{ ...styles.td, fontSize: 12 }}>{s.startTime}–{s.endTime}</td>
-                            <td style={{ ...styles.td, fontSize: 12, color: "#94a3b8" }}>{s.note || "—"}</td>
+                            <td style={{ ...styles.td, fontSize: 12, color: "var(--isg-text-muted)" }}>{s.note || "—"}</td>
                             <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteShift(s.id)}>Sil</button></td>
                           </tr>
                         );
                       })}
                       {filteredShifts.length === 0 && (
-                        <tr><td colSpan={7} style={{ ...styles.td, textAlign: "center", color: "#64748b" }}>Vardiya kaydı yok</td></tr>
+                        <tr><td colSpan={7} style={{ ...styles.td, textAlign: "center", color: "var(--isg-text-muted)" }}>Vardiya kaydı yok</td></tr>
                       )}
                     </tbody>
                   </table>

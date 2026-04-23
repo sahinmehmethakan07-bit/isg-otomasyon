@@ -230,6 +230,14 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
   if (byCompany.length === 0) return;
 
   const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3" });
+
+  // NotoSans Türkçe font yükle
+  pdf.addFileToVFS("NotoSans-Regular.ttf", NOTO_SANS_BASE64);
+  pdf.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
+  pdf.addFileToVFS("NotoSans-Bold.ttf", NOTO_SANS_BASE64);
+  pdf.addFont("NotoSans-Bold.ttf", "NotoSans", "bold");
+  pdf.setFont("NotoSans", "normal");
+
   const pw = pdf.internal.pageSize.width;
   const ph = pdf.internal.pageSize.height;
 
@@ -241,27 +249,27 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
     // Başlık
     pdf.setFillColor(30, 41, 59);
     pdf.rect(0, 0, pw, 18, "F");
-    pdf.setFont("helvetica", "bold");
+    pdf.setFont("NotoSans", "bold");
     pdf.setFontSize(12);
     pdf.setTextColor(255, 255, 255);
-    pdf.text(tr(company.officialName.toUpperCase()), pw / 2, 8, { align: "center" });
+    pdf.text(company.officialName.toUpperCase(), pw / 2, 8, { align: "center" });
     pdf.setFontSize(9);
-    pdf.setFont("helvetica", "normal");
+    pdf.setFont("NotoSans", "normal");
     pdf.text("RISK DEGERLENDIRME RAPORU", pw / 2, 14, { align: "center" });
 
     // Bilgi satırları
     pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(7.5);
-    pdf.setFont("helvetica", "normal");
+    pdf.setFont("NotoSans", "normal");
     const infoY = 24;
     const col2X = pw / 2 + 10;
     const gap = 6;
 
     const info = (label: string, value: string, x: number, y: number) => {
-      pdf.setFont("helvetica", "bold");
-      pdf.text(tr(label), x, y);
-      pdf.setFont("helvetica", "normal");
-      pdf.text(tr(value), x + pdf.getTextWidth(tr(label)) + 2, y);
+      pdf.setFont("NotoSans", "bold");
+      pdf.text(label, x, y);
+      pdf.setFont("NotoSans", "normal");
+      pdf.text(value, x + pdf.getTextWidth(label) + 2, y);
     };
 
     info("Isyeri Unvani    :", company.officialName, 14, infoY);
@@ -277,21 +285,21 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
     const head = [["No", "Bolum", "Tehlike Kaynagi", "Tehlike/Risk", "Mevcut Onlem", "Oneriler", "O", "S", "RS", "KO", "KS", "KRS", "Etkilenecek", "Sorumlu", "Termin", "Durum"]];
     const body = companyRisks.map((r, i) => [
       String(i + 1),
-      tr(r.section || ""),
-      tr(r.hazard || ""),
-      tr(r.risk || ""),
-      tr(r.currentMeasure || ""),
-      tr(r.actionToTake || ""),
+      r.section || "",
+      r.hazard || "",
+      r.risk || "",
+      r.currentMeasure || "",
+      r.actionToTake || "",
       String(r.probability),
       String(r.severity),
       String(r.score),
       String(r.residualProbability),
       String(r.residualSeverity),
       String(r.residualScore),
-      tr(r.affectedPersons || "-"),
-      tr(r.responsible || ""),
-      tr(r.dueDate || ""),
-      tr(r.status || ""),
+      r.affectedPersons || "-",
+      r.responsible || "",
+      r.dueDate || "",
+      r.status || "",
     ]);
 
     autoTable(pdf, {
@@ -299,8 +307,8 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
       margin: { left: 14, right: 14, bottom: 20 },
       head,
       body,
-      styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak", font: "helvetica" },
-      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 7 },
+      styles: { fontSize: 7, cellPadding: 2, overflow: "linebreak", font: "NotoSans" },
+      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: "normal", fontSize: 7 },
       columnStyles: {
         0: { cellWidth: 8 },
         1: { cellWidth: 22 },
@@ -326,7 +334,7 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
           pdf.setFillColor(color[0], color[1], color[2]);
           pdf.rect(data.cell.x + 1, data.cell.y + 1, data.cell.width - 2, data.cell.height - 2, "F");
           pdf.setTextColor(255, 255, 255);
-          pdf.setFont("helvetica", "bold");
+          pdf.setFont("NotoSans", "bold");
           pdf.setFontSize(7);
           pdf.text(data.cell.text[0], data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2 + 1, { align: "center" });
         }
@@ -336,7 +344,7 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
           pdf.setFillColor(color[0], color[1], color[2]);
           pdf.rect(data.cell.x + 1, data.cell.y + 1, data.cell.width - 2, data.cell.height - 2, "F");
           pdf.setTextColor(255, 255, 255);
-          pdf.setFont("helvetica", "bold");
+          pdf.setFont("NotoSans", "bold");
           pdf.setFontSize(7);
           pdf.text(data.cell.text[0], data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2 + 1, { align: "center" });
         }

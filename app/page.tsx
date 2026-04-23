@@ -229,9 +229,9 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
   const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3" });
 
   // Türkçe font yükle
-  pdf.addFileToVFS("NotoSans-Regular.ttf", NOTO_SANS_BASE64);
-  pdf.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
-  const fontName = "NotoSans";
+  // font disabled
+  // font disabled
+  const fontName = "helvetica";
   pdf.setFont(fontName);
 
   const pw = pdf.internal.pageSize.width;   // 420 mm

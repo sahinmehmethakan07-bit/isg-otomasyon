@@ -5,22 +5,47 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ISG Theme Variables */
+body.dark {
+  --isg-bg: #0f172a;
+  --isg-card: #1e293b;
+  --isg-border: #334155;
+  --isg-text: #e2e8f0;
+  --isg-text-muted: #94a3b8;
+  --isg-input-bg: #0f172a;
+  --isg-header: #1e293b;
+  --isg-nav: #0f172a;
+  --isg-label: #94a3b8;
+  --isg-td-border: #1e293b;
+}
+
+body.light {
+  --isg-bg: #f1f5f9;
+  --isg-card: #ffffff;
+  --isg-border: #e2e8f0;
+  --isg-text: #1e293b;
+  --isg-text-muted: #64748b;
+  --isg-input-bg: #f8fafc;
+  --isg-header: #ffffff;
+  --isg-nav: #f8fafc;
+  --isg-label: #64748b;
+  --isg-td-border: #e2e8f0;
+}
+
+.isg-app { background-color: var(--isg-bg) !important; color: var(--isg-text) !important; }
+.isg-header { background-color: var(--isg-header) !important; border-color: var(--isg-border) !important; }
+.isg-nav { background-color: var(--isg-nav) !important; border-color: var(--isg-border) !important; }
+.isg-card { background-color: var(--isg-card) !important; border-color: var(--isg-border) !important; color: var(--isg-text) !important; }
+.isg-input { background-color: var(--isg-input-bg) !important; border-color: var(--isg-border) !important; color: var(--isg-text) !important; }
+.isg-label { color: var(--isg-label) !important; }
+.isg-text { color: var(--isg-text) !important; }
+.isg-text-muted { color: var(--isg-text-muted) !important; }
+.isg-td { border-color: var(--isg-td-border) !important; color: var(--isg-text) !important; }
+.isg-th { border-color: var(--isg-border) !important; color: var(--isg-text-muted) !important; }
+.isg-stat-card { background-color: var(--isg-card) !important; border-color: var(--isg-border) !important; }

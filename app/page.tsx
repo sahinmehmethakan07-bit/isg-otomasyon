@@ -534,7 +534,7 @@ function Badge({ text, color }: { text: string; color: string }) {
 }
 
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div><label style={styles.label}>{label}</label>{children}</div>;
+  return <div><label style={styles.label} className="isg-label">{label}</label>{children}</div>;
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -544,6 +544,12 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
+
+  // Body class güncelle
+  useEffect(() => {
+    document.body.classList.remove("dark", "light");
+    document.body.classList.add(darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -868,37 +874,15 @@ export default function Page() {
   const highRisks = risks.filter(r => r.score >= 15).length;
   const incompleteEmployees = employees.filter(e => !e.trainingComplete).length;
 
-  const theme = {
-    bg: darkMode ? "#0f172a" : "#f1f5f9",
-    card: darkMode ? "#1e293b" : "#ffffff",
-    border: darkMode ? "#334155" : "#e2e8f0",
-    text: darkMode ? "#e2e8f0" : "#1e293b",
-    textMuted: darkMode ? "#94a3b8" : "#64748b",
-    input: darkMode ? "#0f172a" : "#f8fafc",
-    header: darkMode ? "#1e293b" : "#ffffff",
-    nav: darkMode ? "#0f172a" : "#f1f5f9",
-  };
-
-  const dynStyles = {
-    app: { ...styles.app, backgroundColor: theme.bg, color: theme.text },
-    header: { ...styles.header, backgroundColor: theme.header, borderColor: theme.border },
-    card: { ...styles.card, backgroundColor: theme.card, borderColor: theme.border },
-    input: { ...styles.input, backgroundColor: theme.input, borderColor: theme.border, color: theme.text },
-    select: { ...styles.select, backgroundColor: theme.input, borderColor: theme.border, color: theme.text },
-    nav: { ...styles.nav, backgroundColor: theme.nav, borderColor: theme.border },
-    td: { ...styles.td, borderColor: theme.border },
-    th: { ...styles.th, borderColor: theme.border, color: theme.textMuted },
-  };
-
   return (
-    <div style={dynStyles.app}>
-      <header style={dynStyles.header}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 700, fontSize: 17, color: darkMode ? "#f1f5f9" : "#1e293b" }}>
+    <div style={styles.app} className="isg-app">
+      <header style={styles.header} className="isg-header">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 700, fontSize: 17 }} className="isg-text">
           <span style={{ fontSize: 20 }}>🦺</span>
           <span>İSG <span style={{ color: "#38bdf8" }}>Otomasyon</span></span>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button style={{ ...styles.btnSecondary, fontSize: 18, padding: "4px 10px", backgroundColor: "transparent", border: "none" }} onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Açık tema" : "Koyu tema"}>
+          <button style={{ fontSize: 20, padding: "4px 8px", backgroundColor: "transparent", border: "none", cursor: "pointer" }} onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Açık tema" : "Koyu tema"}>
             {darkMode ? "☀️" : "🌙"}
           </button>
           <button style={{ ...styles.btnSecondary, fontSize: 11 }} onClick={loadAll}>🔄 Yenile</button>
@@ -910,7 +894,7 @@ export default function Page() {
         </div>
       </header>
 
-      <nav style={styles.nav}>
+      <nav style={styles.nav} className="isg-nav">
         {tabs.map(tab => (
           <button key={tab.id} style={{ padding: "8px 16px", borderRadius: "6px 6px 0 0", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, whiteSpace: "nowrap" as const, backgroundColor: activeTab === tab.id ? "#0ea5e9" : "transparent", color: activeTab === tab.id ? "#fff" : "#94a3b8" }}
             onClick={() => { setActiveTab(tab.id); setSearch(""); }}>
@@ -919,7 +903,7 @@ export default function Page() {
         ))}
       </nav>
 
-      <main style={styles.content}>
+      <main style={styles.content} className="isg-app">
 
         {activeTab === "ozet" && (
           <div>
@@ -934,13 +918,13 @@ export default function Page() {
                 { value: highRisks, label: "Yüksek Risk (≥15)", color: highRisks > 0 ? "#dc2626" : "#16a34a" },
                 { value: incompleteEmployees, label: "Eğitim Eksik", color: incompleteEmployees > 0 ? "#d97706" : "#16a34a" },
               ].map(({ value, label, color }) => (
-                <div key={label} style={styles.statCard}>
+                <div key={label} style={styles.statCard} className="isg-stat-card">
                   <div style={{ ...styles.statValue, color }}>{value}</div>
                   <div style={styles.statLabel}>{label}</div>
                 </div>
               ))}
             </div>
-            <p style={styles.sectionTitle}>Firma Durumları</p>
+            <p style={styles.sectionTitle} className="isg-text-muted">Firma Durumları</p>
             {companies.map(c => {
               const ind = getCompanyIndicator(c.id);
               const summary = getCompanyDocSummary(c.id);
@@ -965,17 +949,17 @@ export default function Page() {
 
         {activeTab === "firmalar" && (
           <div>
-            <div style={styles.card}>
-              <p style={styles.sectionTitle}>Yeni Firma Ekle</p>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">Yeni Firma Ekle</p>
               <div style={styles.formGrid}>
-                <FormField label="Kısa Ad *"><input style={styles.input} value={newCompany.nickName} onChange={e => setNewCompany({ ...newCompany, nickName: e.target.value })} /></FormField>
-                <FormField label="SGK Sicil No *"><input style={styles.input} value={newCompany.sgkSicil} onChange={e => { const sgk = e.target.value; const nace = extractNaceFromSgk(sgk); const official = officialNameFromSgk(sgk); setNewCompany({ ...newCompany, sgkSicil: sgk, naceCode: nace, officialName: official || newCompany.officialName, dangerClass: dangerFromNace(nace) }); }} /></FormField>
-                <FormField label="Resmi Unvan"><input style={styles.input} value={newCompany.officialName} onChange={e => setNewCompany({ ...newCompany, officialName: e.target.value })} /></FormField>
-                <FormField label="NACE Kodu"><input style={styles.input} value={newCompany.naceCode} onChange={e => setNewCompany({ ...newCompany, naceCode: e.target.value, dangerClass: dangerFromNace(e.target.value) })} /></FormField>
-                <FormField label="Tehlike Sınıfı"><select style={styles.select} value={newCompany.dangerClass} onChange={e => setNewCompany({ ...newCompany, dangerClass: e.target.value as DangerClass })}><option>Az Tehlikeli</option><option>Tehlikeli</option><option>Çok Tehlikeli</option></select></FormField>
-                <FormField label="Çalışan Sayısı"><input style={styles.input} type="number" value={newCompany.employeeCount} onChange={e => setNewCompany({ ...newCompany, employeeCount: e.target.value })} /></FormField>
+                <FormField label="Kısa Ad *"><input style={styles.input} className="isg-input" value={newCompany.nickName} onChange={e => setNewCompany({ ...newCompany, nickName: e.target.value })} /></FormField>
+                <FormField label="SGK Sicil No *"><input style={styles.input} className="isg-input" value={newCompany.sgkSicil} onChange={e => { const sgk = e.target.value; const nace = extractNaceFromSgk(sgk); const official = officialNameFromSgk(sgk); setNewCompany({ ...newCompany, sgkSicil: sgk, naceCode: nace, officialName: official || newCompany.officialName, dangerClass: dangerFromNace(nace) }); }} /></FormField>
+                <FormField label="Resmi Unvan"><input style={styles.input} className="isg-input" value={newCompany.officialName} onChange={e => setNewCompany({ ...newCompany, officialName: e.target.value })} /></FormField>
+                <FormField label="NACE Kodu"><input style={styles.input} className="isg-input" value={newCompany.naceCode} onChange={e => setNewCompany({ ...newCompany, naceCode: e.target.value, dangerClass: dangerFromNace(e.target.value) })} /></FormField>
+                <FormField label="Tehlike Sınıfı"><select style={styles.select} className="isg-input" value={newCompany.dangerClass} onChange={e => setNewCompany({ ...newCompany, dangerClass: e.target.value as DangerClass })}><option>Az Tehlikeli</option><option>Tehlikeli</option><option>Çok Tehlikeli</option></select></FormField>
+                <FormField label="Çalışan Sayısı"><input style={styles.input} className="isg-input" type="number" value={newCompany.employeeCount} onChange={e => setNewCompany({ ...newCompany, employeeCount: e.target.value })} /></FormField>
                 <FormField label="Sözleşme Bitiş"><DatePicker value={newCompany.contractEnd} onChange={v => setNewCompany({ ...newCompany, contractEnd: v })} /></FormField>
-                <FormField label="Hizmet Türü"><select style={styles.select} value={newCompany.serviceType} onChange={e => setNewCompany({ ...newCompany, serviceType: e.target.value as ServiceType })}><option>İş Güvenliği</option><option>İş Güvenliği + İşyeri Hekimliği</option></select></FormField>
+                <FormField label="Hizmet Türü"><select style={styles.select} className="isg-input" value={newCompany.serviceType} onChange={e => setNewCompany({ ...newCompany, serviceType: e.target.value as ServiceType })}><option>İş Güvenliği</option><option>İş Güvenliği + İşyeri Hekimliği</option></select></FormField>
               </div>
               <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addCompany}>Firma Ekle</button></div>
             </div>
@@ -985,23 +969,23 @@ export default function Page() {
             </div>
             <div style={{ ...styles.card, padding: 0, overflow: "auto" }}>
               <table style={styles.table}>
-                <thead><tr>{["Kısa Ad", "Resmi Unvan", "SGK Sicil", "NACE", "Tehlike", "Personel", "Sözleşme", "Hizmet", "Durum", "İşlem"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+                <thead><tr>{["Kısa Ad", "Resmi Unvan", "SGK Sicil", "NACE", "Tehlike", "Personel", "Sözleşme", "Hizmet", "Durum", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
                 <tbody>
                   {filteredCompanies.map(c => {
                     const ind = getCompanyIndicator(c.id);
                     const cs = getDateStatus(c.contractEnd);
                     return (
                       <tr key={c.id}>
-                        <td style={styles.td}><span style={{ fontWeight: 600 }}>{c.nickName}</span></td>
+                        <td style={styles.td} className="isg-td"><span style={{ fontWeight: 600 }}>{c.nickName}</span></td>
                         <td style={{ ...styles.td, maxWidth: 180, fontSize: 12, color: "#94a3b8" }}>{c.officialName}</td>
                         <td style={{ ...styles.td, fontSize: 11, color: "#64748b" }}>{c.sgkSicil}</td>
-                        <td style={styles.td}>{c.naceCode}</td>
-                        <td style={styles.td}><Badge text={c.dangerClass} color={c.dangerClass === "Çok Tehlikeli" ? "#dc2626" : c.dangerClass === "Tehlikeli" ? "#d97706" : "#16a34a"} /></td>
-                        <td style={styles.td}>{c.employeeCount}</td>
-                        <td style={styles.td}><span style={{ fontSize: 12 }}>{c.contractEnd}</span> <Badge text={cs} color={statusColor(cs)} /></td>
+                        <td style={styles.td} className="isg-td">{c.naceCode}</td>
+                        <td style={styles.td} className="isg-td"><Badge text={c.dangerClass} color={c.dangerClass === "Çok Tehlikeli" ? "#dc2626" : c.dangerClass === "Tehlikeli" ? "#d97706" : "#16a34a"} /></td>
+                        <td style={styles.td} className="isg-td">{c.employeeCount}</td>
+                        <td style={styles.td} className="isg-td"><span style={{ fontSize: 12 }}>{c.contractEnd}</span> <Badge text={cs} color={statusColor(cs)} /></td>
                         <td style={{ ...styles.td, fontSize: 12 }}>{c.serviceType}</td>
-                        <td style={styles.td}><Badge text={ind.text} color={ind.color} /></td>
-                        <td style={styles.td}><button style={styles.btnDanger} onClick={() => deleteCompany(c.id)}>Sil</button></td>
+                        <td style={styles.td} className="isg-td"><Badge text={ind.text} color={ind.color} /></td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteCompany(c.id)}>Sil</button></td>
                       </tr>
                     );
                   })}
@@ -1014,14 +998,14 @@ export default function Page() {
         {activeTab === "personel" && (
           <div style={{ display: "grid", gridTemplateColumns: selectedEmployee ? "1fr 340px" : "1fr", gap: 20 }}>
             <div>
-              <div style={styles.card}>
-                <p style={styles.sectionTitle}>Yeni Personel Ekle</p>
+              <div style={styles.card} className="isg-card">
+                <p style={styles.sectionTitle} className="isg-text-muted">Yeni Personel Ekle</p>
                 <div style={styles.formGrid}>
-                  <FormField label="Firma *"><select style={styles.select} value={newEmployee.companyId} onChange={e => setNewEmployee({ ...newEmployee, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
-                  <FormField label="Ad *"><input style={styles.input} value={newEmployee.firstName} onChange={e => setNewEmployee({ ...newEmployee, firstName: e.target.value })} /></FormField>
-                  <FormField label="Soyad"><input style={styles.input} value={newEmployee.lastName} onChange={e => setNewEmployee({ ...newEmployee, lastName: e.target.value })} /></FormField>
-                  <FormField label="TC No"><input style={styles.input} value={newEmployee.tcNo} onChange={e => setNewEmployee({ ...newEmployee, tcNo: e.target.value })} /></FormField>
-                  <FormField label="Unvan"><input style={styles.input} value={newEmployee.title} onChange={e => setNewEmployee({ ...newEmployee, title: e.target.value })} /></FormField>
+                  <FormField label="Firma *"><select style={styles.select} className="isg-input" value={newEmployee.companyId} onChange={e => setNewEmployee({ ...newEmployee, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
+                  <FormField label="Ad *"><input style={styles.input} className="isg-input" value={newEmployee.firstName} onChange={e => setNewEmployee({ ...newEmployee, firstName: e.target.value })} /></FormField>
+                  <FormField label="Soyad"><input style={styles.input} className="isg-input" value={newEmployee.lastName} onChange={e => setNewEmployee({ ...newEmployee, lastName: e.target.value })} /></FormField>
+                  <FormField label="TC No"><input style={styles.input} className="isg-input" value={newEmployee.tcNo} onChange={e => setNewEmployee({ ...newEmployee, tcNo: e.target.value })} /></FormField>
+                  <FormField label="Unvan"><input style={styles.input} className="isg-input" value={newEmployee.title} onChange={e => setNewEmployee({ ...newEmployee, title: e.target.value })} /></FormField>
                   <FormField label="İşe Giriş"><DatePicker value={newEmployee.hireDate} onChange={v => setNewEmployee({ ...newEmployee, hireDate: v })} /></FormField>
                 </div>
                 <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addEmployee}>Personel Ekle</button></div>
@@ -1033,20 +1017,20 @@ export default function Page() {
               </div>
               <div style={{ ...styles.card, padding: 0, overflow: "auto" }}>
                 <table style={styles.table}>
-                  <thead><tr>{["Ad Soyad", "TC No", "Unvan", "Firma", "İşe Giriş", "Eğitim", "Kontrol Listesi", "İşlem"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+                  <thead><tr>{["Ad Soyad", "TC No", "Unvan", "Firma", "İşe Giriş", "Eğitim", "Kontrol Listesi", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
                   <tbody>
                     {filteredEmployees.map(emp => {
                       const company = companies.find(c => c.id === emp.companyId);
                       const cl = checklistCompletion(emp.checklist);
                       return (
                         <tr key={emp.id} style={{ cursor: "pointer", backgroundColor: selectedEmployeeId === emp.id ? "#1a2942" : "transparent" }} onClick={() => setSelectedEmployeeId(emp.id)}>
-                          <td style={styles.td}><span style={{ fontWeight: 600 }}>{emp.firstName} {emp.lastName}</span></td>
+                          <td style={styles.td} className="isg-td"><span style={{ fontWeight: 600 }}>{emp.firstName} {emp.lastName}</span></td>
                           <td style={{ ...styles.td, fontSize: 12, color: "#94a3b8" }}>{emp.tcNo}</td>
-                          <td style={styles.td}>{emp.title}</td>
+                          <td style={styles.td} className="isg-td">{emp.title}</td>
                           <td style={{ ...styles.td, fontSize: 12 }}>{company?.nickName}</td>
                           <td style={{ ...styles.td, fontSize: 12 }}>{emp.hireDate}</td>
-                          <td style={styles.td}><Badge text={emp.trainingComplete ? "Tamamlandı" : "Eksik"} color={emp.trainingComplete ? "#16a34a" : "#d97706"} /></td>
-                          <td style={styles.td}>
+                          <td style={styles.td} className="isg-td"><Badge text={emp.trainingComplete ? "Tamamlandı" : "Eksik"} color={emp.trainingComplete ? "#16a34a" : "#d97706"} /></td>
+                          <td style={styles.td} className="isg-td">
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <div style={{ height: 6, width: 80, backgroundColor: "#0f172a", borderRadius: 3, overflow: "hidden" }}>
                                 <div style={{ height: "100%", width: `${(cl.completed / cl.total) * 100}%`, backgroundColor: cl.missing === 0 ? "#16a34a" : "#d97706" }} />
@@ -1054,7 +1038,7 @@ export default function Page() {
                               <span style={{ fontSize: 11, color: "#94a3b8" }}>{cl.completed}/{cl.total}</span>
                             </div>
                           </td>
-                          <td style={styles.td}><button style={styles.btnDanger} onClick={e => { e.stopPropagation(); deleteEmployee(emp.id); }}>Sil</button></td>
+                          <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={e => { e.stopPropagation(); deleteEmployee(emp.id); }}>Sil</button></td>
                         </tr>
                       );
                     })}
@@ -1064,8 +1048,8 @@ export default function Page() {
             </div>
             {selectedEmployee && (
               <div>
-                <div style={styles.card}>
-                  <p style={styles.sectionTitle}>Personel Detayı</p>
+                <div style={styles.card} className="isg-card">
+                  <p style={styles.sectionTitle} className="isg-text-muted">Personel Detayı</p>
                   <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 2 }}>{selectedEmployee.firstName} {selectedEmployee.lastName}</div>
                   <div style={{ fontSize: 12, color: "#94a3b8" }}>{selectedEmployee.title}</div>
                   <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{selectedEmployeeCompany?.nickName}</div>
@@ -1100,12 +1084,12 @@ export default function Page() {
 
         {activeTab === "belgeler" && (
           <div>
-            <div style={styles.card}>
-              <p style={styles.sectionTitle}>Yeni Belge Ekle</p>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">Yeni Belge Ekle</p>
               <div style={styles.formGrid}>
-                <FormField label="Firma *"><select style={styles.select} value={newDocument.companyId} onChange={e => setNewDocument({ ...newDocument, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
-                <FormField label="Belge Türü *"><select style={styles.select} value={newDocument.type} onChange={e => setNewDocument({ ...newDocument, type: e.target.value })}>{documentTemplates.map(t => <option key={t}>{t}</option>)}</select></FormField>
-                <FormField label="Personel (opsiyonel)"><select style={styles.select} value={newDocument.employeeId} onChange={e => setNewDocument({ ...newDocument, employeeId: e.target.value })}><option value="">Firma Belgesi</option>{employees.filter(e => !newDocument.companyId || e.companyId === newDocument.companyId).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}</select></FormField>
+                <FormField label="Firma *"><select style={styles.select} className="isg-input" value={newDocument.companyId} onChange={e => setNewDocument({ ...newDocument, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
+                <FormField label="Belge Türü *"><select style={styles.select} className="isg-input" value={newDocument.type} onChange={e => setNewDocument({ ...newDocument, type: e.target.value })}>{documentTemplates.map(t => <option key={t}>{t}</option>)}</select></FormField>
+                <FormField label="Personel (opsiyonel)"><select style={styles.select} className="isg-input" value={newDocument.employeeId} onChange={e => setNewDocument({ ...newDocument, employeeId: e.target.value })}><option value="">Firma Belgesi</option>{employees.filter(e => !newDocument.companyId || e.companyId === newDocument.companyId).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}</select></FormField>
                 <FormField label="Düzenleme Tarihi *"><DatePicker value={newDocument.issueDate} onChange={v => setNewDocument({ ...newDocument, issueDate: v })} /></FormField>
                 <FormField label="Geçerlilik Tarihi"><DatePicker value={newDocument.expiryDate} onChange={v => setNewDocument({ ...newDocument, expiryDate: v })} /></FormField>
               </div>
@@ -1118,7 +1102,7 @@ export default function Page() {
             </div>
             <div style={{ ...styles.card, padding: 0, overflow: "auto" }}>
               <table style={styles.table}>
-                <thead><tr>{["Belge Türü", "Firma", "Personel", "Düzenleme", "Geçerlilik", "Durum", "İşlem"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+                <thead><tr>{["Belge Türü", "Firma", "Personel", "Düzenleme", "Geçerlilik", "Durum", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
                 <tbody>
                   {filteredDocuments.map(d => {
                     const company = companies.find(c => c.id === d.companyId);
@@ -1128,12 +1112,12 @@ export default function Page() {
                     return (
                       <tr key={d.id}>
                         <td style={{ ...styles.td, fontWeight: 500 }}>{d.type}</td>
-                        <td style={styles.td}>{company?.nickName}</td>
+                        <td style={styles.td} className="isg-td">{company?.nickName}</td>
                         <td style={{ ...styles.td, fontSize: 12, color: "#94a3b8" }}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</td>
                         <td style={{ ...styles.td, fontSize: 12 }}>{d.issueDate}</td>
                         <td style={{ ...styles.td, fontSize: 12 }}>{d.expiryDate || "—"}</td>
-                        <td style={styles.td}>{d.expiryDate ? <div><Badge text={ds} color={statusColor(ds)} />{days !== null && days >= 0 && <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{days} gün</div>}</div> : "—"}</td>
-                        <td style={styles.td}><button style={styles.btnDanger} onClick={() => deleteDocument(d.id)}>Sil</button></td>
+                        <td style={styles.td} className="isg-td">{d.expiryDate ? <div><Badge text={ds} color={statusColor(ds)} />{days !== null && days >= 0 && <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{days} gün</div>}</div> : "—"}</td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteDocument(d.id)}>Sil</button></td>
                       </tr>
                     );
                   })}
@@ -1145,19 +1129,19 @@ export default function Page() {
 
         {activeTab === "gozlemciler" && (
           <div>
-            <div style={styles.card}>
-              <p style={styles.sectionTitle}>Yeni Gözlemci Ekle</p>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">Yeni Gözlemci Ekle</p>
               <div style={styles.formGrid}>
-                <FormField label="Ad Soyad *"><input style={styles.input} value={newObserver.fullName} onChange={e => setNewObserver({ ...newObserver, fullName: e.target.value })} /></FormField>
-                <FormField label="Unvan"><input style={styles.input} value={newObserver.title} onChange={e => setNewObserver({ ...newObserver, title: e.target.value })} /></FormField>
-                <FormField label="Sertifika No"><input style={styles.input} value={newObserver.certificateNo} onChange={e => setNewObserver({ ...newObserver, certificateNo: e.target.value })} /></FormField>
-                <FormField label="Telefon"><input style={styles.input} value={newObserver.phone} onChange={e => setNewObserver({ ...newObserver, phone: e.target.value })} /></FormField>
+                <FormField label="Ad Soyad *"><input style={styles.input} className="isg-input" value={newObserver.fullName} onChange={e => setNewObserver({ ...newObserver, fullName: e.target.value })} /></FormField>
+                <FormField label="Unvan"><input style={styles.input} className="isg-input" value={newObserver.title} onChange={e => setNewObserver({ ...newObserver, title: e.target.value })} /></FormField>
+                <FormField label="Sertifika No"><input style={styles.input} className="isg-input" value={newObserver.certificateNo} onChange={e => setNewObserver({ ...newObserver, certificateNo: e.target.value })} /></FormField>
+                <FormField label="Telefon"><input style={styles.input} className="isg-input" value={newObserver.phone} onChange={e => setNewObserver({ ...newObserver, phone: e.target.value })} /></FormField>
               </div>
               <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addObserver}>Gözlemci Ekle</button></div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
               {observers.map(obs => (
-                <div key={obs.id} style={styles.card}>
+                <div key={obs.id} style={styles.card} className="isg-card">
                   <div style={{ fontWeight: 700, marginBottom: 4 }}>{obs.fullName}</div>
                   <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 2 }}>{obs.title}</div>
                   <div style={{ fontSize: 12, color: "#64748b" }}>Sertifika: {obs.certificateNo}</div>
@@ -1171,29 +1155,29 @@ export default function Page() {
 
         {activeTab === "dof" && (
           <div>
-            <div style={styles.card}>
-              <p style={styles.sectionTitle}>Yeni DÖF Kaydı</p>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">Yeni DÖF Kaydı</p>
               <div style={styles.formGrid}>
-                <FormField label="Firma *"><select style={styles.select} value={newDof.companyId} onChange={e => setNewDof({ ...newDof, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
-                <FormField label="Gözlemci"><select style={styles.select} value={newDof.observerId} onChange={e => setNewDof({ ...newDof, observerId: e.target.value })}><option value="">Seçin...</option>{observers.map(o => <option key={o.id} value={o.id}>{o.fullName}</option>)}</select></FormField>
-                <FormField label="Başlık *"><input style={styles.input} value={newDof.title} onChange={e => setNewDof({ ...newDof, title: e.target.value })} /></FormField>
-                <FormField label="Konum"><input style={styles.input} value={newDof.location} onChange={e => setNewDof({ ...newDof, location: e.target.value })} /></FormField>
-                <FormField label="Öncelik"><select style={styles.select} value={newDof.priority} onChange={e => setNewDof({ ...newDof, priority: e.target.value as any })}><option>Düşük</option><option>Orta</option><option>Yüksek</option></select></FormField>
-                <FormField label="Sorumlu"><input style={styles.input} value={newDof.responsible} onChange={e => setNewDof({ ...newDof, responsible: e.target.value })} /></FormField>
+                <FormField label="Firma *"><select style={styles.select} className="isg-input" value={newDof.companyId} onChange={e => setNewDof({ ...newDof, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
+                <FormField label="Gözlemci"><select style={styles.select} className="isg-input" value={newDof.observerId} onChange={e => setNewDof({ ...newDof, observerId: e.target.value })}><option value="">Seçin...</option>{observers.map(o => <option key={o.id} value={o.id}>{o.fullName}</option>)}</select></FormField>
+                <FormField label="Başlık *"><input style={styles.input} className="isg-input" value={newDof.title} onChange={e => setNewDof({ ...newDof, title: e.target.value })} /></FormField>
+                <FormField label="Konum"><input style={styles.input} className="isg-input" value={newDof.location} onChange={e => setNewDof({ ...newDof, location: e.target.value })} /></FormField>
+                <FormField label="Öncelik"><select style={styles.select} className="isg-input" value={newDof.priority} onChange={e => setNewDof({ ...newDof, priority: e.target.value as any })}><option>Düşük</option><option>Orta</option><option>Yüksek</option></select></FormField>
+                <FormField label="Sorumlu"><input style={styles.input} className="isg-input" value={newDof.responsible} onChange={e => setNewDof({ ...newDof, responsible: e.target.value })} /></FormField>
                 <FormField label="Termin"><DatePicker value={newDof.dueDate} onChange={v => setNewDof({ ...newDof, dueDate: v })} /></FormField>
-                <FormField label="Durum"><select style={styles.select} value={newDof.status} onChange={e => setNewDof({ ...newDof, status: e.target.value as any })}><option>Açık</option><option>Devam Ediyor</option><option>Kapandı</option></select></FormField>
+                <FormField label="Durum"><select style={styles.select} className="isg-input" value={newDof.status} onChange={e => setNewDof({ ...newDof, status: e.target.value as any })}><option>Açık</option><option>Devam Ediyor</option><option>Kapandı</option></select></FormField>
               </div>
               <div style={{ marginTop: 10 }}>
-                <label style={styles.label}>Açıklama</label>
+                <label style={styles.label} className="isg-label">Açıklama</label>
                 <textarea style={{ ...styles.input, height: 60, resize: "vertical" as const }} value={newDof.description} onChange={e => setNewDof({ ...newDof, description: e.target.value })} />
               </div>
               <div style={{ marginTop: 10 }}>
-                <label style={styles.label}>Yasal Dayanak</label>
-                <input style={styles.input} value={newDof.lawReference} onChange={e => setNewDof({ ...newDof, lawReference: e.target.value })} />
+                <label style={styles.label} className="isg-label">Yasal Dayanak</label>
+                <input style={styles.input} className="isg-input" value={newDof.lawReference} onChange={e => setNewDof({ ...newDof, lawReference: e.target.value })} />
               </div>
               <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div><label style={styles.label}>Öncesi Fotoğraf</label><input type="file" accept="image/*" style={{ fontSize: 12, color: "#94a3b8" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, beforePhoto: b64 }))} /></div>
-                <div><label style={styles.label}>Sonrası Fotoğraf</label><input type="file" accept="image/*" style={{ fontSize: 12, color: "#94a3b8" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, afterPhoto: b64 }))} /></div>
+                <div><label style={styles.label} className="isg-label">Öncesi Fotoğraf</label><input type="file" accept="image/*" style={{ fontSize: 12, color: "#94a3b8" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, beforePhoto: b64 }))} /></div>
+                <div><label style={styles.label} className="isg-label">Sonrası Fotoğraf</label><input type="file" accept="image/*" style={{ fontSize: 12, color: "#94a3b8" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, afterPhoto: b64 }))} /></div>
               </div>
               <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addDof}>DÖF Ekle</button></div>
             </div>
@@ -1232,7 +1216,7 @@ export default function Page() {
                     )}
                     {isEditing && (
                       <div style={{ marginBottom: 8 }}>
-                        <select style={styles.select} value={dof.status} onChange={e => updateDofStatus(dof.id, e.target.value as any)}>
+                        <select style={styles.select} className="isg-input" value={dof.status} onChange={e => updateDofStatus(dof.id, e.target.value as any)}>
                           <option>Açık</option><option>Devam Ediyor</option><option>Kapandı</option>
                         </select>
                       </div>
@@ -1253,26 +1237,26 @@ export default function Page() {
 
         {activeTab === "risk" && (
           <div>
-            <div style={styles.card}>
-              <p style={styles.sectionTitle}>Yeni Risk Kaydı</p>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">Yeni Risk Kaydı</p>
               <div style={styles.formGrid}>
-                <FormField label="Firma *"><select style={styles.select} value={newRisk.companyId} onChange={e => setNewRisk({ ...newRisk, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
-                <FormField label="Bölüm / Faaliyet"><input style={styles.input} value={newRisk.section} onChange={e => setNewRisk({ ...newRisk, section: e.target.value })} /></FormField>
-                <FormField label="Tehlike Kaynağı / Mevcut Durum *"><input style={styles.input} value={newRisk.hazard} onChange={e => setNewRisk({ ...newRisk, hazard: e.target.value })} /></FormField>
-                <FormField label="Tehlike"><input style={styles.input} value={newRisk.risk} onChange={e => setNewRisk({ ...newRisk, risk: e.target.value })} /></FormField>
-                <FormField label="Mevcut Önlem"><input style={styles.input} value={newRisk.currentMeasure} onChange={e => setNewRisk({ ...newRisk, currentMeasure: e.target.value })} /></FormField>
-                <FormField label="Öneriler / Alınacak Önlemler"><input style={styles.input} value={newRisk.actionToTake} onChange={e => setNewRisk({ ...newRisk, actionToTake: e.target.value })} /></FormField>
-                <FormField label="Olasılık (1-5)"><input style={styles.input} type="number" min={1} max={5} value={newRisk.probability} onChange={e => setNewRisk({ ...newRisk, probability: e.target.value })} /></FormField>
-                <FormField label="Şiddet (1-5)"><input style={styles.input} type="number" min={1} max={5} value={newRisk.severity} onChange={e => setNewRisk({ ...newRisk, severity: e.target.value })} /></FormField>
-                <FormField label="Kalıntı Olasılık"><input style={styles.input} type="number" min={1} max={5} value={newRisk.residualProbability} onChange={e => setNewRisk({ ...newRisk, residualProbability: e.target.value })} /></FormField>
-                <FormField label="Kalıntı Şiddet"><input style={styles.input} type="number" min={1} max={5} value={newRisk.residualSeverity} onChange={e => setNewRisk({ ...newRisk, residualSeverity: e.target.value })} /></FormField>
-                <FormField label="Etkilenecek Kişiler"><input style={styles.input} value={newRisk.affectedPersons} onChange={e => setNewRisk({ ...newRisk, affectedPersons: e.target.value })} placeholder="Tüm çalışanlar" /></FormField>
-                <FormField label="Sorumlu"><input style={styles.input} value={newRisk.responsible} onChange={e => setNewRisk({ ...newRisk, responsible: e.target.value })} /></FormField>
+                <FormField label="Firma *"><select style={styles.select} className="isg-input" value={newRisk.companyId} onChange={e => setNewRisk({ ...newRisk, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
+                <FormField label="Bölüm / Faaliyet"><input style={styles.input} className="isg-input" value={newRisk.section} onChange={e => setNewRisk({ ...newRisk, section: e.target.value })} /></FormField>
+                <FormField label="Tehlike Kaynağı / Mevcut Durum *"><input style={styles.input} className="isg-input" value={newRisk.hazard} onChange={e => setNewRisk({ ...newRisk, hazard: e.target.value })} /></FormField>
+                <FormField label="Tehlike"><input style={styles.input} className="isg-input" value={newRisk.risk} onChange={e => setNewRisk({ ...newRisk, risk: e.target.value })} /></FormField>
+                <FormField label="Mevcut Önlem"><input style={styles.input} className="isg-input" value={newRisk.currentMeasure} onChange={e => setNewRisk({ ...newRisk, currentMeasure: e.target.value })} /></FormField>
+                <FormField label="Öneriler / Alınacak Önlemler"><input style={styles.input} className="isg-input" value={newRisk.actionToTake} onChange={e => setNewRisk({ ...newRisk, actionToTake: e.target.value })} /></FormField>
+                <FormField label="Olasılık (1-5)"><input style={styles.input} className="isg-input" type="number" min={1} max={5} value={newRisk.probability} onChange={e => setNewRisk({ ...newRisk, probability: e.target.value })} /></FormField>
+                <FormField label="Şiddet (1-5)"><input style={styles.input} className="isg-input" type="number" min={1} max={5} value={newRisk.severity} onChange={e => setNewRisk({ ...newRisk, severity: e.target.value })} /></FormField>
+                <FormField label="Kalıntı Olasılık"><input style={styles.input} className="isg-input" type="number" min={1} max={5} value={newRisk.residualProbability} onChange={e => setNewRisk({ ...newRisk, residualProbability: e.target.value })} /></FormField>
+                <FormField label="Kalıntı Şiddet"><input style={styles.input} className="isg-input" type="number" min={1} max={5} value={newRisk.residualSeverity} onChange={e => setNewRisk({ ...newRisk, residualSeverity: e.target.value })} /></FormField>
+                <FormField label="Etkilenecek Kişiler"><input style={styles.input} className="isg-input" value={newRisk.affectedPersons} onChange={e => setNewRisk({ ...newRisk, affectedPersons: e.target.value })} placeholder="Tüm çalışanlar" /></FormField>
+                <FormField label="Sorumlu"><input style={styles.input} className="isg-input" value={newRisk.responsible} onChange={e => setNewRisk({ ...newRisk, responsible: e.target.value })} /></FormField>
                 <FormField label="Termin"><DatePicker value={newRisk.dueDate} onChange={v => setNewRisk({ ...newRisk, dueDate: v })} /></FormField>
                 <FormField label="Kontrol Tarihi"><DatePicker value={newRisk.controlDate} onChange={v => setNewRisk({ ...newRisk, controlDate: v })} /></FormField>
-                <FormField label="Durum"><select style={styles.select} value={newRisk.status} onChange={e => setNewRisk({ ...newRisk, status: e.target.value as any })}><option>Açık</option><option>Kontrol Altında</option><option>Kapandı</option></select></FormField>
+                <FormField label="Durum"><select style={styles.select} className="isg-input" value={newRisk.status} onChange={e => setNewRisk({ ...newRisk, status: e.target.value as any })}><option>Açık</option><option>Kontrol Altında</option><option>Kapandı</option></select></FormField>
                 <FormField label="İlgili Mevzuat">
-                  <input style={styles.input} value={newRisk.lawReference} onChange={e => setNewRisk({ ...newRisk, lawReference: e.target.value })} placeholder="6331 sayılı İSG Kanunu..." />
+                  <input style={styles.input} className="isg-input" value={newRisk.lawReference} onChange={e => setNewRisk({ ...newRisk, lawReference: e.target.value })} placeholder="6331 sayılı İSG Kanunu..." />
                 </FormField>
               </div>
               <div style={{ marginTop: 8, fontSize: 13, color: "#94a3b8" }}>
@@ -1309,7 +1293,7 @@ export default function Page() {
                 <thead>
                   <tr>
                     {["Firma", "Bölüm", "Tehlike Kaynağı", "Tehlike", "Mevcut Önlem", "Öneriler", "O", "Ş", "RS", "KO", "KŞ", "KRS", "Etkilenecek", "Sorumlu", "Termin", "K.Tarihi", "Durum", "Mevzuat", "İşlem"].map(h => (
-                      <th key={h} style={styles.th}>{h}</th>
+                      <th key={h} style={styles.th} className="isg-th">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1319,24 +1303,24 @@ export default function Page() {
                     return (
                       <tr key={r.id}>
                         <td style={{ ...styles.td, fontSize: 12 }}>{company?.nickName}</td>
-                        <td style={styles.td}>{r.section}</td>
+                        <td style={styles.td} className="isg-td">{r.section}</td>
                         <td style={{ ...styles.td, fontWeight: 500 }}>{r.hazard}</td>
                         <td style={{ ...styles.td, fontSize: 12, color: "#94a3b8" }}>{r.risk}</td>
                         <td style={{ ...styles.td, fontSize: 11, color: "#64748b" }}>{r.currentMeasure}</td>
                         <td style={{ ...styles.td, fontSize: 11, color: "#64748b" }}>{r.actionToTake}</td>
                         <td style={{ ...styles.td, textAlign: "center" as const, fontSize: 12 }}>{r.probability}</td>
                         <td style={{ ...styles.td, textAlign: "center" as const, fontSize: 12 }}>{r.severity}</td>
-                        <td style={styles.td}><span style={{ fontWeight: 700, color: riskScoreColor(r.score), fontSize: 14 }}>{r.score}</span></td>
+                        <td style={styles.td} className="isg-td"><span style={{ fontWeight: 700, color: riskScoreColor(r.score), fontSize: 14 }}>{r.score}</span></td>
                         <td style={{ ...styles.td, textAlign: "center" as const, fontSize: 12 }}>{r.residualProbability}</td>
                         <td style={{ ...styles.td, textAlign: "center" as const, fontSize: 12 }}>{r.residualSeverity}</td>
-                        <td style={styles.td}><span style={{ fontWeight: 700, color: riskScoreColor(r.residualScore), fontSize: 14 }}>{r.residualScore}</span></td>
+                        <td style={styles.td} className="isg-td"><span style={{ fontWeight: 700, color: riskScoreColor(r.residualScore), fontSize: 14 }}>{r.residualScore}</span></td>
                         <td style={{ ...styles.td, fontSize: 11 }}>{r.affectedPersons || "—"}</td>
                         <td style={{ ...styles.td, fontSize: 12 }}>{r.responsible}</td>
                         <td style={{ ...styles.td, fontSize: 12 }}>{r.dueDate}</td>
                         <td style={{ ...styles.td, fontSize: 12 }}>{r.controlDate || "—"}</td>
-                        <td style={styles.td}><Badge text={r.status} color={r.status === "Kapandı" ? "#16a34a" : r.status === "Kontrol Altında" ? "#d97706" : "#dc2626"} /></td>
+                        <td style={styles.td} className="isg-td"><Badge text={r.status} color={r.status === "Kapandı" ? "#16a34a" : r.status === "Kontrol Altında" ? "#d97706" : "#dc2626"} /></td>
                         <td style={{ ...styles.td, fontSize: 11, color: "#94a3b8", maxWidth: 140 }}>{r.lawReference || "—"}</td>
-                        <td style={styles.td}><button style={styles.btnDanger} onClick={() => deleteRisk(r.id)}>Sil</button></td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteRisk(r.id)}>Sil</button></td>
                       </tr>
                     );
                   })}
@@ -1365,17 +1349,17 @@ export default function Page() {
           return (
             <div>
               {/* Form */}
-              <div style={styles.card}>
-                <p style={styles.sectionTitle}>Vardiya Ekle</p>
+              <div style={styles.card} className="isg-card">
+                <p style={styles.sectionTitle} className="isg-text-muted">Vardiya Ekle</p>
                 <div style={styles.formGrid}>
                   <FormField label="Firma *">
-                    <select style={styles.select} value={newShift.companyId} onChange={e => setNewShift({ ...newShift, companyId: e.target.value, employeeId: "" })}>
+                    <select style={styles.select} className="isg-input" value={newShift.companyId} onChange={e => setNewShift({ ...newShift, companyId: e.target.value, employeeId: "" })}>
                       <option value="">Seçin...</option>
                       {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
                     </select>
                   </FormField>
                   <FormField label="Personel *">
-                    <select style={styles.select} value={newShift.employeeId} onChange={e => setNewShift({ ...newShift, employeeId: e.target.value })}>
+                    <select style={styles.select} className="isg-input" value={newShift.employeeId} onChange={e => setNewShift({ ...newShift, employeeId: e.target.value })}>
                       <option value="">Seçin...</option>
                       {companyEmployees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
                     </select>
@@ -1384,7 +1368,7 @@ export default function Page() {
                     <DatePicker value={newShift.date} onChange={v => setNewShift({ ...newShift, date: v })} />
                   </FormField>
                   <FormField label="Vardiya Türü">
-                    <select style={styles.select} value={newShift.shiftType} onChange={e => setNewShift({ ...newShift, shiftType: e.target.value as ShiftType, startTime: e.target.value === "Gündüz" ? "08:00" : e.target.value === "Akşam" ? "16:00" : "00:00", endTime: e.target.value === "Gündüz" ? "16:00" : e.target.value === "Akşam" ? "00:00" : "08:00" })}>
+                    <select style={styles.select} className="isg-input" value={newShift.shiftType} onChange={e => setNewShift({ ...newShift, shiftType: e.target.value as ShiftType, startTime: e.target.value === "Gündüz" ? "08:00" : e.target.value === "Akşam" ? "16:00" : "00:00", endTime: e.target.value === "Gündüz" ? "16:00" : e.target.value === "Akşam" ? "00:00" : "08:00" })}>
                       <option>Gündüz</option>
                       <option>Akşam</option>
                       <option>Gece</option>
@@ -1397,7 +1381,7 @@ export default function Page() {
                     <TimePicker value={newShift.endTime} onChange={v => setNewShift({ ...newShift, endTime: v })} />
                   </FormField>
                   <FormField label="Not">
-                    <input style={styles.input} value={newShift.note} onChange={e => setNewShift({ ...newShift, note: e.target.value })} placeholder="Opsiyonel..." />
+                    <input style={styles.input} className="isg-input" value={newShift.note} onChange={e => setNewShift({ ...newShift, note: e.target.value })} placeholder="Opsiyonel..." />
                   </FormField>
                 </div>
                 <div style={{ marginTop: 12 }}>
@@ -1406,7 +1390,7 @@ export default function Page() {
               </div>
 
               {/* Haftalık Takvim */}
-              <div style={styles.card}>
+              <div style={styles.card} className="isg-card">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
                   <p style={{ ...styles.sectionTitle, margin: 0 }}>Haftalık Takvim</p>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -1459,14 +1443,14 @@ export default function Page() {
               </div>
 
               {/* Liste görünümü */}
-              <div style={styles.card}>
-                <p style={styles.sectionTitle}>Tüm Vardiyalar</p>
+              <div style={styles.card} className="isg-card">
+                <p style={styles.sectionTitle} className="isg-text-muted">Tüm Vardiyalar</p>
                 <div style={{ ...styles.card, padding: 0, overflow: "auto", margin: 0 }}>
                   <table style={styles.table}>
                     <thead>
                       <tr>
                         {["Firma", "Personel", "Tarih", "Tür", "Saat", "Not", "İşlem"].map(h => (
-                          <th key={h} style={styles.th}>{h}</th>
+                          <th key={h} style={styles.th} className="isg-th">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -1477,12 +1461,12 @@ export default function Page() {
                         return (
                           <tr key={s.id}>
                             <td style={{ ...styles.td, fontSize: 12 }}>{company?.nickName || "—"}</td>
-                            <td style={styles.td}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</td>
+                            <td style={styles.td} className="isg-td">{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</td>
                             <td style={{ ...styles.td, fontSize: 12 }}>{s.date}</td>
-                            <td style={styles.td}><Badge text={s.shiftType} color={shiftColor[s.shiftType]} /></td>
+                            <td style={styles.td} className="isg-td"><Badge text={s.shiftType} color={shiftColor[s.shiftType]} /></td>
                             <td style={{ ...styles.td, fontSize: 12 }}>{s.startTime}–{s.endTime}</td>
                             <td style={{ ...styles.td, fontSize: 12, color: "#94a3b8" }}>{s.note || "—"}</td>
-                            <td style={styles.td}><button style={styles.btnDanger} onClick={() => deleteShift(s.id)}>Sil</button></td>
+                            <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteShift(s.id)}>Sil</button></td>
                           </tr>
                         );
                       })}

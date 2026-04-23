@@ -579,6 +579,8 @@ export default function Page() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [newShift, setNewShift] = useState({ companyId: "", employeeId: "", date: "", shiftType: "Gündüz" as ShiftType, startTime: "08:00", endTime: "16:00", note: "" });
   const [shiftWeekOffset, setShiftWeekOffset] = useState(0);
+  const [calendarModal, setCalendarModal] = useState<{ date: string; } | null>(null);
+  const [quickShift, setQuickShift] = useState({ companyId: "", employeeId: "", shiftType: "Gündüz" as ShiftType, startTime: "08:00", endTime: "16:00", note: "" });
 
   async function loadAll() {
     setLoading(true);
@@ -1411,18 +1413,25 @@ export default function Page() {
                     const dayShifts = filteredShifts.filter(s => s.date === key);
                     const isToday = formatDateKey(new Date()) === key;
                     return (
-                      <div key={key} style={{ backgroundColor: isToday ? "var(--isg-today-bg, #1e3a5f)" : "var(--isg-input-bg)", border: `1px solid ${isToday ? "#0ea5e9" : "var(--isg-border)"}`, borderRadius: 8, padding: 8, minHeight: 120 }}>
+                      <div
+                        key={key}
+                        onClick={() => { setCalendarModal({ date: key }); setQuickShift({ companyId: "", employeeId: "", shiftType: "Gündüz", startTime: "08:00", endTime: "16:00", note: "" }); }}
+                        style={{ backgroundColor: isToday ? "var(--isg-today-bg, #1e3a5f)" : "var(--isg-input-bg)", border: `1px solid ${isToday ? "#0ea5e9" : "var(--isg-border)"}`, borderRadius: 8, padding: 8, minHeight: 120, cursor: "pointer", transition: "border-color 0.15s" }}
+                        onMouseEnter={e => (e.currentTarget.style.borderColor = "#0ea5e9")}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = isToday ? "#0ea5e9" : "var(--isg-border)")}
+                      >
                         <div style={{ fontSize: 11, color: isToday ? "#38bdf8" : "var(--isg-text-muted)", fontWeight: 600, marginBottom: 2 }}>{dayNames[i]}</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: isToday ? "var(--isg-text)" : "var(--isg-text-muted)", marginBottom: 8 }}>{day.getDate()}.{String(day.getMonth() + 1).padStart(2, "0")}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: isToday ? "var(--isg-text)" : "var(--isg-text-muted)", marginBottom: 4 }}>{day.getDate()}.{String(day.getMonth() + 1).padStart(2, "0")}</div>
+                        <div style={{ fontSize: 9, color: "#0ea5e9", marginBottom: 4 }}>+ Ekle</div>
                         {dayShifts.map(s => {
                           const emp = employees.find(e => e.id === s.employeeId);
                           return (
-                            <div key={s.id} style={{ backgroundColor: shiftColor[s.shiftType] + "22", border: `1px solid ${shiftColor[s.shiftType]}44`, borderRadius: 4, padding: "4px 6px", marginBottom: 4, fontSize: 11 }}>
+                            <div key={s.id} onClick={e => e.stopPropagation()} style={{ backgroundColor: shiftColor[s.shiftType] + "22", border: `1px solid ${shiftColor[s.shiftType]}44`, borderRadius: 4, padding: "4px 6px", marginBottom: 4, fontSize: 11 }}>
                               <div style={{ color: shiftColor[s.shiftType], fontWeight: 600 }}>{s.shiftType}</div>
                               <div style={{ color: "var(--isg-text)" }}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</div>
                               <div style={{ color: "var(--isg-text-muted)" }}>{s.startTime}–{s.endTime}</div>
                               {s.note && <div style={{ color: "var(--isg-text-muted)", fontSize: 10, marginTop: 2 }}>{s.note}</div>}
-                              <button style={{ ...styles.btnDanger, fontSize: 10, padding: "2px 6px", marginTop: 4 }} onClick={() => deleteShift(s.id)}>Sil</button>
+                              <button style={{ ...styles.btnDanger, fontSize: 10, padding: "2px 6px", marginTop: 4 }} onClick={e => { e.stopPropagation(); deleteShift(s.id); }}>Sil</button>
                             </div>
                           );
                         })}
@@ -1430,6 +1439,80 @@ export default function Page() {
                     );
                   })}
                 </div>
+
+                {/* Gün tıklama modalı */}
+                {calendarModal && (
+                  <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setCalendarModal(null)}>
+                    <div style={{ backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 12, padding: 24, width: 400, maxWidth: "90vw" }} onClick={e => e.stopPropagation()}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: "var(--isg-text)" }}>
+                          📅 {new Date(calendarModal.date).toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" })}
+                        </div>
+                        <button style={{ ...styles.btnSecondary, fontSize: 16, padding: "2px 8px" }} onClick={() => setCalendarModal(null)}>✕</button>
+                      </div>
+
+                      {/* O güne ait vardiyalar */}
+                      {shifts.filter(s => s.date === calendarModal.date).length > 0 && (
+                        <div style={{ marginBottom: 16 }}>
+                          <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 8, fontWeight: 600 }}>MEVCUT VARDİYALAR</div>
+                          {shifts.filter(s => s.date === calendarModal.date).map(s => {
+                            const emp = employees.find(e => e.id === s.employeeId);
+                            const comp = companies.find(c => c.id === s.companyId);
+                            return (
+                              <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: shiftColor[s.shiftType] + "22", border: `1px solid ${shiftColor[s.shiftType]}44`, borderRadius: 6, padding: "8px 12px", marginBottom: 6 }}>
+                                <div>
+                                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--isg-text)" }}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</div>
+                                  <div style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{comp?.nickName} · {s.shiftType} · {s.startTime}–{s.endTime}</div>
+                                </div>
+                                <button style={styles.btnDanger} onClick={() => deleteShift(s.id)}>Sil</button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Hızlı vardiya ekle */}
+                      <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 8, fontWeight: 600 }}>YENİ VARDİYA EKLE</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                        <div>
+                          <label style={styles.label}>Firma *</label>
+                          <select style={styles.select} className="isg-input" value={quickShift.companyId} onChange={e => setQuickShift({ ...quickShift, companyId: e.target.value, employeeId: "" })}>
+                            <option value="">Seçin...</option>
+                            {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={styles.label}>Personel *</label>
+                          <select style={styles.select} className="isg-input" value={quickShift.employeeId} onChange={e => setQuickShift({ ...quickShift, employeeId: e.target.value })}>
+                            <option value="">Seçin...</option>
+                            {employees.filter(e => !quickShift.companyId || e.companyId === quickShift.companyId).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={styles.label}>Vardiya Türü</label>
+                          <select style={styles.select} className="isg-input" value={quickShift.shiftType} onChange={e => setQuickShift({ ...quickShift, shiftType: e.target.value as ShiftType })}>
+                            <option>Gündüz</option><option>Akşam</option><option>Gece</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={styles.label}>Saat</label>
+                          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                            <input style={{ ...styles.input, width: 70 }} className="isg-input" value={quickShift.startTime} onChange={e => setQuickShift({ ...quickShift, startTime: e.target.value })} placeholder="08:00" />
+                            <span style={{ color: "var(--isg-text-muted)" }}>–</span>
+                            <input style={{ ...styles.input, width: 70 }} className="isg-input" value={quickShift.endTime} onChange={e => setQuickShift({ ...quickShift, endTime: e.target.value })} placeholder="16:00" />
+                          </div>
+                        </div>
+                      </div>
+                      <button style={{ ...styles.btnPrimary, width: "100%" }} onClick={async () => {
+                        if (!quickShift.companyId || !quickShift.employeeId) return;
+                        const data = { ...quickShift, date: calendarModal.date };
+                        const ref = await addDoc(collection(db, "shifts"), data);
+                        setShifts(prev => [...prev, { id: ref.id, ...data }]);
+                        setQuickShift({ companyId: quickShift.companyId, employeeId: "", shiftType: "Gündüz", startTime: "08:00", endTime: "16:00", note: "" });
+                      }}>Vardiya Ekle</button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Legend */}
                 <div style={{ display: "flex", gap: 16, marginTop: 12 }}>

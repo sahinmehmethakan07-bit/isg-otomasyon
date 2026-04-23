@@ -318,7 +318,7 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], observ
     content.push({
       table: {
         headerRows: 1,
-        widths: [14, 36, 46, 40, 40, 46, 12, 12, 14, 12, 12, 14, 36, 30, 26, 30],
+        widths: [10, 30, 42, 38, 38, 48, 10, 10, 12, 10, 10, 12, 40, 28, 30, 28],
         body: tableBody,
       },
       layout: {

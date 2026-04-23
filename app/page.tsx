@@ -328,29 +328,15 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], observ
 
     // İmza bloğu — gözlemciler yan yana
     if (observers.length > 0) {
-      const sigCols = observers.map(o => ({
-        stack: [
-          { text: o.fullName, fontSize: 8, bold: true, alignment: "center" },
-          { text: o.title || "", fontSize: 7, alignment: "center", color: "#64748b" },
-          { text: `Sertifika No: ${o.certificateNo || "-"}`, fontSize: 7, alignment: "center", color: "#64748b" },
-          { canvas: [{ type: "line", x1: 0, y1: 20, x2: 100, y2: 20, lineWidth: 0.5, lineColor: "#334155" }], margin: [0, 8, 0, 4] },
-          { text: "İmza", fontSize: 7, alignment: "center", color: "#94a3b8" },
-        ],
-        width: "*",
-        margin: [4, 0, 4, 0],
-      }));
-
       content.push({
         margin: [0, 16, 0, 0],
         table: {
           widths: observers.map(() => "*"),
           body: [[...observers.map(o => ({
             stack: [
-              { text: o.fullName, fontSize: 8, bold: true, alignment: "center" as const },
-              { text: o.title || "", fontSize: 7, alignment: "center" as const, color: "#64748b" },
-              { text: `Sertifika: ${o.certificateNo || "-"}`, fontSize: 7, alignment: "center" as const, color: "#64748b" },
-              { canvas: [{ type: "line" as const, x1: 10, y1: 18, x2: 110, y2: 18, lineWidth: 0.5, lineColor: "#000000" }], margin: [0, 6, 0, 2] },
-              { text: "Ad Soyad / İmza", fontSize: 6, alignment: "center" as const, color: "#94a3b8" },
+              { text: o.fullName, fontSize: 8, bold: true, alignment: "center" as const, color: "#000000" },
+              { text: o.title || "", fontSize: 7, alignment: "center" as const, color: "#000000" },
+              { text: "\n\n\n\n", fontSize: 7 },
             ],
             margin: [8, 8, 8, 8],
             border: [true, true, true, true],

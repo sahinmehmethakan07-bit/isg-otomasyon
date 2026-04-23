@@ -479,6 +479,56 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
+function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [h, m] = value ? value.split(":").map(Number) : [8, 0];
+  const [hour, setHour] = useState(h);
+  const [minute, setMinute] = useState(m);
+
+  const apply = (newH: number, newM: number) => {
+    onChange(`${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`);
+  };
+
+  return (
+    <div style={{ position: "relative" }}>
+      <div onClick={() => setOpen(!open)} style={{ ...styles.input, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span>{value || "Saat seçin..."}</span>
+        <span style={{ fontSize: 14 }}>🕐</span>
+      </div>
+      {open && (
+        <div style={{ position: "absolute", zIndex: 1000, top: "calc(100% + 4px)", left: 0, backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: 16, width: 200, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>Saat</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <button onClick={() => { const n = (hour + 1) % 24; setHour(n); apply(n, minute); }} style={{ ...styles.btnSecondary, padding: "2px 12px" }}>▲</button>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "#e2e8f0", textAlign: "center", minWidth: 40 }}>{String(hour).padStart(2, "0")}</div>
+                <button onClick={() => { const n = (hour - 1 + 24) % 24; setHour(n); apply(n, minute); }} style={{ ...styles.btnSecondary, padding: "2px 12px" }}>▼</button>
+              </div>
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: "#94a3b8", paddingTop: 8 }}>:</div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>Dakika</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <button onClick={() => { const n = (minute + 15) % 60; setMinute(n); apply(hour, n); }} style={{ ...styles.btnSecondary, padding: "2px 12px" }}>▲</button>
+                <div style={{ fontSize: 24, fontWeight: 700, color: "#e2e8f0", textAlign: "center", minWidth: 40 }}>{String(minute).padStart(2, "0")}</div>
+                <button onClick={() => { const n = (minute - 15 + 60) % 60; setMinute(n); apply(hour, n); }} style={{ ...styles.btnSecondary, padding: "2px 12px" }}>▼</button>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4, marginBottom: 8 }}>
+            {["00:00","08:00","09:00","10:00","12:00","16:00","17:00","18:00","20:00","22:00","23:00","23:59"].map(t => (
+              <button key={t} onClick={() => { const [hh, mm] = t.split(":").map(Number); setHour(hh); setMinute(mm); apply(hh, mm); setOpen(false); }}
+                style={{ ...styles.btnSecondary, fontSize: 10, padding: "3px 0", backgroundColor: value === t ? "#0ea5e9" : "#334155", color: value === t ? "#fff" : "#e2e8f0" }}>{t}</button>
+            ))}
+          </div>
+          <button onClick={() => setOpen(false)} style={{ ...styles.btnPrimary, width: "100%", fontSize: 12 }}>Tamam</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Badge({ text, color }: { text: string; color: string }) {
   return <span style={{ ...styles.badge, backgroundColor: color + "22", color, border: `1px solid ${color}44` }}>{text}</span>;
 }
@@ -493,6 +543,7 @@ export default function Page() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -817,14 +868,39 @@ export default function Page() {
   const highRisks = risks.filter(r => r.score >= 15).length;
   const incompleteEmployees = employees.filter(e => !e.trainingComplete).length;
 
+  const theme = {
+    bg: darkMode ? "#0f172a" : "#f1f5f9",
+    card: darkMode ? "#1e293b" : "#ffffff",
+    border: darkMode ? "#334155" : "#e2e8f0",
+    text: darkMode ? "#e2e8f0" : "#1e293b",
+    textMuted: darkMode ? "#94a3b8" : "#64748b",
+    input: darkMode ? "#0f172a" : "#f8fafc",
+    header: darkMode ? "#1e293b" : "#ffffff",
+    nav: darkMode ? "#0f172a" : "#f1f5f9",
+  };
+
+  const dynStyles = {
+    app: { ...styles.app, backgroundColor: theme.bg, color: theme.text },
+    header: { ...styles.header, backgroundColor: theme.header, borderColor: theme.border },
+    card: { ...styles.card, backgroundColor: theme.card, borderColor: theme.border },
+    input: { ...styles.input, backgroundColor: theme.input, borderColor: theme.border, color: theme.text },
+    select: { ...styles.select, backgroundColor: theme.input, borderColor: theme.border, color: theme.text },
+    nav: { ...styles.nav, backgroundColor: theme.nav, borderColor: theme.border },
+    td: { ...styles.td, borderColor: theme.border },
+    th: { ...styles.th, borderColor: theme.border, color: theme.textMuted },
+  };
+
   return (
-    <div style={styles.app}>
-      <header style={styles.header}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 700, fontSize: 17, color: "#f1f5f9" }}>
+    <div style={dynStyles.app}>
+      <header style={dynStyles.header}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 700, fontSize: 17, color: darkMode ? "#f1f5f9" : "#1e293b" }}>
           <span style={{ fontSize: 20 }}>🦺</span>
           <span>İSG <span style={{ color: "#38bdf8" }}>Otomasyon</span></span>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button style={{ ...styles.btnSecondary, fontSize: 18, padding: "4px 10px", backgroundColor: "transparent", border: "none" }} onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Açık tema" : "Koyu tema"}>
+            {darkMode ? "☀️" : "🌙"}
+          </button>
           <button style={{ ...styles.btnSecondary, fontSize: 11 }} onClick={loadAll}>🔄 Yenile</button>
           <button style={{ ...styles.btnDanger, fontSize: 11 }} onClick={async () => {
             await signOut(auth);
@@ -1315,10 +1391,10 @@ export default function Page() {
                     </select>
                   </FormField>
                   <FormField label="Başlangıç">
-                    <input style={styles.input} type="time" value={newShift.startTime} onChange={e => setNewShift({ ...newShift, startTime: e.target.value })} />
+                    <TimePicker value={newShift.startTime} onChange={v => setNewShift({ ...newShift, startTime: v })} />
                   </FormField>
                   <FormField label="Bitiş">
-                    <input style={styles.input} type="time" value={newShift.endTime} onChange={e => setNewShift({ ...newShift, endTime: e.target.value })} />
+                    <TimePicker value={newShift.endTime} onChange={v => setNewShift({ ...newShift, endTime: v })} />
                   </FormField>
                   <FormField label="Not">
                     <input style={styles.input} value={newShift.note} onChange={e => setNewShift({ ...newShift, note: e.target.value })} placeholder="Opsiyonel..." />

@@ -218,9 +218,12 @@ function tr(text: string): string {
 }
 
 async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
-  const pdfMake = (await import("pdfmake/build/pdfmake")).default;
-  const pdfFonts = (await import("pdfmake/build/vfs_fonts")).default;
-  pdfMake.vfs = pdfFonts.vfs;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
+  const maker = pdfMake.default || pdfMake;
+  maker.vfs = (pdfFonts.default || pdfFonts).vfs;
 
   const today = new Date().toLocaleDateString("tr-TR");
   const byCompany = companies
@@ -337,7 +340,7 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[]) {
     defaultStyle: { font: "Roboto" },
   };
 
-  pdfMake.createPdf(docDef).download(`Risk_Degerlendirme_Raporu_${today.replace(/\./g, "_")}.pdf`);
+  maker.createPdf(docDef).download(`Risk_Degerlendirme_Raporu_${today.replace(/\./g, "_")}.pdf`);
 }
 
 

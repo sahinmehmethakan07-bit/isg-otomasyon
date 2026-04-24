@@ -1520,6 +1520,7 @@ export default function Page() {
                       }}>Vardiya Ekle</button>
                     </div>
                   </div>
+                )}
 
                 {/* Legend */}
                 <div style={{ display: "flex", gap: 16, marginTop: 12 }}>

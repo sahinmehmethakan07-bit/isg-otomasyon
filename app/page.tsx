@@ -1497,9 +1497,9 @@ export default function Page() {
                         <div>
                           <label style={styles.label}>Saat</label>
                           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                            <input style={{ ...styles.input, width: 70 }} className="isg-input" value={quickShift.startTime} onChange={e => setQuickShift({ ...quickShift, startTime: e.target.value })} placeholder="08:00" />
-                            <span style={{ color: "var(--isg-text-muted)" }}>–</span>
-                            <input style={{ ...styles.input, width: 70 }} className="isg-input" value={quickShift.endTime} onChange={e => setQuickShift({ ...quickShift, endTime: e.target.value })} placeholder="16:00" />
+                            <TimePicker value={quickShift.startTime} onChange={v => setQuickShift({ ...quickShift, startTime: v })} />
+                            <span style={{ color: "var(--isg-text-muted)", padding: "0 4px" }}>–</span>
+                            <TimePicker value={quickShift.endTime} onChange={v => setQuickShift({ ...quickShift, endTime: v })} />
                           </div>
                         </div>
                       </div>

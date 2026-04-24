@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import React, { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { db, auth } from "../lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -393,15 +393,25 @@ const styles: Record<string, React.CSSProperties> = {
 
 function DatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
   const now = value ? new Date(value) : new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [viewMonth, setViewMonth] = useState(now.getMonth());
 
   const months = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const firstDay = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7; // Pazartesi başlat
+  const firstDay = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
 
   const selectedDate = value ? new Date(value) : null;
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
 
   const select = (day: number) => {
     const d = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -414,7 +424,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
     : "Tarih seçin...";
 
   return (
-    <div style={{ position: "relative" }}>
+    <div ref={ref} style={{ position: "relative" }}>
       <div
         onClick={() => setOpen(!open)}
         style={{ ...styles.input, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
@@ -481,16 +491,26 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
 
 function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
   const parts = value ? value.split(":") : ["8", "0"];
   const [hour, setHour] = useState(parseInt(parts[0]) || 8);
   const [minute, setMinute] = useState(parseInt(parts[1]) || 0);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
 
   const apply = (newH: number, newM: number) => {
     onChange(`${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`);
   };
 
   return (
-    <div style={{ position: "relative" }}>
+    <div ref={ref} style={{ position: "relative" }}>
       <div onClick={() => setOpen(!open)} style={{ ...styles.input, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span>{value || "Saat seçin..."}</span>
         <span style={{ fontSize: 14 }}>🕐</span>
@@ -1369,13 +1389,6 @@ export default function Page() {
                   <FormField label="Tarih *">
                     <DatePicker value={newShift.date} onChange={v => setNewShift({ ...newShift, date: v })} />
                   </FormField>
-                  <FormField label="Vardiya Türü">
-                    <select style={styles.select} className="isg-input" value={newShift.shiftType} onChange={e => setNewShift({ ...newShift, shiftType: e.target.value as ShiftType, startTime: e.target.value === "Gündüz" ? "08:00" : e.target.value === "Akşam" ? "16:00" : "00:00", endTime: e.target.value === "Gündüz" ? "16:00" : e.target.value === "Akşam" ? "00:00" : "08:00" })}>
-                      <option>Gündüz</option>
-                      <option>Akşam</option>
-                      <option>Gece</option>
-                    </select>
-                  </FormField>
                   <FormField label="Başlangıç">
                     <TimePicker value={newShift.startTime} onChange={v => setNewShift({ ...newShift, startTime: v })} />
                   </FormField>
@@ -1489,11 +1502,6 @@ export default function Page() {
                           </select>
                         </div>
                         <div>
-                          <label style={styles.label}>Vardiya Türü</label>
-                          <select style={styles.select} className="isg-input" value={quickShift.shiftType} onChange={e => setQuickShift({ ...quickShift, shiftType: e.target.value as ShiftType })}>
-                            <option>Gündüz</option><option>Akşam</option><option>Gece</option>
-                          </select>
-                        </div>
                         <div>
                           <label style={styles.label}>Saat</label>
                           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>

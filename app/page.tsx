@@ -600,6 +600,7 @@ export default function Page() {
   const [newShift, setNewShift] = useState({ companyId: "", employeeId: "", date: "", shiftType: "Gündüz" as ShiftType, startTime: "08:00", endTime: "16:00", note: "" });
   const [shiftWeekOffset, setShiftWeekOffset] = useState(0);
   const [calendarModal, setCalendarModal] = useState<{ date: string; } | null>(null);
+  const [selectedCalDay, setSelectedCalDay] = useState<string | null>(null);
   const [quickShift, setQuickShift] = useState({ companyId: "", employeeId: "", shiftType: "Gündüz" as ShiftType, startTime: "08:00", endTime: "16:00", note: "" });
 
   async function loadAll() {
@@ -867,7 +868,7 @@ export default function Page() {
   }
 
   function formatDateKey(d: Date) {
-    return d.toISOString().slice(0, 10);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   }
 
   const tabs = [
@@ -1425,16 +1426,17 @@ export default function Page() {
                     const key = formatDateKey(day);
                     const dayShifts = filteredShifts.filter(s => s.date === key);
                     const isToday = formatDateKey(new Date()) === key;
+                    const isSelected = selectedCalDay === key;
                     return (
                       <div
                         key={key}
-                        onClick={() => { setCalendarModal({ date: key }); setQuickShift({ companyId: "", employeeId: "", shiftType: "Gündüz", startTime: "08:00", endTime: "16:00", note: "" }); }}
-                        style={{ backgroundColor: isToday ? "var(--isg-today-bg, #1e3a5f)" : "var(--isg-input-bg)", border: `1px solid ${isToday ? "#0ea5e9" : "var(--isg-border)"}`, borderRadius: 8, padding: 8, minHeight: 120, cursor: "pointer", transition: "border-color 0.15s" }}
+                        onClick={() => { setSelectedCalDay(key); setCalendarModal({ date: key }); setQuickShift({ companyId: "", employeeId: "", shiftType: "Gündüz", startTime: "08:00", endTime: "16:00", note: "" }); }}
+                        style={{ backgroundColor: isSelected ? "var(--isg-today-bg, #1e3a5f)" : "var(--isg-input-bg)", border: `2px solid ${isToday ? "#0ea5e9" : isSelected ? "#0ea5e9" : "var(--isg-border)"}`, borderRadius: 8, padding: 8, minHeight: 120, cursor: "pointer", transition: "border-color 0.15s, background-color 0.15s" }}
                         onMouseEnter={e => (e.currentTarget.style.borderColor = "#0ea5e9")}
-                        onMouseLeave={e => (e.currentTarget.style.borderColor = isToday ? "#0ea5e9" : "var(--isg-border)")}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = isToday || isSelected ? "#0ea5e9" : "var(--isg-border)")}
                       >
-                        <div style={{ fontSize: 11, color: isToday ? "#38bdf8" : "var(--isg-text-muted)", fontWeight: 600, marginBottom: 2 }}>{dayNames[i]}</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: isToday ? "var(--isg-text)" : "var(--isg-text-muted)", marginBottom: 4 }}>{day.getDate()}.{String(day.getMonth() + 1).padStart(2, "0")}</div>
+                        <div style={{ fontSize: 11, color: isToday ? "#0ea5e9" : "var(--isg-text-muted)", fontWeight: 600, marginBottom: 2 }}>{dayNames[i]}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: isToday || isSelected ? "var(--isg-text)" : "var(--isg-text-muted)", marginBottom: 4 }}>{day.getDate()}.{String(day.getMonth() + 1).padStart(2, "0")}</div>
                         <div style={{ fontSize: 9, color: "#0ea5e9", marginBottom: 4 }}>+ Ekle</div>
                         {dayShifts.map(s => {
                           const emp = employees.find(e => e.id === s.employeeId);
@@ -1455,13 +1457,13 @@ export default function Page() {
 
                 {/* Gün tıklama modalı */}
                 {calendarModal && (
-                  <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setCalendarModal(null)}>
+                  <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => { setCalendarModal(null); setSelectedCalDay(null); }}>
                     <div style={{ backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 12, padding: 24, width: 400, maxWidth: "90vw" }} onClick={e => e.stopPropagation()}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                         <div style={{ fontWeight: 700, fontSize: 15, color: "var(--isg-text)" }}>
                           📅 {new Date(calendarModal.date).toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" })}
                         </div>
-                        <button style={{ ...styles.btnSecondary, fontSize: 16, padding: "2px 8px" }} onClick={() => setCalendarModal(null)}>✕</button>
+                        <button style={{ ...styles.btnSecondary, fontSize: 16, padding: "2px 8px" }} onClick={() => { setCalendarModal(null); setSelectedCalDay(null); }}>✕</button>
                       </div>
 
                       {/* O güne ait vardiyalar */}

@@ -1502,7 +1502,6 @@ export default function Page() {
                           </select>
                         </div>
                         <div>
-                        <div>
                           <label style={styles.label}>Saat</label>
                           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                             <TimePicker value={quickShift.startTime} onChange={v => setQuickShift({ ...quickShift, startTime: v })} />
@@ -1520,6 +1519,7 @@ export default function Page() {
                       }}>Vardiya Ekle</button>
                     </div>
                   </div>
+                )}
 
                 {/* Legend */}
                 <div style={{ display: "flex", gap: 16, marginTop: 12 }}>

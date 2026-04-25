@@ -27,6 +27,7 @@ type Company = {
   employeeCount: number;
   contractEnd: string;
   serviceType: ServiceType;
+  contactEmail?: string;
 };
 
 type EmployeeChecklist = {
@@ -688,7 +689,7 @@ export default function Page() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [editingDofId, setEditingDofId] = useState<string | null>(null);
 
-  const [newCompany, setNewCompany] = useState({ nickName: "", officialName: "", sgkSicil: "", naceCode: "", dangerClass: "Az Tehlikeli" as DangerClass, employeeCount: "", contractEnd: "", serviceType: "İş Güvenliği" as ServiceType });
+  const [newCompany, setNewCompany] = useState({ nickName: "", officialName: "", sgkSicil: "", naceCode: "", dangerClass: "Az Tehlikeli" as DangerClass, employeeCount: "", contractEnd: "", serviceType: "İş Güvenliği" as ServiceType, contactEmail: "" });
   const [newEmployee, setNewEmployee] = useState({ companyId: "", firstName: "", lastName: "", tcNo: "", title: "", hireDate: "" });
   const [newDocument, setNewDocument] = useState({ companyId: "", employeeId: "", type: "Risk Değerlendirme Raporu", issueDate: "", expiryDate: "" });
   const [newObserver, setNewObserver] = useState({ fullName: "", title: "", certificateNo: "", phone: "" });
@@ -795,7 +796,7 @@ export default function Page() {
     if (!newCompany.nickName || !newCompany.sgkSicil) return;
     const naceCode = newCompany.naceCode || extractNaceFromSgk(newCompany.sgkSicil);
     const officialName = newCompany.officialName || officialNameFromSgk(newCompany.sgkSicil) || newCompany.nickName;
-    const data = { nickName: newCompany.nickName, officialName, sgkSicil: newCompany.sgkSicil, naceCode, dangerClass: dangerFromNace(naceCode), employeeCount: parseInt(newCompany.employeeCount) || 0, contractEnd: newCompany.contractEnd, serviceType: newCompany.serviceType };
+    const data = { nickName: newCompany.nickName, officialName, sgkSicil: newCompany.sgkSicil, naceCode, dangerClass: dangerFromNace(naceCode), employeeCount: parseInt(newCompany.employeeCount) || 0, contractEnd: newCompany.contractEnd, serviceType: newCompany.serviceType, contactEmail: newCompany.contactEmail };
     const ref = await addDoc(collection(db, "companies"), data);
     setCompanies(prev => [...prev, { id: ref.id, ...data }]);
     setNewCompany({ nickName: "", officialName: "", sgkSicil: "", naceCode: "", dangerClass: "Az Tehlikeli", employeeCount: "", contractEnd: "", serviceType: "İş Güvenliği" });
@@ -881,6 +882,31 @@ export default function Page() {
     const data: Omit<DofRecord, "id"> = { companyId: newDof.companyId, observerId: newDof.observerId, title: newDof.title, description: newDof.description, lawReference: newDof.lawReference, priority: newDof.priority, responsible: newDof.responsible, dueDate: newDof.dueDate, status: newDof.status, location: newDof.location, beforePhoto: newDof.beforePhoto || undefined, afterPhoto: newDof.afterPhoto || undefined };
     const ref = await addDoc(collection(db, "dofs"), data);
     setDofs(prev => [...prev, { id: ref.id, ...data }]);
+
+    // E-mail bildirimi gönder
+    const company = companies.find(c => c.id === newDof.companyId);
+    if (company?.contactEmail) {
+      try {
+        await fetch("/api/send-dof-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: company.contactEmail,
+            companyName: company.officialName,
+            dofTitle: newDof.title,
+            dofDescription: newDof.description,
+            dofLocation: newDof.location,
+            dofPriority: newDof.priority,
+            dofResponsible: newDof.responsible,
+            dofDueDate: newDof.dueDate,
+            dofLawReference: newDof.lawReference,
+          }),
+        });
+      } catch (e) {
+        console.error("E-mail gönderilemedi:", e);
+      }
+    }
+
     setNewDof({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta", responsible: "", dueDate: "", status: "Açık", location: "", beforePhoto: "", afterPhoto: "" });
   }
 
@@ -1098,6 +1124,7 @@ export default function Page() {
                 <FormField label="Çalışan Sayısı"><input style={styles.input} className="isg-input" type="number" value={newCompany.employeeCount} onChange={e => setNewCompany({ ...newCompany, employeeCount: e.target.value })} /></FormField>
                 <FormField label="Sözleşme Bitiş"><DatePicker value={newCompany.contractEnd} onChange={v => setNewCompany({ ...newCompany, contractEnd: v })} /></FormField>
                 <FormField label="Hizmet Türü"><select style={styles.select} className="isg-input" value={newCompany.serviceType} onChange={e => setNewCompany({ ...newCompany, serviceType: e.target.value as ServiceType })}><option>İş Güvenliği</option><option>İş Güvenliği + İşyeri Hekimliği</option></select></FormField>
+                <FormField label="İletişim E-posta"><input style={styles.input} className="isg-input" type="email" value={newCompany.contactEmail} onChange={e => setNewCompany({ ...newCompany, contactEmail: e.target.value })} placeholder="firma@ornek.com" /></FormField>
               </div>
               <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addCompany}>Firma Ekle</button></div>
             </div>

@@ -16,26 +16,26 @@ const db = getFirestore(app);
 
 export async function POST(req: NextRequest) {
   try {
-    const { dofId } = await req.json();
+    const { dofId, pdfBase64 } = await req.json();
     if (!dofId) return NextResponse.json({ error: "dofId gerekli" }, { status: 400 });
 
-    // 1. Email ayarlarını oku
+    // 1. Email ayarlarini oku
     const settingsSnap = await getDoc(doc(db, "settings", "emailNotifications"));
     if (!settingsSnap.exists()) {
-      return NextResponse.json({ error: "Email ayarları bulunamadı. Ayarlar sekmesinden yapılandırın." }, { status: 404 });
+      return NextResponse.json({ error: "Email ayarlari bulunamadi" }, { status: 404 });
     }
     const settings = settingsSnap.data();
     if (!settings.enabled) {
       return NextResponse.json({ message: "Email bildirimi pasif" }, { status: 200 });
     }
     if (!settings.toEmail) {
-      return NextResponse.json({ error: "Alıcı email adresi tanımlı değil" }, { status: 400 });
+      return NextResponse.json({ error: "Alici email adresi tanimli degil" }, { status: 400 });
     }
 
-    // 2. DÖF kaydını oku
+    // 2. DOF kaydini oku
     const dofSnap = await getDoc(doc(db, "dofs", dofId));
     if (!dofSnap.exists()) {
-      return NextResponse.json({ error: "DÖF kaydı bulunamadı" }, { status: 404 });
+      return NextResponse.json({ error: "DOF kaydi bulunamadi" }, { status: 404 });
     }
     const dof = dofSnap.data();
 
@@ -46,48 +46,55 @@ export async function POST(req: NextRequest) {
       if (compSnap.exists()) companyName = compSnap.data().officialName || compSnap.data().nickName;
     }
 
-    // 4. Konu hazırla
-    const subject = (settings.subject || "[İSG] Yeni DÖF Bildirimi")
+    // 4. Konu hazirla
+    const subject = (settings.subject || "[ISG] Yeni DOF Bildirimi")
       .replace("{dofTitle}", dof.title || "")
       .replace("{companyName}", companyName);
 
-    const priorityColor = dof.priority === "Yüksek" ? "#dc2626" : dof.priority === "Orta" ? "#d97706" : "#16a34a";
-
+    // 5. Kisa HTML govde (PDF ekte)
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
         <div style="background:#1e293b;padding:20px;border-radius:8px 8px 0 0;">
-          <h1 style="color:white;margin:0;font-size:20px;">🦺 İSG Otomasyon</h1>
-          <p style="color:#94a3b8;margin:4px 0 0;font-size:14px;">Yeni DÖF Bildirimi</p>
+          <h1 style="color:white;margin:0;font-size:20px;">ISG Otomasyon</h1>
+          <p style="color:#94a3b8;margin:4px 0 0;font-size:14px;">DOF Bildirimi</p>
         </div>
         <div style="border:1px solid #e2e8f0;border-top:none;padding:24px;border-radius:0 0 8px 8px;">
-          <h2 style="margin:0 0 16px;color:#1e293b;font-size:18px;">${dof.title || ""}</h2>
-          ${settings.message ? `<p style="color:#334155;font-size:14px;margin:0 0 16px;padding:12px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">${settings.message}</p>` : ""}
-          <table style="width:100%;border-collapse:collapse;font-size:14px;">
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;width:140px;">Firma</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-weight:600;">${companyName}</td></tr>
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">Konum</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">${dof.location || "—"}</td></tr>
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">Öncelik</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;"><span style="background:${priorityColor};color:white;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;">${dof.priority || "Orta"}</span></td></tr>
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">Sorumlu</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">${dof.responsible || "—"}</td></tr>
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">Termin</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">${dof.dueDate || "—"}</td></tr>
-          </table>
-          ${dof.description ? `<div style="margin-top:16px;"><p style="color:#64748b;font-size:13px;margin:0 0 4px;">Açıklama:</p><p style="color:#1e293b;font-size:14px;margin:0;padding:12px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">${dof.description}</p></div>` : ""}
-          <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;"><p style="color:#94a3b8;font-size:12px;margin:0;">Bu bildirim İSG Otomasyon tarafından otomatik gönderilmiştir.</p></div>
+          <p style="font-size:14px;color:#334155;margin:0 0 8px;">Sayin Yetkili,</p>
+          <p style="font-size:14px;color:#334155;margin:0 0 16px;"><strong>${companyName}</strong> firmasina ait yeni bir DOF kaydi olusturulmustur.</p>
+          <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Baslik:</strong> ${dof.title || ""}</p>
+          <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Oncelik:</strong> ${dof.priority || "Orta"}</p>
+          <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Termin:</strong> ${dof.dueDate || "—"}</p>
+          ${settings.message ? `<p style="font-size:14px;color:#334155;margin:16px 0 0;padding:12px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">${settings.message}</p>` : ""}
+          <p style="font-size:13px;color:#64748b;margin:20px 0 0;">Detayli bilgi icin ekteki PDF dosyasini inceleyiniz.</p>
+          <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;">
+            <p style="color:#94a3b8;font-size:12px;margin:0;">Bu bildirim ISG Otomasyon tarafindan otomatik gonderilmistir.</p>
+          </div>
         </div>
       </div>`;
 
-    // 5. Resend ile gönder
+    // 6. Resend ile gonder (PDF ek olarak)
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
       await logEmail(db, dofId, settings.toEmail, "failed", "RESEND_API_KEY yok");
-      return NextResponse.json({ error: "RESEND_API_KEY tanımlı değil" }, { status: 500 });
+      return NextResponse.json({ error: "RESEND_API_KEY tanimli degil" }, { status: 500 });
     }
 
+    const today = new Date().toLocaleDateString("tr-TR").replace(/\./g, "_");
     const emailPayload: any = {
-      from: "İSG Otomasyon <onboarding@resend.dev>",
+      from: "ISG Otomasyon <onboarding@resend.dev>",
       to: [settings.toEmail],
       subject,
       html,
     };
     if (settings.ccEmail) emailPayload.cc = [settings.ccEmail];
+
+    // PDF eki ekle
+    if (pdfBase64) {
+      emailPayload.attachments = [{
+        filename: `DOF_${dofId.substring(0, 8)}_${today}.pdf`,
+        content: pdfBase64,
+      }];
+    }
 
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -102,10 +109,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result }, { status: response.status });
     }
 
-    // 6. DÖF durumunu güncelle
+    // 7. DOF durumunu guncelle
     await updateDoc(doc(db, "dofs", dofId), { status: "Bildirildi" });
 
-    // 7. Başarılı log
+    // 8. Basarili log
     await logEmail(db, dofId, settings.toEmail, "success", result.id);
 
     return NextResponse.json({ success: true, id: result.id });
@@ -119,5 +126,5 @@ async function logEmail(fireDb: any, dofId: string, to: string, status: string, 
     await addDoc(collection(fireDb, "emailLogs"), {
       dofId, to, status, detail, createdAt: new Date().toISOString(),
     });
-  } catch (e) { console.error("Log yazılamadı:", e); }
+  } catch (e) { console.error("Log yazilamadi:", e); }
 }

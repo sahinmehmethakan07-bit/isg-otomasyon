@@ -897,18 +897,127 @@ export default function Page() {
     setObservers(prev => prev.filter(o => o.id !== id));
   }
 
+  async function generateDofPDF(dof: DofRecord, returnBase64?: boolean): Promise<string | void> {
+    const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
+    const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
+    const maker = pdfMake.default || pdfMake;
+    maker.vfs = (pdfFonts.default || pdfFonts).vfs;
+
+    const company = companies.find(c => c.id === dof.companyId);
+    const observer = observers.find(o => o.id === dof.observerId);
+    const today = new Date().toLocaleDateString("tr-TR");
+    const HL = "#1e293b";
+
+    const priorityColor = dof.priority === "Yüksek" ? "#dc2626" : dof.priority === "Orta" ? "#d97706" : "#16a34a";
+
+    const hdr = (t: string) => ({ text: t, fontSize: 8, bold: true, color: "white", fillColor: HL, margin: [4, 4, 4, 4] as [number, number, number, number] });
+    const cell = (t: string) => ({ text: t, fontSize: 9, margin: [4, 4, 4, 4] as [number, number, number, number] });
+
+    const content: any[] = [
+      // Başlık
+      {
+        table: { widths: ["*"], body: [[{
+          stack: [
+            { text: company?.officialName?.toUpperCase() || "—", fontSize: 14, bold: true, color: "white", alignment: "center" },
+            { text: "DÖF — DÜZELTME ÖNLEYİCİ FAALİYET FORMU", fontSize: 10, color: "white", alignment: "center", margin: [0, 2, 0, 0] },
+          ],
+          fillColor: HL, margin: [0, 6, 0, 6],
+        }]] },
+        layout: "noBorders", margin: [0, 0, 0, 10],
+      },
+
+      // DÖF bilgileri tablosu
+      {
+        table: {
+          widths: [120, "*"],
+          body: [
+            [hdr("Alan"), hdr("Bilgi")],
+            [cell("DÖF No"), cell(dof.id)],
+            [cell("Firma"), cell(company?.officialName || "—")],
+            [cell("Konum / Bölüm"), cell(dof.location || "—")],
+            [cell("Başlık"), { text: dof.title, fontSize: 9, bold: true, margin: [4, 4, 4, 4] }],
+            [cell("Açıklama"), cell(dof.description || "—")],
+            [cell("Öncelik"), { text: dof.priority, fontSize: 9, bold: true, color: "white", fillColor: priorityColor, margin: [4, 4, 4, 4], alignment: "center" }],
+            [cell("Sorumlu"), cell(dof.responsible || "—")],
+            [cell("Termin Tarihi"), cell(dof.dueDate || "—")],
+            [cell("Durum"), cell(dof.status)],
+            [cell("İlgili Mevzuat"), cell(dof.lawReference || "—")],
+            [cell("Gözlemci"), cell(observer?.fullName || "—")],
+            [cell("Rapor Tarihi"), cell(today)],
+          ],
+        },
+        layout: {
+          hLineWidth: () => 0.5,
+          vLineWidth: () => 0.5,
+          hLineColor: () => "#94a3b8",
+          vLineColor: () => "#94a3b8",
+        },
+        margin: [0, 0, 0, 16],
+      },
+
+      // Açıklama detay
+      ...(dof.description ? [{
+        stack: [
+          { text: "Detaylı Açıklama", fontSize: 10, bold: true, color: HL, margin: [0, 0, 0, 6] as [number, number, number, number] },
+          { text: dof.description, fontSize: 9, lineHeight: 1.5, margin: [0, 0, 0, 16] as [number, number, number, number] },
+        ],
+      }] : []),
+
+      // İmza bölümü
+      {
+        table: {
+          widths: ["*", "*", "*"],
+          body: [[
+            ...["Hazırlayan", "Onaylayan", "Firma Yetkilisi"].map(role => ({
+              stack: [
+                { text: role, fontSize: 8, bold: true, alignment: "center" as const, color: "#334155" },
+                { text: "\n\n\n", fontSize: 6 },
+                { text: "Ad Soyad / İmza", fontSize: 7, alignment: "center" as const, color: "#94a3b8" },
+              ],
+              margin: [6, 8, 6, 8] as [number, number, number, number],
+            })),
+          ]],
+        },
+        layout: {
+          hLineWidth: () => 0.5,
+          vLineWidth: () => 0.5,
+          hLineColor: () => "#94a3b8",
+          vLineColor: () => "#94a3b8",
+        },
+        margin: [0, 16, 0, 0],
+      },
+    ];
+
+    const docDef: any = {
+      pageSize: "A4",
+      pageMargins: [30, 30, 30, 30],
+      content,
+      defaultStyle: { font: "Roboto" },
+    };
+
+    if (returnBase64) {
+      return new Promise<string>((resolve) => {
+        maker.createPdf(docDef).getBase64((data: string) => resolve(data));
+      });
+    } else {
+      maker.createPdf(docDef).download(`DOF_${dof.id}_${today.replace(/\./g, "_")}.pdf`);
+    }
+  }
+
   async function addDof() {
     if (!newDof.companyId || !newDof.title) return;
     const data: Omit<DofRecord, "id"> = { companyId: newDof.companyId, observerId: newDof.observerId, title: newDof.title, description: newDof.description, lawReference: newDof.lawReference, priority: newDof.priority, responsible: newDof.responsible, dueDate: newDof.dueDate, status: newDof.status, location: newDof.location, beforePhoto: newDof.beforePhoto || undefined, afterPhoto: newDof.afterPhoto || undefined };
     const ref = await addDoc(collection(db, "dofs"), data);
     setDofs(prev => [...prev, { id: ref.id, ...data }]);
 
-    // E-mail bildirimi — API route Firestore ayarlarını okur
+    // E-mail bildirimi — PDF ek olarak gönderilir
     try {
+      const dofWithId = { id: ref.id, ...data };
+      const pdfBase64 = await generateDofPDF(dofWithId, true);
       const res = await fetch("/api/send-dof-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dofId: ref.id }),
+        body: JSON.stringify({ dofId: ref.id, pdfBase64 }),
       });
       if (res.ok) {
         setDofs(prev => prev.map(d => d.id === ref.id ? { ...d, status: "Bildirildi" } : d));
@@ -1411,6 +1520,7 @@ export default function Page() {
                           {risks.some(r => r.sourceDofId === dof.id) ? "✓ Risk Görüntüle" : "⚡ Riske Aktar"}
                         </button>
                       )}
+                      <button style={{ ...styles.btnSecondary, fontSize: 11, padding: "4px 8px" }} onClick={() => generateDofPDF(dof)}>📄 PDF</button>
                       <button style={styles.btnDanger} onClick={() => deleteDof(dof.id)}>Sil</button>
                     </div>
                   </div>

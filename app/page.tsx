@@ -86,6 +86,15 @@ type DofRecord = {
   afterPhoto?: string;
 };
 
+type SignerRole = "İş Güvenliği Uzmanı" | "İşveren / İşveren Vekili" | "Çalışan Temsilcisi";
+
+type Signer = {
+  id: string;
+  companyId: string;
+  role: SignerRole;
+  fullName: string;
+};
+
 type ShiftType = "Gündüz" | "Akşam" | "Gece";
 
 type Shift = {
@@ -217,7 +226,7 @@ function tr(text: string): string {
     .replace(/Ç/g, "C").replace(/ç/g, "c");
 }
 
-async function generateRiskPDF(risks: RiskRecord[], companies: Company[], observers: Observer[]) {
+async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signers: Signer[]) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -336,22 +345,17 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], observ
     content.push({ text: `Sayfa ${pageNum}`, alignment: "center", fontSize: 8, color: "#64748b", margin: [0, 6, 0, 6] });
 
     // ── İmza bölümü ──
-    const signers = observers.length >= 3
-      ? observers.slice(0, 3).map((o, i) => ({
-          role: i === 0 ? "İş Güvenliği Uzmanı" : i === 1 ? "İşveren / İşveren Vekili" : "Çalışan Temsilcisi",
-          name: o.fullName,
-        }))
-      : [
-          { role: "İş Güvenliği Uzmanı", name: observers[0]?.fullName || "—" },
-          { role: "İşveren / İşveren Vekili", name: observers[1]?.fullName || "—" },
-          { role: "Çalışan Temsilcisi", name: observers[2]?.fullName || "—" },
-        ];
+    const roles: SignerRole[] = ["İş Güvenliği Uzmanı", "İşveren / İşveren Vekili", "Çalışan Temsilcisi"];
+    const companySigners = roles.map(role => {
+      const found = signers.find(s => s.companyId === company.id && s.role === role);
+      return { role, name: found?.fullName || "—" };
+    });
 
     content.push({
       table: {
         widths: ["*", "*", "*"],
         body: [[
-          ...signers.map(s => ({
+          ...companySigners.map(s => ({
             stack: [
               { text: s.role, fontSize: 8, bold: true, alignment: "center" as const, color: "#334155" },
               { text: s.name.toUpperCase(), fontSize: 9, bold: true, alignment: "center" as const, margin: [0, 4, 0, 0] as [number, number, number, number] },
@@ -697,6 +701,7 @@ export default function Page() {
   });
 
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [signers, setSigners] = useState<Signer[]>([]);
   const [newShift, setNewShift] = useState({ companyId: "", employeeId: "", date: "", shiftType: "Gündüz" as ShiftType, startTime: "08:00", endTime: "16:00", note: "" });
   const [shiftWeekOffset, setShiftWeekOffset] = useState(0);
   const [calendarModal, setCalendarModal] = useState<{ date: string; } | null>(null);
@@ -706,7 +711,7 @@ export default function Page() {
   async function loadAll() {
     setLoading(true);
     try {
-      const [compSnap, empSnap, docSnap, obsSnap, dofSnap, riskSnap, shiftSnap] = await Promise.all([
+      const [compSnap, empSnap, docSnap, obsSnap, dofSnap, riskSnap, shiftSnap, signerSnap] = await Promise.all([
         getDocs(collection(db, "companies")),
         getDocs(collection(db, "employees")),
         getDocs(collection(db, "documents")),
@@ -714,6 +719,7 @@ export default function Page() {
         getDocs(collection(db, "dofs")),
         getDocs(collection(db, "risks")),
         getDocs(collection(db, "shifts")),
+        getDocs(collection(db, "signers")),
       ]);
       setCompanies(compSnap.docs.map(d => ({ id: d.id, ...d.data() } as Company)));
       setEmployees(empSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
@@ -722,6 +728,7 @@ export default function Page() {
       setDofs(dofSnap.docs.map(d => ({ id: d.id, ...d.data() } as DofRecord)));
       setRisks(riskSnap.docs.map(d => ({ id: d.id, ...d.data() } as RiskRecord)));
       setShifts(shiftSnap.docs.map(d => ({ id: d.id, ...d.data() } as Shift)));
+      setSigners(signerSnap.docs.map(d => ({ id: d.id, ...d.data() } as Signer)));
     } catch (e) {
       console.error("Firestore yükleme hatası", e);
     } finally {
@@ -801,18 +808,21 @@ export default function Page() {
     const relatedDocs = documents.filter(d => d.companyId === id);
     const relatedDofs = dofs.filter(d => d.companyId === id);
     const relatedRisks = risks.filter(r => r.companyId === id);
+    const relatedSigners = signers.filter(s => s.companyId === id);
     await Promise.all([
       deleteDoc(doc(db, "companies", id)),
       ...relatedEmployees.map(e => deleteDoc(doc(db, "employees", e.id))),
       ...relatedDocs.map(d => deleteDoc(doc(db, "documents", d.id))),
       ...relatedDofs.map(d => deleteDoc(doc(db, "dofs", d.id))),
       ...relatedRisks.map(r => deleteDoc(doc(db, "risks", r.id))),
+      ...relatedSigners.map(s => deleteDoc(doc(db, "signers", s.id))),
     ]);
     setCompanies(prev => prev.filter(c => c.id !== id));
     setEmployees(prev => prev.filter(e => e.companyId !== id));
     setDocuments(prev => prev.filter(d => d.companyId !== id));
     setDofs(prev => prev.filter(d => d.companyId !== id));
     setRisks(prev => prev.filter(r => r.companyId !== id));
+    setSigners(prev => prev.filter(s => s.companyId !== id));
   }
 
   async function addEmployee() {
@@ -979,6 +989,7 @@ export default function Page() {
     { id: "gozlemciler", label: "🔍 Gözlemciler" },
     { id: "dof", label: "⚠️ DÖF" },
     { id: "risk", label: "🛡 Risk" },
+    { id: "imzacilar", label: "✍️ İmzacılar" },
     { id: "vardiya", label: "🕐 Vardiya" },
   ];
 
@@ -1401,7 +1412,7 @@ export default function Page() {
                   try {
                     const risksToExport = selectedCompanyId === "all" ? risks : risks.filter(r => r.companyId === selectedCompanyId);
                     const companiesToExport = selectedCompanyId === "all" ? companies : companies.filter(c => c.id === selectedCompanyId);
-                    await generateRiskPDF(risksToExport, companiesToExport, observers);
+                    await generateRiskPDF(risksToExport, companiesToExport, signers);
                   } finally {
                     setPdfLoading(false);
                   }
@@ -1449,6 +1460,67 @@ export default function Page() {
                   })}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "imzacilar" && (
+          <div>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">İmzacı Yönetimi</p>
+              <p style={{ fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 16 }}>
+                Her firma için PDF raporlarında görünecek 3 imzacıyı belirleyin: İş Güvenliği Uzmanı, İşveren/İşveren Vekili ve Çalışan Temsilcisi.
+              </p>
+
+              {companies.map(company => {
+                const compSigners = signers.filter(s => s.companyId === company.id);
+                const roles: SignerRole[] = ["İş Güvenliği Uzmanı", "İşveren / İşveren Vekili", "Çalışan Temsilcisi"];
+
+                return (
+                  <div key={company.id} style={{ ...styles.card, marginBottom: 12 }} className="isg-card">
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: "var(--isg-text)" }}>{company.nickName}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                      {roles.map(role => {
+                        const existing = compSigners.find(s => s.role === role);
+                        return (
+                          <div key={role} style={{ backgroundColor: "var(--isg-input-bg)", border: "1px solid var(--isg-border)", borderRadius: 8, padding: 12 }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--isg-text-muted)", marginBottom: 8 }}>{role}</div>
+                            {existing ? (
+                              <div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--isg-text)", marginBottom: 8 }}>{existing.fullName}</div>
+                                <div style={{ display: "flex", gap: 6 }}>
+                                  <button style={styles.btnDanger} onClick={async () => {
+                                    await deleteDoc(doc(db, "signers", existing.id));
+                                    setSigners(prev => prev.filter(s => s.id !== existing.id));
+                                  }}>Sil</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <input
+                                  style={styles.input}
+                                  className="isg-input"
+                                  placeholder="Ad Soyad girin..."
+                                  onKeyDown={async (e) => {
+                                    if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                                      const name = (e.target as HTMLInputElement).value.trim();
+                                      const data = { companyId: company.id, role, fullName: name };
+                                      const ref = await addDoc(collection(db, "signers"), data);
+                                      setSigners(prev => [...prev, { id: ref.id, ...data }]);
+                                      (e.target as HTMLInputElement).value = "";
+                                    }
+                                  }}
+                                />
+                                <div style={{ fontSize: 10, color: "var(--isg-text-muted)", marginTop: 4 }}>Enter ile kaydet</div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

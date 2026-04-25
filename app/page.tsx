@@ -895,10 +895,14 @@ export default function Page() {
   }
 
   async function createRiskFromDof(dof: DofRecord) {
+    // Zaten risk varsa Risk sekmesine git
     if (risks.some(r => r.sourceDofId === dof.id)) {
-      alert("Bu DÖF için zaten bir risk kaydı oluşturulmuş.");
+      setActiveTab("risk");
       return;
     }
+    const probMap: Record<string, number> = { "Yüksek": 5, "Orta": 3, "Düşük": 1 };
+    const prob = probMap[dof.priority] || 3;
+    const sev = dof.priority === "Yüksek" ? 4 : dof.priority === "Orta" ? 3 : 2;
     const data = {
       companyId: dof.companyId,
       sourceDofId: dof.id,
@@ -907,9 +911,9 @@ export default function Page() {
       risk: dof.description || "",
       currentMeasure: "",
       actionToTake: "",
-      probability: 3,
-      severity: 3,
-      score: 9,
+      probability: prob,
+      severity: sev,
+      score: prob * sev,
       residualProbability: 1,
       residualSeverity: 1,
       residualScore: 1,
@@ -922,7 +926,7 @@ export default function Page() {
     };
     const ref = await addDoc(collection(db, "risks"), data);
     setRisks(prev => [...prev, { id: ref.id, ...data }]);
-    alert("Risk kaydı oluşturuldu. Risk sekmesinden düzenleyebilirsiniz.");
+    setActiveTab("risk");
   }
 
   async function addRisk() {
@@ -1357,8 +1361,8 @@ export default function Page() {
                     )}
                     <div style={{ display: "flex", gap: 6 }}>
                       <button style={styles.btnSecondary} onClick={() => setEditingDofId(isEditing ? null : dof.id)}>{isEditing ? "Kapat" : "Düzenle"}</button>
-                      <button style={{ ...styles.btnPrimary, fontSize: 11, padding: "4px 10px" }} onClick={() => createRiskFromDof(dof)}>
-                        {risks.some(r => r.sourceDofId === dof.id) ? "✓ Risk Var" : "⚡ Risk Oluştur"}
+                      <button style={{ ...(risks.some(r => r.sourceDofId === dof.id) ? styles.btnSuccess : styles.btnPrimary), fontSize: 11, padding: "4px 10px" }} onClick={() => createRiskFromDof(dof)}>
+                        {risks.some(r => r.sourceDofId === dof.id) ? "✓ Risk Görüntüle" : "⚡ Risk Oluştur"}
                       </button>
                       <button style={styles.btnDanger} onClick={() => deleteDof(dof.id)}>Sil</button>
                     </div>
@@ -1426,7 +1430,7 @@ export default function Page() {
               <table style={styles.table}>
                 <thead>
                   <tr>
-                    {["Firma", "Bölüm", "Tehlike Kaynağı", "Tehlike", "Mevcut Önlem", "Öneriler", "O", "Ş", "RS", "KO", "KŞ", "KRS", "Etkilenecek", "Sorumlu", "Termin", "K.Tarihi", "Durum", "Mevzuat", "İşlem"].map(h => (
+                    {["Firma", "Bölüm", "Tehlike Kaynağı", "Tehlike", "Mevcut Önlem", "Öneriler", "O", "Ş", "RS", "KO", "KŞ", "KRS", "Etkilenecek", "Sorumlu", "Termin", "K.Tarihi", "Durum", "Mevzuat", "Kaynak", "İşlem"].map(h => (
                       <th key={h} style={styles.th} className="isg-th">{h}</th>
                     ))}
                   </tr>
@@ -1434,6 +1438,7 @@ export default function Page() {
                 <tbody>
                   {filteredRisks.map(r => {
                     const company = companies.find(c => c.id === r.companyId);
+                    const sourceDof = r.sourceDofId ? dofs.find(d => d.id === r.sourceDofId) : null;
                     return (
                       <tr key={r.id}>
                         <td style={{ ...styles.td, fontSize: 12 }}>{company?.nickName}</td>
@@ -1454,6 +1459,13 @@ export default function Page() {
                         <td style={{ ...styles.td, fontSize: 12 }}>{r.controlDate || "—"}</td>
                         <td style={styles.td} className="isg-td"><Badge text={r.status} color={r.status === "Kapandı" ? "#16a34a" : r.status === "Kontrol Altında" ? "#d97706" : "#dc2626"} /></td>
                         <td style={{ ...styles.td, fontSize: 11, color: "#94a3b8", maxWidth: 140 }}>{r.lawReference || "—"}</td>
+                        <td style={styles.td} className="isg-td">
+                          {sourceDof ? (
+                            <span onClick={() => setActiveTab("dof")} style={{ cursor: "pointer", display: "inline-block", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 600, backgroundColor: "#7c3aed22", color: "#7c3aed", border: "1px solid #7c3aed44" }} title={sourceDof.title}>
+                              DÖF ↗
+                            </span>
+                          ) : <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>Manuel</span>}
+                        </td>
                         <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteRisk(r.id)}>Sil</button></td>
                       </tr>
                     );

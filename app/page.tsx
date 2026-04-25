@@ -81,7 +81,7 @@ type DofRecord = {
   priority: "Düşük" | "Orta" | "Yüksek";
   responsible: string;
   dueDate: string;
-  status: "Açık" | "Devam Ediyor" | "Kapandı";
+  status: "Açık" | "Bildirildi" | "Önlem Alındı" | "Çözüldü" | "Riske Aktarıldı";
   location: string;
   beforePhoto?: string;
   afterPhoto?: string;
@@ -693,7 +693,7 @@ export default function Page() {
   const [newEmployee, setNewEmployee] = useState({ companyId: "", firstName: "", lastName: "", tcNo: "", title: "", hireDate: "" });
   const [newDocument, setNewDocument] = useState({ companyId: "", employeeId: "", type: "Risk Değerlendirme Raporu", issueDate: "", expiryDate: "" });
   const [newObserver, setNewObserver] = useState({ fullName: "", title: "", certificateNo: "", phone: "" });
-  const [newDof, setNewDof] = useState({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta" as "Düşük" | "Orta" | "Yüksek", responsible: "", dueDate: "", status: "Açık" as "Açık" | "Devam Ediyor" | "Kapandı", location: "", beforePhoto: "", afterPhoto: "" });
+  const [newDof, setNewDof] = useState({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta" as "Düşük" | "Orta" | "Yüksek", responsible: "", dueDate: "", status: "Açık" as "Açık" | "Bildirildi" | "Önlem Alındı" | "Çözüldü" | "Riske Aktarıldı", location: "", beforePhoto: "", afterPhoto: "" });
   const [newRisk, setNewRisk] = useState({
     companyId: "", section: "", hazard: "", risk: "", currentMeasure: "", actionToTake: "",
     probability: "1", severity: "1", residualProbability: "1", residualSeverity: "1",
@@ -799,7 +799,7 @@ export default function Page() {
     const data = { nickName: newCompany.nickName, officialName, sgkSicil: newCompany.sgkSicil, naceCode, dangerClass: dangerFromNace(naceCode), employeeCount: parseInt(newCompany.employeeCount) || 0, contractEnd: newCompany.contractEnd, serviceType: newCompany.serviceType, contactEmail: newCompany.contactEmail };
     const ref = await addDoc(collection(db, "companies"), data);
     setCompanies(prev => [...prev, { id: ref.id, ...data }]);
-    setNewCompany({ nickName: "", officialName: "", sgkSicil: "", naceCode: "", contactEmail: "", dangerClass: "Az Tehlikeli", employeeCount: "", contractEnd: "", serviceType: "İş Güvenliği" });
+    setNewCompany({ nickName: "", officialName: "", sgkSicil: "", naceCode: "", dangerClass: "Az Tehlikeli", employeeCount: "", contractEnd: "", serviceType: "İş Güvenliği", contactEmail: "" });
   }
 
   async function deleteCompany(id: string) {
@@ -887,7 +887,7 @@ export default function Page() {
     const company = companies.find(c => c.id === newDof.companyId);
     if (company?.contactEmail) {
       try {
-        await fetch("/api/send-dof-email", {
+        const res = await fetch("/api/send-dof-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -902,6 +902,10 @@ export default function Page() {
             dofLawReference: newDof.lawReference,
           }),
         });
+        if (res.ok) {
+          await updateDoc(doc(db, "dofs", ref.id), { status: "Bildirildi" });
+          setDofs(prev => prev.map(d => d.id === ref.id ? { ...d, status: "Bildirildi" } : d));
+        }
       } catch (e) {
         console.error("E-mail gönderilemedi:", e);
       }
@@ -924,6 +928,10 @@ export default function Page() {
     // Zaten risk varsa Risk sekmesine git
     if (risks.some(r => r.sourceDofId === dof.id)) {
       setActiveTab("risk");
+      return;
+    }
+    // Sadece "Önlem Alındı" durumundaki DÖF'ler riske aktarılabilir
+    if (dof.status !== "Önlem Alındı") {
       return;
     }
     const probMap: Record<string, number> = { "Yüksek": 5, "Orta": 3, "Düşük": 1 };
@@ -952,6 +960,9 @@ export default function Page() {
     };
     const ref = await addDoc(collection(db, "risks"), data);
     setRisks(prev => [...prev, { id: ref.id, ...data }]);
+    // DÖF durumunu güncelle
+    await updateDoc(doc(db, "dofs", dof.id), { status: "Riske Aktarıldı" });
+    setDofs(prev => prev.map(d => d.id === dof.id ? { ...d, status: "Riske Aktarıldı" } : d));
     setActiveTab("risk");
   }
 
@@ -1034,7 +1045,7 @@ export default function Page() {
 
   const totalExpiredDocs = documents.filter(d => getDateStatus(d.expiryDate) === "Süresi Dolmuş").length;
   const totalSoonDocs = documents.filter(d => getDateStatus(d.expiryDate) === "Yaklaşıyor").length;
-  const openDofs = dofs.filter(d => d.status !== "Kapandı").length;
+  const openDofs = dofs.filter(d => d.status !== "Çözüldü" && d.status !== "Riske Aktarıldı").length;
   const highRisks = risks.filter(r => r.score >= 15).length;
   const incompleteEmployees = employees.filter(e => !e.trainingComplete).length;
 
@@ -1330,7 +1341,7 @@ export default function Page() {
                 <FormField label="Öncelik"><select style={styles.select} className="isg-input" value={newDof.priority} onChange={e => setNewDof({ ...newDof, priority: e.target.value as any })}><option>Düşük</option><option>Orta</option><option>Yüksek</option></select></FormField>
                 <FormField label="Sorumlu"><input style={styles.input} className="isg-input" value={newDof.responsible} onChange={e => setNewDof({ ...newDof, responsible: e.target.value })} /></FormField>
                 <FormField label="Termin"><DatePicker value={newDof.dueDate} onChange={v => setNewDof({ ...newDof, dueDate: v })} /></FormField>
-                <FormField label="Durum"><select style={styles.select} className="isg-input" value={newDof.status} onChange={e => setNewDof({ ...newDof, status: e.target.value as any })}><option>Açık</option><option>Devam Ediyor</option><option>Kapandı</option></select></FormField>
+                <FormField label="Durum"><select style={styles.select} className="isg-input" value={newDof.status} onChange={e => setNewDof({ ...newDof, status: e.target.value as any })}><option>Açık</option></select></FormField>
               </div>
               <div style={{ marginTop: 10 }}>
                 <label style={styles.label} className="isg-label">Açıklama</label>
@@ -1369,7 +1380,7 @@ export default function Page() {
                       <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>📅 {dof.dueDate}</span>
                     </div>
                     <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-                      <Badge text={dof.status} color={dof.status === "Kapandı" ? "#16a34a" : dof.status === "Devam Ediyor" ? "#d97706" : "#dc2626"} />
+                      <Badge text={dof.status} color={dof.status === "Çözüldü" ? "#16a34a" : dof.status === "Riske Aktarıldı" ? "#7c3aed" : dof.status === "Önlem Alındı" ? "#d97706" : dof.status === "Bildirildi" ? "#0ea5e9" : "#dc2626"} />
                       <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{company?.nickName}</span>
                       {observer && <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{observer.fullName}</span>}
                     </div>
@@ -1382,15 +1393,17 @@ export default function Page() {
                     {isEditing && (
                       <div style={{ marginBottom: 8 }}>
                         <select style={styles.select} className="isg-input" value={dof.status} onChange={e => updateDofStatus(dof.id, e.target.value as any)}>
-                          <option>Açık</option><option>Devam Ediyor</option><option>Kapandı</option>
+                          <option>Açık</option><option>Bildirildi</option><option>Önlem Alındı</option><option>Çözüldü</option>
                         </select>
                       </div>
                     )}
                     <div style={{ display: "flex", gap: 6 }}>
                       <button style={styles.btnSecondary} onClick={() => setEditingDofId(isEditing ? null : dof.id)}>{isEditing ? "Kapat" : "Düzenle"}</button>
-                      <button style={{ ...(risks.some(r => r.sourceDofId === dof.id) ? styles.btnSuccess : styles.btnPrimary), fontSize: 11, padding: "4px 10px" }} onClick={() => createRiskFromDof(dof)}>
-                        {risks.some(r => r.sourceDofId === dof.id) ? "✓ Risk Görüntüle" : "⚡ Risk Oluştur"}
-                      </button>
+                      {(risks.some(r => r.sourceDofId === dof.id) || dof.status === "Önlem Alındı") && (
+                        <button style={{ ...(risks.some(r => r.sourceDofId === dof.id) ? styles.btnSuccess : styles.btnPrimary), fontSize: 11, padding: "4px 10px" }} onClick={() => createRiskFromDof(dof)}>
+                          {risks.some(r => r.sourceDofId === dof.id) ? "✓ Risk Görüntüle" : "⚡ Riske Aktar"}
+                        </button>
+                      )}
                       <button style={styles.btnDanger} onClick={() => deleteDof(dof.id)}>Sil</button>
                     </div>
                   </div>

@@ -715,7 +715,11 @@ export default function Page() {
   const [signers, setSigners] = useState<Signer[]>([]);
   const [emailSettings, setEmailSettings] = useState<EmailSettings>({ enabled: true, toEmail: "", ccEmail: "", subject: "[İSG] Yeni DÖF Bildirimi: {dofTitle}", message: "" });
   const [emailSaving, setEmailSaving] = useState(false);
+  const [emailSaveStatus, setEmailSaveStatus] = useState<string | null>(null);
   const [emailTestStatus, setEmailTestStatus] = useState<string | null>(null);
+  const [emailLogs, setEmailLogs] = useState<{ id: string; dofId: string; to: string; status: string; detail: string; createdAt: string }[]>([]);
+  const [dofAdding, setDofAdding] = useState(false);
+  const [dofAddStatus, setDofAddStatus] = useState<string | null>(null);
   const [newShift, setNewShift] = useState({ companyId: "", employeeId: "", date: "", shiftType: "Gündüz" as ShiftType, startTime: "08:00", endTime: "16:00", note: "" });
   const [shiftWeekOffset, setShiftWeekOffset] = useState(0);
   const [calendarModal, setCalendarModal] = useState<{ date: string; } | null>(null);
@@ -750,6 +754,10 @@ export default function Page() {
         const ed = emailDoc.data() as EmailSettings;
         setEmailSettings(ed);
       }
+
+      // Email loglarını yükle
+      const emailLogSnap = await getDocs(collection(db, "emailLogs"));
+      setEmailLogs(emailLogSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)).sort((a: any, b: any) => b.createdAt?.localeCompare(a.createdAt || "") || 0).slice(0, 20));
     } catch (e) {
       console.error("Firestore yükleme hatası", e);
     } finally {
@@ -1006,27 +1014,44 @@ export default function Page() {
 
   async function addDof() {
     if (!newDof.companyId || !newDof.title) return;
-    const data: Omit<DofRecord, "id"> = { companyId: newDof.companyId, observerId: newDof.observerId, title: newDof.title, description: newDof.description, lawReference: newDof.lawReference, priority: newDof.priority, responsible: newDof.responsible, dueDate: newDof.dueDate, status: newDof.status, location: newDof.location, beforePhoto: newDof.beforePhoto || undefined, afterPhoto: newDof.afterPhoto || undefined };
-    const ref = await addDoc(collection(db, "dofs"), data);
-    setDofs(prev => [...prev, { id: ref.id, ...data }]);
-
-    // E-mail bildirimi — PDF ek olarak gönderilir
+    setDofAdding(true);
+    setDofAddStatus(null);
     try {
-      const dofWithId = { id: ref.id, ...data };
-      const pdfBase64 = await generateDofPDF(dofWithId, true);
-      const res = await fetch("/api/send-dof-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dofId: ref.id, pdfBase64 }),
-      });
-      if (res.ok) {
-        setDofs(prev => prev.map(d => d.id === ref.id ? { ...d, status: "Bildirildi" } : d));
-      }
-    } catch (e) {
-      console.error("E-mail gönderilemedi:", e);
-    }
+      const data: Omit<DofRecord, "id"> = { companyId: newDof.companyId, observerId: newDof.observerId, title: newDof.title, description: newDof.description, lawReference: newDof.lawReference, priority: newDof.priority, responsible: newDof.responsible, dueDate: newDof.dueDate, status: newDof.status, location: newDof.location, beforePhoto: newDof.beforePhoto || undefined, afterPhoto: newDof.afterPhoto || undefined };
+      const ref = await addDoc(collection(db, "dofs"), data);
+      setDofs(prev => [...prev, { id: ref.id, ...data }]);
 
-    setNewDof({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta", responsible: "", dueDate: "", status: "Açık", location: "", beforePhoto: "", afterPhoto: "" });
+      // E-mail bildirimi — sadece email aktifse gönder
+      if (emailSettings.enabled && emailSettings.toEmail) {
+        try {
+          const dofWithId = { id: ref.id, ...data };
+          const pdfBase64 = await generateDofPDF(dofWithId, true);
+          const res = await fetch("/api/send-dof-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dofId: ref.id, pdfBase64 }),
+          });
+          if (res.ok) {
+            setDofs(prev => prev.map(d => d.id === ref.id ? { ...d, status: "Bildirildi" } : d));
+            setDofAddStatus("✅ DÖF kaydedildi ve e-posta gönderildi");
+          } else {
+            const errData = await res.json();
+            setDofAddStatus(`⚠️ DÖF kaydedildi ama e-posta gönderilemedi: ${errData.error || "Bilinmeyen hata"}`);
+          }
+        } catch (e: any) {
+          setDofAddStatus(`⚠️ DÖF kaydedildi ama e-posta gönderilemedi: ${e.message}`);
+        }
+      } else {
+        setDofAddStatus("✅ DÖF kaydedildi (e-posta bildirimi pasif)");
+      }
+
+      setNewDof({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta", responsible: "", dueDate: "", status: "Açık", location: "", beforePhoto: "", afterPhoto: "" });
+    } catch (e: any) {
+      setDofAddStatus(`❌ DÖF kaydedilemedi: ${e.message}`);
+    } finally {
+      setDofAdding(false);
+      setTimeout(() => setDofAddStatus(null), 6000);
+    }
   }
 
   async function deleteDof(id: string) {
@@ -1471,7 +1496,12 @@ export default function Page() {
                 <div><label style={styles.label} className="isg-label">Öncesi Fotoğraf</label><input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, beforePhoto: b64 }))} /></div>
                 <div><label style={styles.label} className="isg-label">Sonrası Fotoğraf</label><input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, afterPhoto: b64 }))} /></div>
               </div>
-              <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addDof}>DÖF Ekle</button></div>
+              <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <button style={{ ...styles.btnPrimary, opacity: dofAdding ? 0.6 : 1 }} disabled={dofAdding} onClick={addDof}>{dofAdding ? "Kaydediliyor..." : "DÖF Ekle"}</button>
+                {dofAddStatus && (
+                  <span style={{ fontSize: 13, padding: "6px 12px", borderRadius: 6, backgroundColor: dofAddStatus.startsWith("✅") ? "#16a34a22" : dofAddStatus.startsWith("⚠️") ? "#d9770622" : "#dc262622", color: dofAddStatus.startsWith("✅") ? "#16a34a" : dofAddStatus.startsWith("⚠️") ? "#d97706" : "#dc2626" }}>{dofAddStatus}</span>
+                )}
+              </div>
             </div>
             <div style={styles.searchBar}>
               <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
@@ -1951,11 +1981,20 @@ export default function Page() {
               <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
                 <button style={styles.btnPrimary} disabled={emailSaving} onClick={async () => {
                   setEmailSaving(true);
+                  setEmailSaveStatus(null);
                   try {
                     await setDoc(doc(db, "settings", "emailNotifications"), { ...emailSettings, updatedAt: new Date().toISOString() });
-                  } catch (e) { console.error(e); }
+                    setEmailSaveStatus("✅ Ayarlar kaydedildi");
+                  } catch (e: any) {
+                    setEmailSaveStatus(`❌ Kayıt hatası: ${e.message}`);
+                  }
                   setEmailSaving(false);
+                  setTimeout(() => setEmailSaveStatus(null), 4000);
                 }}>{emailSaving ? "Kaydediliyor..." : "Ayarları Kaydet"}</button>
+
+                {emailSaveStatus && (
+                  <span style={{ fontSize: 13, padding: "8px 12px", color: emailSaveStatus.startsWith("✅") ? "#16a34a" : "#dc2626" }}>{emailSaveStatus}</span>
+                )}
 
                 <button style={styles.btnSecondary} disabled={!emailSettings.toEmail || !emailSettings.enabled} onClick={async () => {
                   setEmailTestStatus("Gönderiliyor...");
@@ -1982,7 +2021,32 @@ export default function Page() {
             {/* Email Logları */}
             <div style={styles.card} className="isg-card">
               <p style={styles.sectionTitle} className="isg-text-muted">Son Gönderim Logları</p>
-              <p style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Email logları Firestore "emailLogs" koleksiyonunda saklanır.</p>
+              {emailLogs.length === 0 ? (
+                <p style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Henüz gönderim kaydı yok.</p>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        {["Tarih", "DÖF ID", "Alıcı", "Durum", "Detay"].map(h => (
+                          <th key={h} style={styles.th} className="isg-th">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {emailLogs.map(log => (
+                        <tr key={log.id}>
+                          <td style={{ ...styles.td, fontSize: 12, whiteSpace: "nowrap" }}>{log.createdAt ? new Date(log.createdAt).toLocaleString("tr-TR") : "—"}</td>
+                          <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)" }}>{log.dofId?.substring(0, 8) || "—"}</td>
+                          <td style={{ ...styles.td, fontSize: 12 }}>{log.to || "—"}</td>
+                          <td style={styles.td}><Badge text={log.status === "success" ? "Başarılı" : "Başarısız"} color={log.status === "success" ? "#16a34a" : "#dc2626"} /></td>
+                          <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{log.detail || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -799,7 +799,7 @@ export default function Page() {
     const data = { nickName: newCompany.nickName, officialName, sgkSicil: newCompany.sgkSicil, naceCode, dangerClass: dangerFromNace(naceCode), employeeCount: parseInt(newCompany.employeeCount) || 0, contractEnd: newCompany.contractEnd, serviceType: newCompany.serviceType, contactEmail: newCompany.contactEmail };
     const ref = await addDoc(collection(db, "companies"), data);
     setCompanies(prev => [...prev, { id: ref.id, ...data }]);
-    setNewCompany({ nickName: "", officialName: "", sgkSicil: "", naceCode: "", dangerClass: "Az Tehlikeli", employeeCount: "", contractEnd: "", serviceType: "İş Güvenliği" });
+    setNewCompany({ nickName: "", officialName: "", sgkSicil: "", naceCode: "", contactEmail: "", dangerClass: "Az Tehlikeli", employeeCount: "", contractEnd: "", serviceType: "İş Güvenliği" });
   }
 
   async function deleteCompany(id: string) {

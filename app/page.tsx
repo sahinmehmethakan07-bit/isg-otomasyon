@@ -226,137 +226,237 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], observ
   maker.vfs = (pdfFonts.default || pdfFonts).vfs;
 
   const today = new Date().toLocaleDateString("tr-TR");
+  const nextYear = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toLocaleDateString("tr-TR");
   const byCompany = companies
     .map((c) => ({ company: c, risks: risks.filter((r) => r.companyId === c.id) }))
     .filter((g) => g.risks.length > 0);
 
   if (byCompany.length === 0) return;
 
-  const scoreColor = (s: number) => s >= 15 ? "#dc2626" : s >= 8 ? "#d97706" : "#16a34a";
+  const scoreColor = (s: number): string => s >= 15 ? "#dc2626" : s >= 8 ? "#d97706" : "#16a34a";
+  const HL = "#1e293b"; // header/label color
 
   const content: any[] = [];
+  let pageNum = 0;
 
   for (const { company, risks: cr } of byCompany) {
     if (content.length > 0) content.push({ text: "", pageBreak: "before" });
+    pageNum++;
 
-    // Başlık
+    // ── Sayfa 1: Başlık ──
     content.push({
-      table: {
-        widths: ["*"],
-        body: [[{
-          stack: [
-            { text: company.officialName.toUpperCase(), style: "header", alignment: "center" },
-            { text: "RİSK DEĞERLENDİRME RAPORU", style: "subheader", alignment: "center" },
-          ],
-          fillColor: "#1e293b", color: "white", margin: [0, 8, 0, 8],
-        }]],
-      },
+      table: { widths: ["*"], body: [[{
+        stack: [
+          { text: company.officialName.toUpperCase(), fontSize: 14, bold: true, color: "white", alignment: "center" },
+          { text: "RİSK DEĞERLENDİRME RAPORU", fontSize: 10, color: "white", alignment: "center", margin: [0, 2, 0, 0] },
+        ],
+        fillColor: HL, margin: [0, 6, 0, 6],
+      }]] },
       layout: "noBorders",
-      margin: [0, 0, 0, 8],
+      margin: [0, 0, 0, 6],
     });
 
-    // Bilgi satırları
+    // ── Bilgi bölümü ──
+    const infoRow = (label: string, value: string) => ({
+      text: [{ text: label, bold: true, fontSize: 8 }, { text: " " + value, fontSize: 8 }], margin: [0, 1, 0, 1] as [number, number, number, number],
+    });
+
     content.push({
       columns: [
-        { width: "*", stack: [
-          { text: [{ text: "İşyeri Ünvanı: ", bold: true }, company.officialName], fontSize: 8, margin: [0, 1] },
-          { text: [{ text: "NACE Kodu: ", bold: true }, company.naceCode], fontSize: 8, margin: [0, 1] },
-          { text: [{ text: "Tehlike Sınıfı: ", bold: true }, company.dangerClass], fontSize: 8, margin: [0, 1] },
-          { text: [{ text: "Çalışan Sayısı: ", bold: true }, String(company.employeeCount)], fontSize: 8, margin: [0, 1] },
-          { text: [{ text: "Hizmet Türü: ", bold: true }, company.serviceType], fontSize: 8, margin: [0, 1] },
+        { width: "50%", stack: [
+          infoRow("İşyeri Ünvanı :", company.officialName),
+          infoRow("İşyeri Bölümü :", "GENEL"),
+          infoRow("NACE Kodu :", company.naceCode),
+          infoRow("Çalışan Sayısı :", String(company.employeeCount)),
+          infoRow("Hizmet Türü :", company.serviceType),
         ]},
-        { width: "*", stack: [
-          { text: [{ text: "SGK Sicil No: ", bold: true }, company.sgkSicil], fontSize: 8, margin: [0, 1] },
-          { text: [{ text: "Analiz Tarihi: ", bold: true }, today], fontSize: 8, margin: [0, 1] },
-          { text: [{ text: "Geçerlilik Tarihi: ", bold: true }, new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toLocaleDateString("tr-TR")], fontSize: 8, margin: [0, 1] },
+        { width: "50%", stack: [
+          infoRow("SGK Sicil No. :", company.sgkSicil),
+          infoRow("Analiz Tarihi :", today),
+          infoRow("Tehlike Sınıfı :", company.dangerClass),
+          infoRow("Geçerlilik Tarihi :", nextYear),
         ]},
       ],
       margin: [0, 0, 0, 8],
     });
 
-    // Tablo
-    const tableBody: any[] = [[
-      { text: "No", style: "tableHeader" },
-      { text: "Bölüm", style: "tableHeader" },
-      { text: "Tehlike Kaynağı", style: "tableHeader" },
-      { text: "Tehlike/Risk", style: "tableHeader" },
-      { text: "Mevcut Önlem", style: "tableHeader" },
-      { text: "Öneriler", style: "tableHeader" },
-      { text: "O", style: "tableHeader" },
-      { text: "Ş", style: "tableHeader" },
-      { text: "RS", style: "tableHeader" },
-      { text: "KO", style: "tableHeader" },
-      { text: "KŞ", style: "tableHeader" },
-      { text: "KRS", style: "tableHeader" },
-      { text: "Etkilenecek", style: "tableHeader" },
-      { text: "Sorumlu", style: "tableHeader" },
-      { text: "Termin", style: "tableHeader" },
-      { text: "Durum", style: "tableHeader" },
-    ]];
+    // ── Risk tablosu ──
+    const hdr = (t: string) => ({ text: t, fontSize: 6, bold: true, color: "white", fillColor: HL, alignment: "center" as const, margin: [1, 3, 1, 3] as [number, number, number, number] });
+    const tableHead = [
+      hdr("No"), hdr("Bölüm /\nFaaliyet"), hdr("Tehlike Kaynağı /\nMevcut Durum"), hdr("Mevcut\nÖnlem"),
+      hdr("Tehlike /\nRisk"), hdr("O"), hdr("Ş"), hdr("RS"),
+      hdr("Öneriler /\nAlınacak Önlemler"), hdr("Etkilenecek\nKişiler"), hdr("Süreç\nSorumlusu"),
+      hdr("Termin"), hdr("Kontrol\nTarihi"), hdr("O"), hdr("Ş"), hdr("RS"), hdr("İlgili Mevzuat"),
+    ];
 
+    const tCell = (t: string, align?: string) => ({ text: t, fontSize: 6, alignment: (align || "left") as any, margin: [1, 2, 1, 2] as [number, number, number, number] });
+    const scoreCell = (val: number) => ({
+      text: String(val), fontSize: 7, bold: true, color: "white",
+      fillColor: scoreColor(val), alignment: "center" as const, margin: [1, 2, 1, 2] as [number, number, number, number],
+    });
+
+    const tableBody: any[] = [tableHead];
     cr.forEach((r, i) => {
       tableBody.push([
-        { text: String(i + 1), fontSize: 7, alignment: "center" },
-        { text: r.section || "", fontSize: 7 },
-        { text: r.hazard || "", fontSize: 7 },
-        { text: r.risk || "", fontSize: 7 },
-        { text: r.currentMeasure || "", fontSize: 7 },
-        { text: r.actionToTake || "", fontSize: 7 },
-        { text: String(r.probability), fontSize: 7, alignment: "center" },
-        { text: String(r.severity), fontSize: 7, alignment: "center" },
-        { text: String(r.score), fontSize: 7, alignment: "center", bold: true, color: "white", fillColor: scoreColor(r.score) },
-        { text: String(r.residualProbability), fontSize: 7, alignment: "center" },
-        { text: String(r.residualSeverity), fontSize: 7, alignment: "center" },
-        { text: String(r.residualScore), fontSize: 7, alignment: "center", bold: true, color: "white", fillColor: scoreColor(r.residualScore) },
-        { text: r.affectedPersons || "-", fontSize: 7 },
-        { text: r.responsible || "", fontSize: 7 },
-        { text: r.dueDate || "", fontSize: 7 },
-        { text: r.status || "", fontSize: 7 },
+        tCell(String(i + 1), "center"),
+        tCell(r.section || ""),
+        tCell(r.hazard || ""),
+        tCell(r.currentMeasure || ""),
+        tCell(r.risk || ""),
+        tCell(String(r.probability), "center"),
+        tCell(String(r.severity), "center"),
+        scoreCell(r.score),
+        tCell(r.actionToTake || ""),
+        tCell(r.affectedPersons || "-"),
+        tCell(r.responsible || ""),
+        tCell(r.dueDate || "", "center"),
+        tCell(r.controlDate || "", "center"),
+        tCell(String(r.residualProbability), "center"),
+        tCell(String(r.residualSeverity), "center"),
+        scoreCell(r.residualScore),
+        tCell(r.lawReference || ""),
       ]);
     });
 
     content.push({
       table: {
         headerRows: 1,
-        widths: ["auto", "*", "*", "*", "*", "*", "auto", "auto", "auto", "auto", "auto", "auto", "*", "*", "auto", "auto"],
+        widths: [12, "*", "*", 34, "*", 12, 12, 16, "*", "*", 34, 30, 30, 12, 12, 16, "*"],
         body: tableBody,
       },
       layout: {
-        fillColor: (rowIndex: number) => rowIndex === 0 ? "#1e293b" : rowIndex % 2 === 0 ? "#f8fafc" : null,
+        hLineWidth: () => 0.5,
+        vLineWidth: () => 0.5,
+        hLineColor: () => "#94a3b8",
+        vLineColor: () => "#94a3b8",
       },
     });
 
-    // İmza bloğu — gözlemciler yan yana
-    if (observers.length > 0) {
-      content.push({
-        margin: [0, 16, 0, 0],
-        table: {
-          widths: observers.map(() => "*"),
-          body: [[...observers.map(o => ({
+    // ── Sayfa numarası ──
+    content.push({ text: `Sayfa ${pageNum}`, alignment: "center", fontSize: 8, color: "#64748b", margin: [0, 6, 0, 6] });
+
+    // ── İmza bölümü ──
+    const signers = observers.length >= 3
+      ? observers.slice(0, 3).map((o, i) => ({
+          role: i === 0 ? "İş Güvenliği Uzmanı" : i === 1 ? "İşveren / İşveren Vekili" : "Çalışan Temsilcisi",
+          name: o.fullName,
+        }))
+      : [
+          { role: "İş Güvenliği Uzmanı", name: observers[0]?.fullName || "—" },
+          { role: "İşveren / İşveren Vekili", name: observers[1]?.fullName || "—" },
+          { role: "Çalışan Temsilcisi", name: observers[2]?.fullName || "—" },
+        ];
+
+    content.push({
+      table: {
+        widths: ["*", "*", "*"],
+        body: [[
+          ...signers.map(s => ({
             stack: [
-              { text: o.fullName, fontSize: 8, bold: true, alignment: "center" as const, color: "#000000" },
-              { text: o.title || "", fontSize: 7, alignment: "center" as const, color: "#000000" },
-              { text: "\n\n\n\n", fontSize: 7 },
+              { text: s.role, fontSize: 8, bold: true, alignment: "center" as const, color: "#334155" },
+              { text: s.name.toUpperCase(), fontSize: 9, bold: true, alignment: "center" as const, margin: [0, 4, 0, 0] as [number, number, number, number] },
+              { text: "\n\n", fontSize: 6 },
+              { text: "İmza", fontSize: 7, alignment: "center" as const, color: "#94a3b8" },
             ],
-            margin: [8, 8, 8, 8],
-            border: [true, true, true, true],
-          }))]]
-        },
-        layout: { defaultBorder: true },
-      });
-    }
+            margin: [6, 6, 6, 6] as [number, number, number, number],
+          })),
+        ]],
+      },
+      layout: {
+        hLineWidth: () => 0.5,
+        vLineWidth: () => 0.5,
+        hLineColor: () => "#94a3b8",
+        vLineColor: () => "#94a3b8",
+      },
+      margin: [0, 8, 0, 0],
+    });
+
+    // ── Sayfa 2: Metodoloji Matrisi ──
+    content.push({ text: "", pageBreak: "before" });
+
+    content.push({
+      text: "Risk Değerlendirmesi Karar Matris Metodolojisi",
+      fontSize: 13, bold: true, alignment: "center", color: HL, margin: [0, 0, 0, 12],
+    });
+
+    // Olasılık tablosu
+    const mHdr = (t: string) => ({ text: t, fontSize: 8, bold: true, color: "white", fillColor: HL, margin: [4, 4, 4, 4] as [number, number, number, number] });
+    const mCell = (t: string, bold?: boolean) => ({ text: t, fontSize: 8, bold: !!bold, margin: [4, 3, 4, 3] as [number, number, number, number] });
+
+    content.push({
+      table: {
+        widths: [30, 100, "*"],
+        headerRows: 1,
+        body: [
+          [mHdr("Puan"), mHdr("Zararın Gerçekleşme Olasılığı"), mHdr("Derecelendirme Basamakları")],
+          [mCell("1", true), mCell("Çok Küçük"), mCell("Hemen hemen hiç")],
+          [mCell("2", true), mCell("Küçük"), mCell("Çok az (yılda bir kez), sadece anormal durumlarda")],
+          [mCell("3", true), mCell("Orta"), mCell("Az (yılda bir kaç kez)")],
+          [mCell("4", true), mCell("Yüksek"), mCell("Sıklıkla (ayda bir)")],
+          [mCell("5", true), mCell("Çok Yüksek"), mCell("Çok sıklıkla (haftada bir, her gün)")],
+        ],
+      },
+      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#94a3b8", vLineColor: () => "#94a3b8" },
+      margin: [0, 0, 0, 12],
+    });
+
+    // Şiddet tablosu
+    content.push({
+      table: {
+        widths: [30, 100, "*"],
+        headerRows: 1,
+        body: [
+          [mHdr("Puan"), mHdr("İhtimal"), mHdr("Derecelendirme")],
+          [mCell("1", true), mCell("Çok Hafif"), mCell("İş saati kaybı yok, hemen giderilebilen")],
+          [mCell("2", true), mCell("Hafif"), mCell("İş günü kaybı yok, kalıcı etkisi olmayan")],
+          [mCell("3", true), mCell("Orta"), mCell("Hafif yaralanma, yatarak tedavi")],
+          [mCell("4", true), mCell("Ciddi"), mCell("Ciddi yaralanma, meslek hastalığı")],
+          [mCell("5", true), mCell("Çok Ciddi"), mCell("Ölüm, sürekli iş göremezlik")],
+        ],
+      },
+      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#94a3b8", vLineColor: () => "#94a3b8" },
+      margin: [0, 0, 0, 12],
+    });
+
+    // Risk skoru tablosu
+    content.push({
+      table: {
+        widths: [60, 100, "*"],
+        headerRows: 1,
+        body: [
+          [mHdr("Risk Skoru"), mHdr("Anlamı"), mHdr("Açıklama")],
+          [{ text: "25", fontSize: 8, bold: true, fillColor: "#dc2626", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Kabul Edilemez"), mCell("Risk kabul edilebilir seviyeye düşürülünceye kadar iş başlatılmamalıdır.")],
+          [{ text: "15, 16, 20", fontSize: 8, bold: true, fillColor: "#dc2626", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Ciddi"), mCell("Riskleri düşürmek için faaliyetler kısa zamanda başlatılmalıdır.")],
+          [{ text: "8, 9, 10, 12", fontSize: 8, bold: true, fillColor: "#d97706", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Orta"), mCell("Riskleri düşürmek için faaliyetler en az 6 ay içinde tamamlanmalıdır.")],
+          [{ text: "2, 3, 4, 5, 6", fontSize: 8, bold: true, fillColor: "#16a34a", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Düşük (Katlanılabilir)"), mCell("Mevcut kontroller sürdürülmelidir.")],
+          [{ text: "1", fontSize: 8, bold: true, fillColor: "#16a34a", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Önemsiz"), mCell("Önlem öncelikli değildir.")],
+        ],
+      },
+      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#94a3b8", vLineColor: () => "#94a3b8" },
+      margin: [0, 0, 0, 12],
+    });
+
+    // Renk skalası
+    content.push({
+      text: "Risk Seviyesi Renk Skalası:", fontSize: 9, bold: true, margin: [0, 0, 0, 6],
+    });
+    content.push({
+      columns: [
+        { width: "auto", stack: [{ canvas: [{ type: "rect", x: 0, y: 0, w: 14, h: 14, r: 2, color: "#dc2626" }] }], margin: [0, 0, 4, 0] },
+        { width: "auto", text: "Yüksek Risk (≥15) — Kabul edilemez / Ciddi", fontSize: 8, margin: [0, 2, 16, 0] },
+        { width: "auto", stack: [{ canvas: [{ type: "rect", x: 0, y: 0, w: 14, h: 14, r: 2, color: "#d97706" }] }], margin: [0, 0, 4, 0] },
+        { width: "auto", text: "Orta Risk (8-14) — Faaliyetler 6 ay içinde", fontSize: 8, margin: [0, 2, 16, 0] },
+        { width: "auto", stack: [{ canvas: [{ type: "rect", x: 0, y: 0, w: 14, h: 14, r: 2, color: "#16a34a" }] }], margin: [0, 0, 4, 0] },
+        { width: "auto", text: "Düşük Risk (<8) — Mevcut kontroller yeterli", fontSize: 8, margin: [0, 2, 0, 0] },
+      ],
+    });
   }
 
   const docDef: any = {
     pageOrientation: "landscape",
     pageSize: "A3",
-    pageMargins: [14, 14, 14, 14],
+    pageMargins: [20, 20, 20, 20],
     content,
-    styles: {
-      header: { fontSize: 13, bold: true, color: "white" },
-      subheader: { fontSize: 9, color: "white", margin: [0, 2, 0, 0] },
-      tableHeader: { fontSize: 7, bold: true, color: "white", fillColor: "#1e293b", alignment: "center" },
-    },
     defaultStyle: { font: "Roboto" },
   };
 
@@ -1431,11 +1531,11 @@ export default function Page() {
                       <div
                         key={key}
                         onClick={() => { setSelectedCalDay(key); setCalendarModal({ date: key }); setQuickShift({ companyId: "", employeeId: "", shiftType: "Gündüz", startTime: "08:00", endTime: "16:00", note: "" }); }}
-                        style={{ backgroundColor: isSelected ? "var(--isg-today-bg, #1e3a5f)" : "var(--isg-input-bg)", border: `2px solid ${isToday ? "#0ea5e9" : isSelected ? "#0ea5e9" : "var(--isg-border)"}`, borderRadius: 8, padding: 8, minHeight: 120, cursor: "pointer", transition: "border-color 0.15s, background-color 0.15s" }}
+                        style={{ backgroundColor: isSelected ? "var(--isg-today-bg, #1e3a5f)" : "var(--isg-input-bg)", border: `1px solid ${isSelected ? "#0ea5e9" : "var(--isg-border)"}`, borderRadius: 8, padding: 8, minHeight: 120, cursor: "pointer", transition: "border-color 0.15s, background-color 0.15s" }}
                         onMouseEnter={e => (e.currentTarget.style.borderColor = "#0ea5e9")}
-                        onMouseLeave={e => (e.currentTarget.style.borderColor = isToday || isSelected ? "#0ea5e9" : "var(--isg-border)")}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = isSelected ? "#0ea5e9" : "var(--isg-border)")}
                       >
-                        <div style={{ fontSize: 11, color: isToday ? "#0ea5e9" : "var(--isg-text-muted)", fontWeight: 600, marginBottom: 2 }}>{dayNames[i]}</div>
+                        <div style={{ fontSize: 11, color: isToday ? "#0ea5e9" : "var(--isg-text-muted)", fontWeight: 600, marginBottom: 2 }}>{dayNames[i]} {isToday ? "• Bugün" : ""}</div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: isToday || isSelected ? "var(--isg-text)" : "var(--isg-text-muted)", marginBottom: 4 }}>{day.getDate()}.{String(day.getMonth() + 1).padStart(2, "0")}</div>
                         <div style={{ fontSize: 9, color: "#0ea5e9", marginBottom: 4 }}>+ Ekle</div>
                         {dayShifts.map(s => {

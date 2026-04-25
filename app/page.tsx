@@ -12,6 +12,8 @@ import {
   deleteDoc,
   doc,
   updateDoc,
+  getDoc,
+  setDoc,
 } from "firebase/firestore";
 
 type DangerClass = "Az Tehlikeli" | "Tehlikeli" | "Çok Tehlikeli";
@@ -88,6 +90,14 @@ type DofRecord = {
 };
 
 type SignerRole = "İş Güvenliği Uzmanı" | "İşveren / İşveren Vekili" | "Çalışan Temsilcisi";
+
+type EmailSettings = {
+  enabled: boolean;
+  toEmail: string;
+  ccEmail: string;
+  subject: string;
+  message: string;
+};
 
 type Signer = {
   id: string;
@@ -703,6 +713,9 @@ export default function Page() {
 
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [signers, setSigners] = useState<Signer[]>([]);
+  const [emailSettings, setEmailSettings] = useState<EmailSettings>({ enabled: true, toEmail: "", ccEmail: "", subject: "[İSG] Yeni DÖF Bildirimi: {dofTitle}", message: "" });
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailTestStatus, setEmailTestStatus] = useState<string | null>(null);
   const [newShift, setNewShift] = useState({ companyId: "", employeeId: "", date: "", shiftType: "Gündüz" as ShiftType, startTime: "08:00", endTime: "16:00", note: "" });
   const [shiftWeekOffset, setShiftWeekOffset] = useState(0);
   const [calendarModal, setCalendarModal] = useState<{ date: string; } | null>(null);
@@ -730,6 +743,13 @@ export default function Page() {
       setRisks(riskSnap.docs.map(d => ({ id: d.id, ...d.data() } as RiskRecord)));
       setShifts(shiftSnap.docs.map(d => ({ id: d.id, ...d.data() } as Shift)));
       setSigners(signerSnap.docs.map(d => ({ id: d.id, ...d.data() } as Signer)));
+
+      // Email ayarlarını yükle
+      const emailDoc = await getDoc(doc(db, "settings", "emailNotifications"));
+      if (emailDoc.exists()) {
+        const ed = emailDoc.data() as EmailSettings;
+        setEmailSettings(ed);
+      }
     } catch (e) {
       console.error("Firestore yükleme hatası", e);
     } finally {
@@ -883,32 +903,18 @@ export default function Page() {
     const ref = await addDoc(collection(db, "dofs"), data);
     setDofs(prev => [...prev, { id: ref.id, ...data }]);
 
-    // E-mail bildirimi gönder
-    const company = companies.find(c => c.id === newDof.companyId);
-    if (company?.contactEmail) {
-      try {
-        const res = await fetch("/api/send-dof-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: company.contactEmail,
-            companyName: company.officialName,
-            dofTitle: newDof.title,
-            dofDescription: newDof.description,
-            dofLocation: newDof.location,
-            dofPriority: newDof.priority,
-            dofResponsible: newDof.responsible,
-            dofDueDate: newDof.dueDate,
-            dofLawReference: newDof.lawReference,
-          }),
-        });
-        if (res.ok) {
-          await updateDoc(doc(db, "dofs", ref.id), { status: "Bildirildi" });
-          setDofs(prev => prev.map(d => d.id === ref.id ? { ...d, status: "Bildirildi" } : d));
-        }
-      } catch (e) {
-        console.error("E-mail gönderilemedi:", e);
+    // E-mail bildirimi — API route Firestore ayarlarını okur
+    try {
+      const res = await fetch("/api/send-dof-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dofId: ref.id }),
+      });
+      if (res.ok) {
+        setDofs(prev => prev.map(d => d.id === ref.id ? { ...d, status: "Bildirildi" } : d));
       }
+    } catch (e) {
+      console.error("E-mail gönderilemedi:", e);
     }
 
     setNewDof({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta", responsible: "", dueDate: "", status: "Açık", location: "", beforePhoto: "", afterPhoto: "" });
@@ -1032,6 +1038,7 @@ export default function Page() {
     { id: "risk", label: "🛡 Risk" },
     { id: "imzacilar", label: "✍️ İmzacılar" },
     { id: "vardiya", label: "🕐 Vardiya" },
+    { id: "ayarlar", label: "⚙️ Ayarlar" },
   ];
 
   if (!mounted || loading) {
@@ -1796,6 +1803,79 @@ export default function Page() {
             </div>
           );
         })()}
+
+        {activeTab === "ayarlar" && (
+          <div>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">E-posta Bildirim Ayarları</p>
+              <p style={{ fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 16 }}>
+                DÖF oluşturulduğunda otomatik e-posta bildirimi göndermek için ayarları yapılandırın. Ayarlar Firestore'da saklanır.
+              </p>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, padding: 12, backgroundColor: emailSettings.enabled ? "#16a34a22" : "#dc262622", border: `1px solid ${emailSettings.enabled ? "#16a34a44" : "#dc262644"}`, borderRadius: 8 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14, fontWeight: 600, color: "var(--isg-text)" }}>
+                  <input type="checkbox" checked={emailSettings.enabled} onChange={e => setEmailSettings({ ...emailSettings, enabled: e.target.checked })} style={{ width: 18, height: 18, cursor: "pointer" }} />
+                  E-posta bildirimi {emailSettings.enabled ? "aktif" : "pasif"}
+                </label>
+              </div>
+
+              <div style={styles.formGrid}>
+                <FormField label="Ana Alıcı E-posta *">
+                  <input style={styles.input} className="isg-input" type="email" value={emailSettings.toEmail} onChange={e => setEmailSettings({ ...emailSettings, toEmail: e.target.value })} placeholder="firma@ornek.com" />
+                </FormField>
+                <FormField label="CC E-posta (Opsiyonel)">
+                  <input style={styles.input} className="isg-input" type="email" value={emailSettings.ccEmail} onChange={e => setEmailSettings({ ...emailSettings, ccEmail: e.target.value })} placeholder="yonetici@ornek.com" />
+                </FormField>
+                <FormField label="Mail Konusu">
+                  <input style={styles.input} className="isg-input" value={emailSettings.subject} onChange={e => setEmailSettings({ ...emailSettings, subject: e.target.value })} placeholder="[İSG] Yeni DÖF Bildirimi: {dofTitle}" />
+                  <div style={{ fontSize: 10, color: "var(--isg-text-muted)", marginTop: 4 }}>{"{dofTitle}"} → DÖF başlığı, {"{companyName}"} → Firma adı</div>
+                </FormField>
+              </div>
+
+              <div style={{ marginTop: 12 }}>
+                <FormField label="Mail İçeriği / Ek Açıklama">
+                  <textarea style={{ ...styles.input, minHeight: 80, resize: "vertical" as const }} className="isg-input" value={emailSettings.message} onChange={e => setEmailSettings({ ...emailSettings, message: e.target.value })} placeholder="Opsiyonel ek mesaj..." />
+                </FormField>
+              </div>
+
+              <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+                <button style={styles.btnPrimary} disabled={emailSaving} onClick={async () => {
+                  setEmailSaving(true);
+                  try {
+                    await setDoc(doc(db, "settings", "emailNotifications"), { ...emailSettings, updatedAt: new Date().toISOString() });
+                  } catch (e) { console.error(e); }
+                  setEmailSaving(false);
+                }}>{emailSaving ? "Kaydediliyor..." : "Ayarları Kaydet"}</button>
+
+                <button style={styles.btnSecondary} disabled={!emailSettings.toEmail || !emailSettings.enabled} onClick={async () => {
+                  setEmailTestStatus("Gönderiliyor...");
+                  try {
+                    const res = await fetch("/api/send-test-email", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ toEmail: emailSettings.toEmail, ccEmail: emailSettings.ccEmail }),
+                    });
+                    const data = await res.json();
+                    setEmailTestStatus(res.ok ? "✅ Test maili gönderildi!" : `❌ Hata: ${data.error}`);
+                  } catch (e) {
+                    setEmailTestStatus("❌ Bağlantı hatası");
+                  }
+                  setTimeout(() => setEmailTestStatus(null), 5000);
+                }}>📧 Test Maili Gönder</button>
+
+                {emailTestStatus && (
+                  <span style={{ fontSize: 13, padding: "8px 12px", color: emailTestStatus.startsWith("✅") ? "#16a34a" : emailTestStatus.startsWith("❌") ? "#dc2626" : "var(--isg-text-muted)" }}>{emailTestStatus}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Email Logları */}
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">Son Gönderim Logları</p>
+              <p style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Email logları Firestore "emailLogs" koleksiyonunda saklanır.</p>
+            </div>
+          </div>
+        )}
 
       </main>
     </div>

@@ -100,6 +100,13 @@ type EmailSettings = {
   message: string;
 };
 
+type EmailContact = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+};
+
 type Signer = {
   id: string;
   companyId: string;
@@ -721,6 +728,12 @@ export default function Page() {
   const [emailLogs, setEmailLogs] = useState<{ id: string; dofId: string; to: string; status: string; detail: string; createdAt: string }[]>([]);
   const [dofAdding, setDofAdding] = useState(false);
   const [dofAddStatus, setDofAddStatus] = useState<string | null>(null);
+  const [emailContacts, setEmailContacts] = useState<EmailContact[]>([]);
+  const [newContact, setNewContact] = useState({ name: "", email: "", role: "" });
+  const [riskEmailModal, setRiskEmailModal] = useState<{ companyId: string } | null>(null);
+  const [riskEmailSelectedContacts, setRiskEmailSelectedContacts] = useState<string[]>([]);
+  const [riskEmailSending, setRiskEmailSending] = useState(false);
+  const [riskEmailStatus, setRiskEmailStatus] = useState<string | null>(null);
   const [newShift, setNewShift] = useState({ companyId: "", employeeId: "", date: "", shiftType: "Gündüz" as ShiftType, startTime: "08:00", endTime: "16:00", note: "" });
   const [shiftWeekOffset, setShiftWeekOffset] = useState(0);
   const [calendarModal, setCalendarModal] = useState<{ date: string; } | null>(null);
@@ -759,6 +772,10 @@ export default function Page() {
       // Email loglarını yükle
       const emailLogSnap = await getDocs(collection(db, "emailLogs"));
       setEmailLogs(emailLogSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)).sort((a: any, b: any) => b.createdAt?.localeCompare(a.createdAt || "") || 0).slice(0, 20));
+
+      // Email adres defterini yükle
+      const contactSnap = await getDocs(collection(db, "emailContacts"));
+      setEmailContacts(contactSnap.docs.map(d => ({ id: d.id, ...d.data() } as EmailContact)));
     } catch (e) {
       console.error("Firestore yükleme hatası", e);
     } finally {
@@ -1740,6 +1757,17 @@ export default function Page() {
               >
                 {pdfLoading ? "⏳ Hazırlanıyor..." : "📄 PDF Rapor İndir"}
               </button>
+              <button
+                style={{ ...styles.btnPrimary, opacity: risks.length === 0 ? 0.6 : 1 }}
+                disabled={risks.length === 0}
+                onClick={() => {
+                  setRiskEmailModal({ companyId: selectedCompanyId === "all" ? "" : selectedCompanyId });
+                  setRiskEmailSelectedContacts([]);
+                  setRiskEmailStatus(null);
+                }}
+              >
+                📧 Risk Raporu Email Gönder
+              </button>
             </div>
 
             <div style={{ ...styles.card, padding: 0, overflow: "auto" }}>
@@ -1782,13 +1810,137 @@ export default function Page() {
                             </span>
                           ) : <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>Manuel</span>}
                         </td>
-                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteRisk(r.id)}>Sil</button></td>
+                        <td style={styles.td} className="isg-td">
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <button style={styles.btnDanger} onClick={() => deleteRisk(r.id)}>Sil</button>
+                            <button style={{ ...styles.btnSecondary, fontSize: 11, padding: "2px 6px" }} title="Risk Raporu Email Gönder" onClick={() => {
+                              setRiskEmailModal({ companyId: r.companyId });
+                              setRiskEmailSelectedContacts([]);
+                              setRiskEmailStatus(null);
+                            }}>📧</button>
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
+
+            {/* Risk Email Gönder Modal */}
+            {riskEmailModal && (
+              <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setRiskEmailModal(null)}>
+                <div style={{ backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 12, padding: 24, width: 500, maxWidth: "90vw", maxHeight: "80vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: "var(--isg-text)" }}>📧 Risk Raporu Email Gönder</div>
+                    <button style={{ ...styles.btnSecondary, fontSize: 16, padding: "2px 8px" }} onClick={() => setRiskEmailModal(null)}>✕</button>
+                  </div>
+
+                  <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 12 }}>
+                    {riskEmailModal.companyId
+                      ? `${companies.find(c => c.id === riskEmailModal.companyId)?.nickName || ""} firmasına ait risk raporu PDF olarak seçili adreslere gönderilecektir.`
+                      : "Tüm firmalara ait risk raporu PDF olarak seçili adreslere gönderilecektir."}
+                  </div>
+
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--isg-text)", marginBottom: 8 }}>Alıcıları Seçin:</div>
+
+                  {emailContacts.length === 0 ? (
+                    <p style={{ fontSize: 12, color: "var(--isg-text-muted)", padding: 12, backgroundColor: "var(--isg-bg)", borderRadius: 6 }}>
+                      Henüz kayıtlı adres yok. Ayarlar → Email Adres Defteri bölümünden ekleyin.
+                    </p>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+                      {emailContacts.map(c => {
+                        const isSelected = riskEmailSelectedContacts.includes(c.id);
+                        return (
+                          <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, border: `1px solid ${isSelected ? "#3b82f6" : "var(--isg-border)"}`, backgroundColor: isSelected ? "#3b82f622" : "transparent", cursor: "pointer" }}>
+                            <input type="checkbox" checked={isSelected} onChange={() => {
+                              setRiskEmailSelectedContacts(prev => isSelected ? prev.filter(id => id !== c.id) : [...prev, c.id]);
+                            }} style={{ width: 16, height: 16 }} />
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--isg-text)" }}>{c.name}</div>
+                              <div style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{c.email}{c.role ? ` · ${c.role}` : ""}</div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                    <button style={{ ...styles.btnPrimary, opacity: riskEmailSending || riskEmailSelectedContacts.length === 0 ? 0.5 : 1 }} disabled={riskEmailSending || riskEmailSelectedContacts.length === 0} onClick={async () => {
+                      setRiskEmailSending(true);
+                      setRiskEmailStatus(null);
+                      try {
+                        const risksToSend = riskEmailModal.companyId ? risks.filter(r => r.companyId === riskEmailModal.companyId) : risks;
+                        const companiesToSend = riskEmailModal.companyId ? companies.filter(c => c.id === riskEmailModal.companyId) : companies;
+                        const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
+                        const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
+                        const maker = pdfMake.default || pdfMake;
+                        maker.vfs = (pdfFonts.default || pdfFonts).vfs;
+                        const pdfBase64: string = await new Promise((resolve) => {
+                          const docDef: any = {
+                            pageSize: "A4", pageOrientation: "landscape", pageMargins: [20, 20, 20, 20],
+                            content: [
+                              { text: "RISK DEGERLENDIRME RAPORU", fontSize: 14, bold: true, alignment: "center", margin: [0, 0, 0, 10] },
+                              {
+                                table: {
+                                  headerRows: 1,
+                                  widths: [15, 50, 60, 50, 40, 15, 15, 20, 70, 50, 40, 40, 15, 15, 20, 50],
+                                  body: [
+                                    ["No", "Bolum", "Tehlike Kaynagi", "Mevcut Onlem", "Tehlike/Risk", "O", "S", "RS", "Oneriler", "Etkilenecek", "Sorumlu", "Termin", "KO", "KS", "KRS", "Mevzuat"].map(h => ({ text: h, fontSize: 6, bold: true, color: "white", fillColor: "#1e293b", margin: [2, 3, 2, 3] })),
+                                    ...risksToSend.map((r, i) => [
+                                      { text: String(i + 1), fontSize: 6, margin: [2, 2, 2, 2] },
+                                      { text: r.section, fontSize: 6, margin: [2, 2, 2, 2] },
+                                      { text: r.hazard, fontSize: 6, margin: [2, 2, 2, 2] },
+                                      { text: r.currentMeasure, fontSize: 6, margin: [2, 2, 2, 2] },
+                                      { text: r.risk, fontSize: 6, margin: [2, 2, 2, 2] },
+                                      { text: String(r.probability), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
+                                      { text: String(r.severity), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
+                                      { text: String(r.score), fontSize: 7, bold: true, color: "white", fillColor: r.score >= 15 ? "#dc2626" : r.score >= 8 ? "#d97706" : "#16a34a", alignment: "center", margin: [2, 2, 2, 2] },
+                                      { text: r.actionToTake, fontSize: 6, margin: [2, 2, 2, 2] },
+                                      { text: r.affectedPersons || "Tum calisanlar", fontSize: 6, margin: [2, 2, 2, 2] },
+                                      { text: r.responsible, fontSize: 6, margin: [2, 2, 2, 2] },
+                                      { text: r.dueDate, fontSize: 6, margin: [2, 2, 2, 2] },
+                                      { text: String(r.residualProbability), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
+                                      { text: String(r.residualSeverity), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
+                                      { text: String(r.residualScore), fontSize: 7, bold: true, color: "white", fillColor: r.residualScore >= 15 ? "#dc2626" : r.residualScore >= 8 ? "#d97706" : "#16a34a", alignment: "center", margin: [2, 2, 2, 2] },
+                                      { text: r.lawReference || "", fontSize: 6, margin: [2, 2, 2, 2] },
+                                    ]),
+                                  ],
+                                },
+                                layout: { hLineWidth: () => 0.3, vLineWidth: () => 0.3, hLineColor: () => "#d1d5db", vLineColor: () => "#d1d5db" },
+                              },
+                            ],
+                            defaultStyle: { font: "Roboto" },
+                          };
+                          maker.createPdf(docDef).getBase64((data: string) => resolve(data));
+                        });
+                        const selectedEmails = emailContacts.filter(c => riskEmailSelectedContacts.includes(c.id)).map(c => c.email);
+                        const res = await fetch("/api/send-risk-email", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ toEmails: selectedEmails, pdfBase64, companyName: companiesToSend.map(c => c.nickName).join(", ") }),
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                          setRiskEmailStatus("✅ Risk raporu başarıyla gönderildi!");
+                          setTimeout(() => setRiskEmailModal(null), 2000);
+                        } else {
+                          setRiskEmailStatus(`❌ Hata: ${data.error || "Bilinmeyen hata"}`);
+                        }
+                      } catch (e: any) {
+                        setRiskEmailStatus(`❌ Hata: ${e.message}`);
+                      }
+                      setRiskEmailSending(false);
+                    }}>{riskEmailSending ? "Gönderiliyor..." : `📧 ${riskEmailSelectedContacts.length} Kişiye Gönder`}</button>
+                    {riskEmailStatus && (
+                      <span style={{ fontSize: 13, color: riskEmailStatus.startsWith("✅") ? "#16a34a" : "#dc2626" }}>{riskEmailStatus}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -2174,6 +2326,57 @@ export default function Page() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+
+            {/* Email Adres Defteri */}
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">📒 Email Adres Defteri</p>
+              <p style={{ fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 16 }}>
+                Risk raporu veya DÖF bildirimi gönderirken bu listeden alıcı seçebilirsiniz.
+              </p>
+
+              {/* Yeni Kişi Ekle */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10, marginBottom: 16, alignItems: "end" }}>
+                <FormField label="Ad Soyad *">
+                  <input style={styles.input} className="isg-input" value={newContact.name} onChange={e => setNewContact({ ...newContact, name: e.target.value })} placeholder="Ahmet Yılmaz" />
+                </FormField>
+                <FormField label="Email *">
+                  <input style={styles.input} className="isg-input" type="email" value={newContact.email} onChange={e => setNewContact({ ...newContact, email: e.target.value })} placeholder="ahmet@firma.com" />
+                </FormField>
+                <FormField label="Rol / Pozisyon">
+                  <input style={styles.input} className="isg-input" value={newContact.role} onChange={e => setNewContact({ ...newContact, role: e.target.value })} placeholder="İSG Uzmanı, Müdür..." />
+                </FormField>
+                <button style={{ ...styles.btnPrimary, height: 38 }} onClick={async () => {
+                  if (!newContact.name || !newContact.email) return;
+                  try {
+                    const ref = await addDoc(collection(db, "emailContacts"), newContact);
+                    setEmailContacts(prev => [...prev, { id: ref.id, ...newContact }]);
+                    setNewContact({ name: "", email: "", role: "" });
+                  } catch (e: any) {
+                    console.error("Kişi eklenemedi:", e);
+                  }
+                }}>+ Ekle</button>
+              </div>
+
+              {/* Mevcut Kişiler */}
+              {emailContacts.length === 0 ? (
+                <p style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Henüz kayıtlı kişi yok.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {emailContacts.map(c => (
+                    <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderRadius: 8, border: "1px solid var(--isg-border)", backgroundColor: "var(--isg-bg)" }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--isg-text)" }}>{c.name}</div>
+                        <div style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{c.email}{c.role ? ` · ${c.role}` : ""}</div>
+                      </div>
+                      <button style={styles.btnDanger} onClick={async () => {
+                        await deleteDoc(doc(db, "emailContacts", c.id));
+                        setEmailContacts(prev => prev.filter(x => x.id !== c.id));
+                      }}>Sil</button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

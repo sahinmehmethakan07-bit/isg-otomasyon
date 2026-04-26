@@ -87,6 +87,7 @@ type DofRecord = {
   location: string;
   beforePhoto?: string;
   afterPhoto?: string;
+  affectedPersons?: string;
 };
 
 type SignerRole = "İş Güvenliği Uzmanı" | "İşveren / İşveren Vekili" | "Çalışan Temsilcisi";
@@ -703,7 +704,7 @@ export default function Page() {
   const [newEmployee, setNewEmployee] = useState({ companyId: "", firstName: "", lastName: "", tcNo: "", title: "", hireDate: "" });
   const [newDocument, setNewDocument] = useState({ companyId: "", employeeId: "", type: "Risk Değerlendirme Raporu", issueDate: "", expiryDate: "" });
   const [newObserver, setNewObserver] = useState({ fullName: "", title: "", certificateNo: "", phone: "" });
-  const [newDof, setNewDof] = useState({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta" as "Düşük" | "Orta" | "Yüksek", responsible: "", dueDate: "", status: "Açık" as "Açık" | "Bildirildi" | "Önlem Alındı" | "Çözüldü" | "Riske Aktarıldı", location: "", beforePhoto: "", afterPhoto: "" });
+  const [newDof, setNewDof] = useState({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta" as "Düşük" | "Orta" | "Yüksek", responsible: "", dueDate: "", status: "Açık" as "Açık" | "Bildirildi" | "Önlem Alındı" | "Çözüldü" | "Riske Aktarıldı", location: "", beforePhoto: "", afterPhoto: "", affectedPersons: "" });
   const [newRisk, setNewRisk] = useState({
     companyId: "", section: "", hazard: "", risk: "", currentMeasure: "", actionToTake: "",
     probability: "1", severity: "1", residualProbability: "1", residualSeverity: "1",
@@ -940,13 +941,14 @@ export default function Page() {
           widths: [120, "*"],
           body: [
             [hdr("Alan"), hdr("Bilgi")],
-            [cell("DÖF No"), cell(dof.id)],
+            [cell("DÖF No"), cell(dof.id.substring(0, 8))],
             [cell("Firma"), cell(company?.officialName || "—")],
             [cell("Konum / Bölüm"), cell(dof.location || "—")],
             [cell("Başlık"), { text: dof.title, fontSize: 9, bold: true, margin: [4, 4, 4, 4] }],
             [cell("Açıklama"), cell(dof.description || "—")],
             [cell("Öncelik"), { text: dof.priority, fontSize: 9, bold: true, color: "white", fillColor: priorityColor, margin: [4, 4, 4, 4], alignment: "center" }],
             [cell("Sorumlu"), cell(dof.responsible || "—")],
+            [cell("Etkilenecek Kişiler"), cell(dof.affectedPersons || "Tüm çalışanlar")],
             [cell("Termin Tarihi"), cell(dof.dueDate || "—")],
             [cell("Durum"), cell(dof.status)],
             [cell("İlgili Mevzuat"), cell(dof.lawReference || "—")],
@@ -962,6 +964,20 @@ export default function Page() {
         },
         margin: [0, 0, 0, 16],
       },
+
+      // Fotoğraflar (ayrı ayrı gösterilir)
+      ...(dof.beforePhoto ? [{
+        stack: [
+          { text: "Uygunsuzluk Fotoğrafı (Önce)", fontSize: 10, bold: true, color: HL, margin: [0, 0, 0, 6] as [number, number, number, number] },
+          { image: dof.beforePhoto.startsWith("data:") ? dof.beforePhoto : `data:image/jpeg;base64,${dof.beforePhoto}`, width: 240, margin: [0, 0, 0, 12] as [number, number, number, number] },
+        ],
+      }] : []),
+      ...(dof.afterPhoto ? [{
+        stack: [
+          { text: "Düzeltme Fotoğrafı (Sonra)", fontSize: 10, bold: true, color: HL, margin: [0, 0, 0, 6] as [number, number, number, number] },
+          { image: dof.afterPhoto.startsWith("data:") ? dof.afterPhoto : `data:image/jpeg;base64,${dof.afterPhoto}`, width: 240, margin: [0, 0, 0, 12] as [number, number, number, number] },
+        ],
+      }] : []),
 
       // Açıklama detay
       ...(dof.description ? [{
@@ -1017,7 +1033,7 @@ export default function Page() {
     setDofAdding(true);
     setDofAddStatus(null);
     try {
-      const data: Omit<DofRecord, "id"> = { companyId: newDof.companyId, observerId: newDof.observerId, title: newDof.title, description: newDof.description, lawReference: newDof.lawReference, priority: newDof.priority, responsible: newDof.responsible, dueDate: newDof.dueDate, status: newDof.status, location: newDof.location, beforePhoto: newDof.beforePhoto || undefined, afterPhoto: newDof.afterPhoto || undefined };
+      const data: Omit<DofRecord, "id"> = { companyId: newDof.companyId, observerId: newDof.observerId, title: newDof.title, description: newDof.description, lawReference: newDof.lawReference, priority: newDof.priority, responsible: newDof.responsible, dueDate: newDof.dueDate, status: newDof.status, location: newDof.location, beforePhoto: newDof.beforePhoto || undefined, afterPhoto: newDof.afterPhoto || undefined, affectedPersons: newDof.affectedPersons || undefined };
       const ref = await addDoc(collection(db, "dofs"), data);
       setDofs(prev => [...prev, { id: ref.id, ...data }]);
 
@@ -1045,7 +1061,7 @@ export default function Page() {
         setDofAddStatus("✅ DÖF kaydedildi (e-posta bildirimi pasif)");
       }
 
-      setNewDof({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta", responsible: "", dueDate: "", status: "Açık", location: "", beforePhoto: "", afterPhoto: "" });
+      setNewDof({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta", responsible: "", dueDate: "", status: "Açık", location: "", beforePhoto: "", afterPhoto: "", affectedPersons: "" });
     } catch (e: any) {
       setDofAddStatus(`❌ DÖF kaydedilemedi: ${e.message}`);
     } finally {
@@ -1094,7 +1110,7 @@ export default function Page() {
       responsible: dof.responsible || "",
       dueDate: dof.dueDate || "",
       status: "Açık" as const,
-      affectedPersons: "",
+      affectedPersons: dof.affectedPersons || "",
       lawReference: dof.lawReference || "",
       controlDate: "",
     };
@@ -1492,9 +1508,53 @@ export default function Page() {
                 <label style={styles.label} className="isg-label">Yasal Dayanak</label>
                 <input style={styles.input} className="isg-input" value={newDof.lawReference} onChange={e => setNewDof({ ...newDof, lawReference: e.target.value })} />
               </div>
-              <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div><label style={styles.label} className="isg-label">Öncesi Fotoğraf</label><input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, beforePhoto: b64 }))} /></div>
-                <div><label style={styles.label} className="isg-label">Sonrası Fotoğraf</label><input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, afterPhoto: b64 }))} /></div>
+              <div style={{ marginTop: 10 }}>
+                <label style={styles.label} className="isg-label">Etkilenecek Kişiler</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+                  {employees.filter(emp => emp.companyId === newDof.companyId).length > 0 ? (
+                    employees.filter(emp => emp.companyId === newDof.companyId).map(emp => {
+                      const fullName = `${emp.firstName} ${emp.lastName}`;
+                      const selected = (newDof.affectedPersons || "").split(",").map(s => s.trim()).filter(Boolean);
+                      const isSelected = selected.includes(fullName);
+                      return (
+                        <button key={emp.id} type="button" onClick={() => {
+                          const current = (newDof.affectedPersons || "").split(",").map(s => s.trim()).filter(Boolean);
+                          const updated = isSelected ? current.filter(n => n !== fullName) : [...current, fullName];
+                          setNewDof({ ...newDof, affectedPersons: updated.join(", ") });
+                        }} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 12, border: isSelected ? "1.5px solid #3b82f6" : "1px solid var(--isg-border, #334155)", backgroundColor: isSelected ? "#3b82f622" : "transparent", color: isSelected ? "#3b82f6" : "var(--isg-text-muted)", cursor: "pointer" }}>
+                          {isSelected ? "✓ " : ""}{fullName}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <span style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>{newDof.companyId ? "Bu firmaya ait çalışan yok" : "Önce firma seçin"}</span>
+                  )}
+                </div>
+                <input style={{ ...styles.input, fontSize: 12 }} className="isg-input" value={newDof.affectedPersons} onChange={e => setNewDof({ ...newDof, affectedPersons: e.target.value })} placeholder="Tüm çalışanlar veya isimleri seçin/yazın" />
+              </div>
+              <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div>
+                  <label style={styles.label} className="isg-label">Öncesi Fotoğraf (Uygunsuzluk)</label>
+                  {newDof.beforePhoto ? (
+                    <div style={{ position: "relative", display: "inline-block" }}>
+                      <img src={newDof.beforePhoto} alt="önce" style={{ width: 120, height: 90, objectFit: "cover", borderRadius: 6, border: "1px solid var(--isg-border, #334155)" }} />
+                      <button type="button" onClick={() => setNewDof({ ...newDof, beforePhoto: "" })} style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                    </div>
+                  ) : (
+                    <input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, beforePhoto: b64 }))} />
+                  )}
+                </div>
+                <div>
+                  <label style={styles.label} className="isg-label">Sonrası Fotoğraf (Düzeltme)</label>
+                  {newDof.afterPhoto ? (
+                    <div style={{ position: "relative", display: "inline-block" }}>
+                      <img src={newDof.afterPhoto} alt="sonra" style={{ width: 120, height: 90, objectFit: "cover", borderRadius: 6, border: "1px solid var(--isg-border, #334155)" }} />
+                      <button type="button" onClick={() => setNewDof({ ...newDof, afterPhoto: "" })} style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                    </div>
+                  ) : (
+                    <input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, afterPhoto: b64 }))} />
+                  )}
+                </div>
               </div>
               <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                 <button style={{ ...styles.btnPrimary, opacity: dofAdding ? 0.6 : 1 }} disabled={dofAdding} onClick={addDof}>{dofAdding ? "Kaydediliyor..." : "DÖF Ekle"}</button>
@@ -1524,6 +1584,7 @@ export default function Page() {
                       <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>📍 {dof.location}</span>
                       <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>👤 {dof.responsible}</span>
                       <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>📅 {dof.dueDate}</span>
+                      {dof.affectedPersons && <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>👥 {dof.affectedPersons}</span>}
                     </div>
                     <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
                       <Badge text={dof.status} color={dof.status === "Çözüldü" ? "#16a34a" : dof.status === "Riske Aktarıldı" ? "#7c3aed" : dof.status === "Önlem Alındı" ? "#d97706" : dof.status === "Bildirildi" ? "#0ea5e9" : "#dc2626"} />
@@ -1545,10 +1606,17 @@ export default function Page() {
                     )}
                     <div style={{ display: "flex", gap: 6 }}>
                       <button style={styles.btnSecondary} onClick={() => setEditingDofId(isEditing ? null : dof.id)}>{isEditing ? "Kapat" : "Düzenle"}</button>
-                      {(risks.some(r => r.sourceDofId === dof.id) || dof.status === "Önlem Alındı") && (
-                        <button style={{ ...(risks.some(r => r.sourceDofId === dof.id) ? styles.btnSuccess : styles.btnPrimary), fontSize: 11, padding: "4px 10px" }} onClick={() => createRiskFromDof(dof)}>
-                          {risks.some(r => r.sourceDofId === dof.id) ? "✓ Risk Görüntüle" : "⚡ Riske Aktar"}
-                        </button>
+                      {risks.some(r => r.sourceDofId === dof.id) ? (
+                        <button style={{ ...styles.btnSuccess, fontSize: 11, padding: "4px 10px" }} onClick={() => createRiskFromDof(dof)}>✓ Risk Görüntüle</button>
+                      ) : dof.status !== "Riske Aktarıldı" && (
+                        <button style={{ ...styles.btnPrimary, fontSize: 11, padding: "4px 10px", opacity: dof.status === "Önlem Alındı" ? 1 : 0.6 }} onClick={() => {
+                          if (dof.status !== "Önlem Alındı") {
+                            setDofAddStatus(`⚠️ Riske aktarmak için önce DÖF durumunu "Önlem Alındı" olarak değiştirin`);
+                            setTimeout(() => setDofAddStatus(null), 4000);
+                            return;
+                          }
+                          createRiskFromDof(dof);
+                        }}>⚡ Riske Aktar</button>
                       )}
                       <button style={{ ...styles.btnSecondary, fontSize: 11, padding: "4px 8px" }} onClick={() => generateDofPDF(dof)}>📄 PDF</button>
                       <button style={styles.btnDanger} onClick={() => deleteDof(dof.id)}>Sil</button>

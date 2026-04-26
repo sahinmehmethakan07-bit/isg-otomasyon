@@ -914,109 +914,168 @@ export default function Page() {
 
     const company = companies.find(c => c.id === dof.companyId);
     const observer = observers.find(o => o.id === dof.observerId);
+    const companySigners = signers.filter(s => s.companyId === dof.companyId);
     const today = new Date().toLocaleDateString("tr-TR");
     const HL = "#1e293b";
+    const BORDER = "#d1d5db";
 
-    const priorityColor = dof.priority === "Yüksek" ? "#dc2626" : dof.priority === "Orta" ? "#d97706" : "#16a34a";
+    const priorityColor = dof.priority === "Yuksek" ? "#dc2626" : dof.priority === "Orta" ? "#d97706" : "#16a34a";
 
-    const hdr = (t: string) => ({ text: t, fontSize: 8, bold: true, color: "white", fillColor: HL, margin: [4, 4, 4, 4] as [number, number, number, number] });
-    const cell = (t: string) => ({ text: t, fontSize: 9, margin: [4, 4, 4, 4] as [number, number, number, number] });
+    // Header helpers (birebir Risk PDF stili)
+    const thCell = (t: string) => ({ text: t, fontSize: 7, bold: true, color: "white", fillColor: HL, margin: [3, 4, 3, 4] as [number, number, number, number] });
+    const tdCell = (t: string, opts?: any) => ({ text: t || "—", fontSize: 7, margin: [3, 3, 3, 3] as [number, number, number, number], ...opts });
+    const infoLabel = (t: string) => ({ text: t, fontSize: 8, bold: true, color: "#334155", margin: [0, 2, 0, 2] as [number, number, number, number] });
+    const infoValue = (t: string) => ({ text: t || "—", fontSize: 8, color: "#475569", margin: [0, 2, 0, 2] as [number, number, number, number] });
+
+    // Öncelik badge rengi
+    const prBadge = (priority: string) => {
+      const color = priority === "Yuksek" ? "#dc2626" : priority === "Orta" ? "#d97706" : "#16a34a";
+      return { text: priority, fontSize: 7, bold: true, color: "white", fillColor: color, alignment: "center" as const, margin: [3, 3, 3, 3] as [number, number, number, number] };
+    };
+
+    // Durum badge rengi
+    const stBadge = (status: string) => {
+      const colorMap: Record<string, string> = { "Acik": "#dc2626", "Bildirildi": "#0ea5e9", "Onlem Alindi": "#d97706", "Cozuldu": "#16a34a", "Riske Aktarildi": "#7c3aed" };
+      const color = colorMap[status] || "#64748b";
+      return { text: status, fontSize: 7, bold: true, color: "white", fillColor: color, alignment: "center" as const, margin: [3, 3, 3, 3] as [number, number, number, number] };
+    };
 
     const content: any[] = [
-      // Başlık
+      // ─── HEADER BAR ───
       {
         table: { widths: ["*"], body: [[{
           stack: [
-            { text: company?.officialName?.toUpperCase() || "—", fontSize: 14, bold: true, color: "white", alignment: "center" },
-            { text: "DÖF — DÜZELTME ÖNLEYİCİ FAALİYET FORMU", fontSize: 10, color: "white", alignment: "center", margin: [0, 2, 0, 0] },
+            { text: (company?.officialName || "—").toUpperCase(), fontSize: 14, bold: true, color: "white", alignment: "center" },
+            { text: "DOF — DUZELTME ONLEYICI FAALIYET FORMU", fontSize: 9, color: "#94a3b8", alignment: "center", margin: [0, 2, 0, 0] },
           ],
-          fillColor: HL, margin: [0, 6, 0, 6],
+          fillColor: HL, margin: [0, 8, 0, 8],
         }]] },
-        layout: "noBorders", margin: [0, 0, 0, 10],
+        layout: "noBorders", margin: [0, 0, 0, 12],
       },
 
-      // DÖF bilgileri tablosu
+      // ─── FİRMA BİLGİLERİ (Risk PDF stili: sol-sağ iki sütun) ───
       {
         table: {
-          widths: [120, "*"],
+          widths: ["auto", "*", "auto", "*"],
           body: [
-            [hdr("Alan"), hdr("Bilgi")],
-            [cell("DÖF No"), cell(dof.id.substring(0, 8))],
-            [cell("Firma"), cell(company?.officialName || "—")],
-            [cell("Konum / Bölüm"), cell(dof.location || "—")],
-            [cell("Başlık"), { text: dof.title, fontSize: 9, bold: true, margin: [4, 4, 4, 4] }],
-            [cell("Açıklama"), cell(dof.description || "—")],
-            [cell("Öncelik"), { text: dof.priority, fontSize: 9, bold: true, color: "white", fillColor: priorityColor, margin: [4, 4, 4, 4], alignment: "center" }],
-            [cell("Sorumlu"), cell(dof.responsible || "—")],
-            [cell("Etkilenecek Kişiler"), cell(dof.affectedPersons || "Tüm çalışanlar")],
-            [cell("Termin Tarihi"), cell(dof.dueDate || "—")],
-            [cell("Durum"), cell(dof.status)],
-            [cell("İlgili Mevzuat"), cell(dof.lawReference || "—")],
-            [cell("Gözlemci"), cell(observer?.fullName || "—")],
-            [cell("Rapor Tarihi"), cell(today)],
+            [infoLabel("Isyeri Unvani"), infoValue(company?.officialName || ""), infoLabel("SGK Sicil No."), infoValue(company?.sgkSicil || "")],
+            [infoLabel("Isyeri Bolumu"), infoValue(dof.location || "GENEL"), infoLabel("DOF Tarihi"), infoValue(today)],
+            [infoLabel("NACE Kodu"), infoValue(company?.naceCode || ""), infoLabel("Tehlike Sinifi"), infoValue(company?.dangerClass || "")],
+            [infoLabel("Calisan Sayisi"), infoValue(String(company?.employeeCount || "")), infoLabel("Termin Tarihi"), infoValue(dof.dueDate || "")],
+            [infoLabel("Gozlemci"), infoValue(observer?.fullName || ""), infoLabel("Belge No."), infoValue(observer?.certificateNo || "")],
+          ],
+        },
+        layout: { hLineWidth: () => 0, vLineWidth: () => 0 },
+        margin: [0, 0, 0, 16],
+      },
+
+      // ─── DÖF DETAY TABLOSU (Risk PDF tablo stili) ───
+      {
+        table: {
+          headerRows: 1,
+          widths: [18, 55, "*", 50, 50, "auto", "*", 55, 50, 50, "auto"],
+          body: [
+            [
+              thCell("No"),
+              thCell("Konum / Bolum"),
+              thCell("Uygunsuzluk / Baslik"),
+              thCell("Oncelik"),
+              thCell("Durum"),
+              thCell("Aciklama"),
+              thCell("Oneriler / Alinacak Onlemler"),
+              thCell("Etkilenecek Kisiler"),
+              thCell("Surec Sorumlusu"),
+              thCell("Termin"),
+              thCell("Ilgili Mevzuat"),
+            ],
+            [
+              tdCell("1"),
+              tdCell(dof.location || "GENEL"),
+              tdCell(dof.title, { bold: true }),
+              prBadge(dof.priority),
+              stBadge(dof.status),
+              tdCell(dof.description || ""),
+              tdCell(dof.lawReference ? `Mevzuat: ${dof.lawReference}` : ""),
+              tdCell(dof.affectedPersons || "Tum calisanlar"),
+              tdCell(dof.responsible || ""),
+              tdCell(dof.dueDate || ""),
+              tdCell(dof.lawReference || ""),
+            ],
           ],
         },
         layout: {
-          hLineWidth: () => 0.5,
-          vLineWidth: () => 0.5,
-          hLineColor: () => "#94a3b8",
-          vLineColor: () => "#94a3b8",
+          hLineWidth: (i: number) => i <= 1 ? 0.5 : 0.3,
+          vLineWidth: () => 0.3,
+          hLineColor: (i: number) => i <= 1 ? HL : BORDER,
+          vLineColor: () => BORDER,
         },
         margin: [0, 0, 0, 16],
       },
 
-      // Fotoğraflar (ayrı ayrı gösterilir)
-      ...(dof.beforePhoto ? [{
-        stack: [
-          { text: "Uygunsuzluk Fotoğrafı (Önce)", fontSize: 10, bold: true, color: HL, margin: [0, 0, 0, 6] as [number, number, number, number] },
-          { image: dof.beforePhoto.startsWith("data:") ? dof.beforePhoto : `data:image/jpeg;base64,${dof.beforePhoto}`, width: 240, margin: [0, 0, 0, 12] as [number, number, number, number] },
+      // ─── FOTOĞRAFLAR (yan yana) ───
+      ...((dof.beforePhoto || dof.afterPhoto) ? [{
+        columns: [
+          ...(dof.beforePhoto ? [{
+            stack: [
+              { text: "Uygunsuzluk Fotografi (Once)", fontSize: 8, bold: true, color: HL, margin: [0, 0, 0, 4] as [number, number, number, number] },
+              { image: dof.beforePhoto.startsWith("data:") ? dof.beforePhoto : `data:image/jpeg;base64,${dof.beforePhoto}`, width: 260, margin: [0, 0, 10, 0] as [number, number, number, number] },
+            ],
+            width: "auto",
+          }] : []),
+          ...(dof.afterPhoto ? [{
+            stack: [
+              { text: "Duzeltme Fotografi (Sonra)", fontSize: 8, bold: true, color: HL, margin: [0, 0, 0, 4] as [number, number, number, number] },
+              { image: dof.afterPhoto.startsWith("data:") ? dof.afterPhoto : `data:image/jpeg;base64,${dof.afterPhoto}`, width: 260, margin: [0, 0, 0, 0] as [number, number, number, number] },
+            ],
+            width: "auto",
+          }] : []),
         ],
-      }] : []),
-      ...(dof.afterPhoto ? [{
-        stack: [
-          { text: "Düzeltme Fotoğrafı (Sonra)", fontSize: 10, bold: true, color: HL, margin: [0, 0, 0, 6] as [number, number, number, number] },
-          { image: dof.afterPhoto.startsWith("data:") ? dof.afterPhoto : `data:image/jpeg;base64,${dof.afterPhoto}`, width: 240, margin: [0, 0, 0, 12] as [number, number, number, number] },
-        ],
+        margin: [0, 0, 0, 20] as [number, number, number, number],
       }] : []),
 
-      // Açıklama detay
-      ...(dof.description ? [{
-        stack: [
-          { text: "Detaylı Açıklama", fontSize: 10, bold: true, color: HL, margin: [0, 0, 0, 6] as [number, number, number, number] },
-          { text: dof.description, fontSize: 9, lineHeight: 1.5, margin: [0, 0, 0, 16] as [number, number, number, number] },
-        ],
-      }] : []),
+      // ─── İMZA BÖLÜMÜnü sayfanın en altına itmek için spacer
+      { text: "", margin: [0, 0, 0, 0] },
 
-      // İmza bölümü
+      // ─── İMZA BÖLÜMÜ (Risk PDF stili: 3 sütun, isimler altında çizgi) ───
       {
         table: {
           widths: ["*", "*", "*"],
-          body: [[
-            ...["Hazırlayan", "Onaylayan", "Firma Yetkilisi"].map(role => ({
-              stack: [
-                { text: role, fontSize: 8, bold: true, alignment: "center" as const, color: "#334155" },
-                { text: "\n\n\n", fontSize: 6 },
-                { text: "Ad Soyad / İmza", fontSize: 7, alignment: "center" as const, color: "#94a3b8" },
-              ],
-              margin: [6, 8, 6, 8] as [number, number, number, number],
-            })),
-          ]],
+          body: [
+            [
+              { text: "Is Guvenligi Uzmani", fontSize: 8, bold: true, color: "#334155", margin: [0, 0, 0, 4] },
+              { text: "Isveren / Isveren Vekili", fontSize: 8, bold: true, color: "#334155", margin: [0, 0, 0, 4] },
+              { text: "Calisan Temsilcisi", fontSize: 8, bold: true, color: "#334155", margin: [0, 0, 0, 4] },
+            ],
+            [
+              { text: companySigners.find(s => s.role === "İş Güvenliği Uzmanı")?.fullName || observer?.fullName || "", fontSize: 8, color: "#475569" },
+              { text: companySigners.find(s => s.role === "İşveren / İşveren Vekili")?.fullName || "", fontSize: 8, color: "#475569" },
+              { text: companySigners.find(s => s.role === "Çalışan Temsilcisi")?.fullName || "", fontSize: 8, color: "#475569" },
+            ],
+            [
+              { text: "____________________\nImza", fontSize: 7, color: "#94a3b8", margin: [0, 12, 0, 0] },
+              { text: "____________________\nImza", fontSize: 7, color: "#94a3b8", margin: [0, 12, 0, 0] },
+              { text: "____________________\nImza", fontSize: 7, color: "#94a3b8", margin: [0, 12, 0, 0] },
+            ],
+          ],
         },
-        layout: {
-          hLineWidth: () => 0.5,
-          vLineWidth: () => 0.5,
-          hLineColor: () => "#94a3b8",
-          vLineColor: () => "#94a3b8",
-        },
-        margin: [0, 16, 0, 0],
+        layout: "noBorders",
+        margin: [0, 40, 0, 0],
       },
     ];
 
     const docDef: any = {
       pageSize: "A4",
-      pageMargins: [30, 30, 30, 30],
+      pageOrientation: "landscape",
+      pageMargins: [30, 30, 30, 40],
       content,
       defaultStyle: { font: "Roboto" },
+      footer: (currentPage: number) => ({
+        text: `Sayfa ${currentPage}`,
+        alignment: "right",
+        fontSize: 7,
+        color: "#94a3b8",
+        margin: [0, 0, 30, 0],
+      }),
     };
 
     if (returnBase64) {
@@ -1024,7 +1083,7 @@ export default function Page() {
         maker.createPdf(docDef).getBase64((data: string) => resolve(data));
       });
     } else {
-      maker.createPdf(docDef).download(`DOF_${dof.id}_${today.replace(/\./g, "_")}.pdf`);
+      maker.createPdf(docDef).download(`DOF_${dof.id.substring(0, 8)}_${today.replace(/\./g, "_")}.pdf`);
     }
   }
 

@@ -919,7 +919,7 @@ export default function Page() {
     const HL = "#1e293b";
     const BORDER = "#d1d5db";
 
-    const priorityColor = dof.priority === "Yuksek" ? "#dc2626" : dof.priority === "Orta" ? "#d97706" : "#16a34a";
+    const priorityColor = dof.priority === "Yüksek" ? "#dc2626" : dof.priority === "Orta" ? "#d97706" : "#16a34a";
 
     // Header helpers (birebir Risk PDF stili)
     const thCell = (t: string) => ({ text: t, fontSize: 7, bold: true, color: "white", fillColor: HL, margin: [3, 4, 3, 4] as [number, number, number, number] });
@@ -929,13 +929,13 @@ export default function Page() {
 
     // Öncelik badge rengi
     const prBadge = (priority: string) => {
-      const color = priority === "Yuksek" ? "#dc2626" : priority === "Orta" ? "#d97706" : "#16a34a";
+      const color = priority === "Yüksek" ? "#dc2626" : priority === "Orta" ? "#d97706" : "#16a34a";
       return { text: priority, fontSize: 7, bold: true, color: "white", fillColor: color, alignment: "center" as const, margin: [3, 3, 3, 3] as [number, number, number, number] };
     };
 
     // Durum badge rengi
     const stBadge = (status: string) => {
-      const colorMap: Record<string, string> = { "Acik": "#dc2626", "Bildirildi": "#0ea5e9", "Onlem Alindi": "#d97706", "Cozuldu": "#16a34a", "Riske Aktarildi": "#7c3aed" };
+      const colorMap: Record<string, string> = { "Açık": "#dc2626", "Bildirildi": "#0ea5e9", "Önlem Alındı": "#d97706", "Çözüldü": "#16a34a", "Riske Aktarıldı": "#7c3aed" };
       const color = colorMap[status] || "#64748b";
       return { text: status, fontSize: 7, bold: true, color: "white", fillColor: color, alignment: "center" as const, margin: [3, 3, 3, 3] as [number, number, number, number] };
     };

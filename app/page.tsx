@@ -1033,7 +1033,9 @@ export default function Page() {
     setDofAdding(true);
     setDofAddStatus(null);
     try {
-      const data: Omit<DofRecord, "id"> = { companyId: newDof.companyId, observerId: newDof.observerId, title: newDof.title, description: newDof.description, lawReference: newDof.lawReference, priority: newDof.priority, responsible: newDof.responsible, dueDate: newDof.dueDate, status: newDof.status, location: newDof.location, beforePhoto: newDof.beforePhoto || undefined, afterPhoto: newDof.afterPhoto || undefined, affectedPersons: newDof.affectedPersons || undefined };
+      const data: Omit<DofRecord, "id"> = { companyId: newDof.companyId, observerId: newDof.observerId, title: newDof.title, description: newDof.description, lawReference: newDof.lawReference, priority: newDof.priority, responsible: newDof.responsible, dueDate: newDof.dueDate, status: newDof.status, location: newDof.location, affectedPersons: newDof.affectedPersons || "" };
+      if (newDof.beforePhoto) (data as any).beforePhoto = newDof.beforePhoto;
+      if (newDof.afterPhoto) (data as any).afterPhoto = newDof.afterPhoto;
       const ref = await addDoc(collection(db, "dofs"), data);
       setDofs(prev => [...prev, { id: ref.id, ...data }]);
 

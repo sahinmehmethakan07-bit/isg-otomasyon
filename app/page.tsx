@@ -114,19 +114,6 @@ type Signer = {
   fullName: string;
 };
 
-type ShiftType = "Gündüz" | "Akşam" | "Gece";
-
-type Shift = {
-  id: string;
-  companyId: string;
-  employeeId: string;
-  date: string;
-  shiftType: ShiftType;
-  startTime: string;
-  endTime: string;
-  note: string;
-};
-
 type RiskRecord = {
   id: string;
   companyId: string;
@@ -612,66 +599,6 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-  const parts = value ? value.split(":") : ["8", "0"];
-  const [hour, setHour] = useState(parseInt(parts[0]) || 8);
-  const [minute, setMinute] = useState(parseInt(parts[1]) || 0);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  const apply = (newH: number, newM: number) => {
-    onChange(`${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`);
-  };
-
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <div onClick={() => setOpen(!open)} style={{ ...styles.input, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span>{value || "Saat seçin..."}</span>
-        <span style={{ fontSize: 14 }}>🕐</span>
-      </div>
-      {open && (
-        <div style={{ position: "absolute", zIndex: 1000, top: "calc(100% + 4px)", left: 0, backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 8, padding: 16, width: 200, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "var(--isg-text-muted)", marginBottom: 4 }}>Saat</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <button onClick={() => { const n = (hour + 1) % 24; setHour(n); apply(n, minute); }} style={{ ...styles.btnSecondary, padding: "2px 12px" }}>▲</button>
-                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--isg-text)", textAlign: "center", minWidth: 40 }}>{String(hour).padStart(2, "0")}</div>
-                <button onClick={() => { const n = (hour - 1 + 24) % 24; setHour(n); apply(n, minute); }} style={{ ...styles.btnSecondary, padding: "2px 12px" }}>▼</button>
-              </div>
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: "var(--isg-text-muted)", paddingTop: 8 }}>:</div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "var(--isg-text-muted)", marginBottom: 4 }}>Dakika</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <button onClick={() => { const n = (minute + 15) % 60; setMinute(n); apply(hour, n); }} style={{ ...styles.btnSecondary, padding: "2px 12px" }}>▲</button>
-                <div style={{ fontSize: 24, fontWeight: 700, color: "var(--isg-text)", textAlign: "center", minWidth: 40 }}>{String(minute).padStart(2, "0")}</div>
-                <button onClick={() => { const n = (minute - 15 + 60) % 60; setMinute(n); apply(hour, n); }} style={{ ...styles.btnSecondary, padding: "2px 12px" }}>▼</button>
-              </div>
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 3, marginBottom: 8, maxHeight: 140, overflowY: "auto" }}>
-            {Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`).map(t => (
-              <button key={t} onClick={() => { const [hh, mm] = t.split(":").map(Number); setHour(hh); setMinute(mm); apply(hh, mm); setOpen(false); }}
-                style={{ ...styles.btnSecondary, fontSize: 10, padding: "3px 0", backgroundColor: value === t ? "#0ea5e9" : "var(--isg-input-bg)", color: value === t ? "#fff" : "var(--isg-text)" }}>{t}</button>
-            ))}
-          </div>
-          <button onClick={() => setOpen(false)} style={{ ...styles.btnPrimary, width: "100%", fontSize: 12 }}>Tamam</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function Badge({ text, color }: { text: string; color: string }) {
   return <span style={{ ...styles.badge, backgroundColor: color + "22", color, border: `1px solid ${color}44` }}>{text}</span>;
 }
@@ -719,13 +646,8 @@ export default function Page() {
     affectedPersons: "", lawReference: "", controlDate: "",
   });
 
-  const [shifts, setShifts] = useState<Shift[]>([]);
   const [signers, setSigners] = useState<Signer[]>([]);
   const [emailSettings, setEmailSettings] = useState<EmailSettings>({ enabled: true, toEmail: "", ccEmail: "", subject: "[İSG] Yeni DÖF Bildirimi: {dofTitle}", message: "" });
-  const [emailSaving, setEmailSaving] = useState(false);
-  const [emailSaveStatus, setEmailSaveStatus] = useState<string | null>(null);
-  const [emailTestStatus, setEmailTestStatus] = useState<string | null>(null);
-  const [emailLogs, setEmailLogs] = useState<{ id: string; dofId: string; to: string; status: string; detail: string; createdAt: string }[]>([]);
   const [dofAdding, setDofAdding] = useState(false);
   const [dofAddStatus, setDofAddStatus] = useState<string | null>(null);
   const [emailContacts, setEmailContacts] = useState<EmailContact[]>([]);
@@ -734,23 +656,17 @@ export default function Page() {
   const [riskEmailSelectedContacts, setRiskEmailSelectedContacts] = useState<string[]>([]);
   const [riskEmailSending, setRiskEmailSending] = useState(false);
   const [riskEmailStatus, setRiskEmailStatus] = useState<string | null>(null);
-  const [newShift, setNewShift] = useState({ companyId: "", employeeId: "", date: "", shiftType: "Gündüz" as ShiftType, startTime: "08:00", endTime: "16:00", note: "" });
-  const [shiftWeekOffset, setShiftWeekOffset] = useState(0);
-  const [calendarModal, setCalendarModal] = useState<{ date: string; } | null>(null);
-  const [selectedCalDay, setSelectedCalDay] = useState<string | null>(null);
-  const [quickShift, setQuickShift] = useState({ companyId: "", employeeId: "", shiftType: "Gündüz" as ShiftType, startTime: "08:00", endTime: "16:00", note: "" });
 
   async function loadAll() {
     setLoading(true);
     try {
-      const [compSnap, empSnap, docSnap, obsSnap, dofSnap, riskSnap, shiftSnap, signerSnap] = await Promise.all([
+      const [compSnap, empSnap, docSnap, obsSnap, dofSnap, riskSnap, signerSnap] = await Promise.all([
         getDocs(collection(db, "companies")),
         getDocs(collection(db, "employees")),
         getDocs(collection(db, "documents")),
         getDocs(collection(db, "observers")),
         getDocs(collection(db, "dofs")),
         getDocs(collection(db, "risks")),
-        getDocs(collection(db, "shifts")),
         getDocs(collection(db, "signers")),
       ]);
       setCompanies(compSnap.docs.map(d => ({ id: d.id, ...d.data() } as Company)));
@@ -759,7 +675,6 @@ export default function Page() {
       setObservers(obsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Observer)));
       setDofs(dofSnap.docs.map(d => ({ id: d.id, ...d.data() } as DofRecord)));
       setRisks(riskSnap.docs.map(d => ({ id: d.id, ...d.data() } as RiskRecord)));
-      setShifts(shiftSnap.docs.map(d => ({ id: d.id, ...d.data() } as Shift)));
       setSigners(signerSnap.docs.map(d => ({ id: d.id, ...d.data() } as Signer)));
 
       // Email ayarlarını yükle
@@ -768,10 +683,6 @@ export default function Page() {
         const ed = emailDoc.data() as EmailSettings;
         setEmailSettings(ed);
       }
-
-      // Email loglarını yükle
-      const emailLogSnap = await getDocs(collection(db, "emailLogs"));
-      setEmailLogs(emailLogSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)).sort((a: any, b: any) => b.createdAt?.localeCompare(a.createdAt || "") || 0).slice(0, 20));
 
       // Email adres defterini yükle
       const contactSnap = await getDocs(collection(db, "emailContacts"));
@@ -1225,37 +1136,6 @@ export default function Page() {
     setRisks(prev => prev.filter(r => r.id !== id));
   }
 
-  async function addShift() {
-    if (!newShift.companyId || !newShift.employeeId || !newShift.date) return;
-    const data = { ...newShift };
-    const ref = await addDoc(collection(db, "shifts"), data);
-    setShifts(prev => [...prev, { id: ref.id, ...data }]);
-    setNewShift({ companyId: newShift.companyId, employeeId: "", date: "", shiftType: "Gündüz", startTime: "08:00", endTime: "16:00", note: "" });
-  }
-
-  async function deleteShift(id: string) {
-    await deleteDoc(doc(db, "shifts", id));
-    setShifts(prev => prev.filter(s => s.id !== id));
-  }
-
-  // Haftalık takvim için yardımcı fonksiyonlar
-  function getWeekDays(offset: number): Date[] {
-    const now = new Date();
-    const monday = new Date(now);
-    const day = now.getDay() === 0 ? 6 : now.getDay() - 1;
-    monday.setDate(now.getDate() - day + offset * 7);
-    monday.setHours(0, 0, 0, 0);
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      return d;
-    });
-  }
-
-  function formatDateKey(d: Date) {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }
-
   const tabs = [
     { id: "ozet", label: "📊 Özet" },
     { id: "firmalar", label: "🏢 Firmalar" },
@@ -1265,8 +1145,6 @@ export default function Page() {
     { id: "dof", label: "⚠️ DÖF" },
     { id: "risk", label: "🛡 Risk" },
     { id: "imzacilar", label: "✍️ İmzacılar" },
-    { id: "vardiya", label: "🕐 Vardiya" },
-    { id: "ayarlar", label: "⚙️ Ayarlar" },
   ];
 
   if (!mounted || loading) {
@@ -1844,12 +1722,8 @@ export default function Page() {
 
                   <div style={{ fontSize: 12, fontWeight: 600, color: "var(--isg-text)", marginBottom: 8 }}>Alıcıları Seçin:</div>
 
-                  {emailContacts.length === 0 ? (
-                    <p style={{ fontSize: 12, color: "var(--isg-text-muted)", padding: 12, backgroundColor: "var(--isg-bg)", borderRadius: 6 }}>
-                      Henüz kayıtlı adres yok. Ayarlar → Email Adres Defteri bölümünden ekleyin.
-                    </p>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+                  {emailContacts.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
                       {emailContacts.map(c => {
                         const isSelected = riskEmailSelectedContacts.includes(c.id);
                         return (
@@ -1857,15 +1731,53 @@ export default function Page() {
                             <input type="checkbox" checked={isSelected} onChange={() => {
                               setRiskEmailSelectedContacts(prev => isSelected ? prev.filter(id => id !== c.id) : [...prev, c.id]);
                             }} style={{ width: 16, height: 16 }} />
-                            <div>
+                            <div style={{ flex: 1 }}>
                               <div style={{ fontSize: 13, fontWeight: 600, color: "var(--isg-text)" }}>{c.name}</div>
                               <div style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{c.email}{c.role ? ` · ${c.role}` : ""}</div>
                             </div>
+                            <button style={{ ...styles.btnDanger, fontSize: 10, padding: "2px 6px" }} onClick={async (e) => {
+                              e.preventDefault(); e.stopPropagation();
+                              await deleteDoc(doc(db, "emailContacts", c.id));
+                              setEmailContacts(prev => prev.filter(x => x.id !== c.id));
+                              setRiskEmailSelectedContacts(prev => prev.filter(id => id !== c.id));
+                            }}>✕</button>
                           </label>
                         );
                       })}
                     </div>
                   )}
+
+                  {emailContacts.length === 0 && (
+                    <p style={{ fontSize: 12, color: "var(--isg-text-muted)", padding: 12, backgroundColor: "var(--isg-bg)", borderRadius: 6, marginBottom: 12 }}>
+                      Henüz kayıtlı alıcı yok. Aşağıdan ekleyin.
+                    </p>
+                  )}
+
+                  {/* Inline Kişi Ekleme */}
+                  <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap", alignItems: "end" }}>
+                    <div style={{ flex: 1, minWidth: 120 }}>
+                      <label style={{ fontSize: 10, color: "var(--isg-text-muted)" }}>Ad Soyad</label>
+                      <input style={{ ...styles.input, fontSize: 12, padding: "6px 8px" }} className="isg-input" value={newContact.name} onChange={e => setNewContact({ ...newContact, name: e.target.value })} placeholder="Ad Soyad" />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 160 }}>
+                      <label style={{ fontSize: 10, color: "var(--isg-text-muted)" }}>Email</label>
+                      <input style={{ ...styles.input, fontSize: 12, padding: "6px 8px" }} className="isg-input" type="email" value={newContact.email} onChange={e => setNewContact({ ...newContact, email: e.target.value })} placeholder="email@firma.com" />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 100 }}>
+                      <label style={{ fontSize: 10, color: "var(--isg-text-muted)" }}>Rol</label>
+                      <input style={{ ...styles.input, fontSize: 12, padding: "6px 8px" }} className="isg-input" value={newContact.role} onChange={e => setNewContact({ ...newContact, role: e.target.value })} placeholder="İSG Uzmanı..." />
+                    </div>
+                    <button style={{ ...styles.btnSuccess, fontSize: 12, padding: "6px 12px", whiteSpace: "nowrap" }} onClick={async () => {
+                      if (!newContact.name || !newContact.email) return;
+                      try {
+                        const ref = await addDoc(collection(db, "emailContacts"), newContact);
+                        const added = { id: ref.id, ...newContact };
+                        setEmailContacts(prev => [...prev, added]);
+                        setRiskEmailSelectedContacts(prev => [...prev, ref.id]);
+                        setNewContact({ name: "", email: "", role: "" });
+                      } catch (e: any) { console.error(e); }
+                    }}>+ Ekle</button>
+                  </div>
 
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                     <button style={{ ...styles.btnPrimary, opacity: riskEmailSending || riskEmailSelectedContacts.length === 0 ? 0.5 : 1 }} disabled={riskEmailSending || riskEmailSelectedContacts.length === 0} onClick={async () => {
@@ -2005,383 +1917,7 @@ export default function Page() {
           </div>
         )}
 
-        {activeTab === "vardiya" && (() => {
-          const weekDays = getWeekDays(shiftWeekOffset);
-          const dayNames = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
-          const companyEmployees = newShift.companyId
-            ? employees.filter(e => e.companyId === newShift.companyId && e.isActive)
-            : [];
-          const filteredShifts = selectedCompanyId === "all"
-            ? shifts
-            : shifts.filter(s => s.companyId === selectedCompanyId);
-
-          const shiftColor: Record<ShiftType, string> = {
-            "Gündüz": "#0ea5e9",
-            "Akşam": "#d97706",
-            "Gece": "#7c3aed",
-          };
-
-          return (
-            <div>
-              {/* Form */}
-              <div style={styles.card} className="isg-card">
-                <p style={styles.sectionTitle} className="isg-text-muted">Vardiya Ekle</p>
-                <div style={styles.formGrid}>
-                  <FormField label="Firma *">
-                    <select style={styles.select} className="isg-input" value={newShift.companyId} onChange={e => setNewShift({ ...newShift, companyId: e.target.value, employeeId: "" })}>
-                      <option value="">Seçin...</option>
-                      {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
-                    </select>
-                  </FormField>
-                  <FormField label="Personel *">
-                    <select style={styles.select} className="isg-input" value={newShift.employeeId} onChange={e => setNewShift({ ...newShift, employeeId: e.target.value })}>
-                      <option value="">Seçin...</option>
-                      {companyEmployees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
-                    </select>
-                  </FormField>
-                  <FormField label="Tarih *">
-                    <DatePicker value={newShift.date} onChange={v => setNewShift({ ...newShift, date: v })} />
-                  </FormField>
-                  <FormField label="Başlangıç">
-                    <TimePicker value={newShift.startTime} onChange={v => setNewShift({ ...newShift, startTime: v })} />
-                  </FormField>
-                  <FormField label="Bitiş">
-                    <TimePicker value={newShift.endTime} onChange={v => setNewShift({ ...newShift, endTime: v })} />
-                  </FormField>
-                  <FormField label="Not">
-                    <input style={styles.input} className="isg-input" value={newShift.note} onChange={e => setNewShift({ ...newShift, note: e.target.value })} placeholder="Opsiyonel..." />
-                  </FormField>
-                </div>
-                <div style={{ marginTop: 12 }}>
-                  <button style={styles.btnPrimary} onClick={addShift}>Vardiya Ekle</button>
-                </div>
-              </div>
-
-              {/* Haftalık Takvim */}
-              <div style={styles.card} className="isg-card">
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
-                  <p style={{ ...styles.sectionTitle, margin: 0 }}>Haftalık Takvim</p>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}>
-                      <option value="all">Tüm Firmalar</option>
-                      {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
-                    </select>
-                    <button style={styles.btnSecondary} onClick={() => setShiftWeekOffset(prev => prev - 1)}>← Önceki</button>
-                    <button style={{ ...styles.btnSecondary, minWidth: 60 }} onClick={() => setShiftWeekOffset(0)}>Bu Hafta</button>
-                    <button style={styles.btnSecondary} onClick={() => setShiftWeekOffset(prev => prev + 1)}>Sonraki →</button>
-                  </div>
-                </div>
-
-                {/* Takvim grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
-                  {weekDays.map((day, i) => {
-                    const key = formatDateKey(day);
-                    const dayShifts = filteredShifts.filter(s => s.date === key);
-                    const isToday = formatDateKey(new Date()) === key;
-                    const isSelected = selectedCalDay === key;
-                    return (
-                      <div
-                        key={key}
-                        onClick={() => { setSelectedCalDay(key); setCalendarModal({ date: key }); setQuickShift({ companyId: "", employeeId: "", shiftType: "Gündüz", startTime: "08:00", endTime: "16:00", note: "" }); }}
-                        style={{ backgroundColor: isSelected ? "var(--isg-today-bg, #1e3a5f)" : "var(--isg-input-bg)", border: `1px solid ${isSelected ? "#0ea5e9" : "var(--isg-border)"}`, borderRadius: 8, padding: 8, minHeight: 120, cursor: "pointer", transition: "border-color 0.15s, background-color 0.15s" }}
-                        onMouseEnter={e => (e.currentTarget.style.borderColor = "#0ea5e9")}
-                        onMouseLeave={e => (e.currentTarget.style.borderColor = isSelected ? "#0ea5e9" : "var(--isg-border)")}
-                      >
-                        <div style={{ fontSize: 11, color: isToday ? "#0ea5e9" : "var(--isg-text-muted)", fontWeight: 600, marginBottom: 2 }}>{dayNames[i]} {isToday ? "• Bugün" : ""}</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: isToday || isSelected ? "var(--isg-text)" : "var(--isg-text-muted)", marginBottom: 4 }}>{day.getDate()}.{String(day.getMonth() + 1).padStart(2, "0")}</div>
-                        <div style={{ fontSize: 9, color: "#0ea5e9", marginBottom: 4 }}>+ Ekle</div>
-                        {dayShifts.map(s => {
-                          const emp = employees.find(e => e.id === s.employeeId);
-                          return (
-                            <div key={s.id} onClick={e => e.stopPropagation()} style={{ backgroundColor: shiftColor[s.shiftType] + "22", border: `1px solid ${shiftColor[s.shiftType]}44`, borderRadius: 4, padding: "4px 6px", marginBottom: 4, fontSize: 11 }}>
-                              <div style={{ color: shiftColor[s.shiftType], fontWeight: 600 }}>{s.shiftType}</div>
-                              <div style={{ color: "var(--isg-text)" }}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</div>
-                              <div style={{ color: "var(--isg-text-muted)" }}>{s.startTime}–{s.endTime}</div>
-                              {s.note && <div style={{ color: "var(--isg-text-muted)", fontSize: 10, marginTop: 2 }}>{s.note}</div>}
-                              <button style={{ ...styles.btnDanger, fontSize: 10, padding: "2px 6px", marginTop: 4 }} onClick={e => { e.stopPropagation(); deleteShift(s.id); }}>Sil</button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Gün tıklama modalı */}
-                {calendarModal && (
-                  <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => { setCalendarModal(null); setSelectedCalDay(null); }}>
-                    <div style={{ backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 12, padding: 24, width: 400, maxWidth: "90vw" }} onClick={e => e.stopPropagation()}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                        <div style={{ fontWeight: 700, fontSize: 15, color: "var(--isg-text)" }}>
-                          📅 {new Date(calendarModal.date).toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" })}
-                        </div>
-                        <button style={{ ...styles.btnSecondary, fontSize: 16, padding: "2px 8px" }} onClick={() => { setCalendarModal(null); setSelectedCalDay(null); }}>✕</button>
-                      </div>
-
-                      {/* O güne ait vardiyalar */}
-                      {shifts.filter(s => s.date === calendarModal.date).length > 0 && (
-                        <div style={{ marginBottom: 16 }}>
-                          <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 8, fontWeight: 600 }}>MEVCUT VARDİYALAR</div>
-                          {shifts.filter(s => s.date === calendarModal.date).map(s => {
-                            const emp = employees.find(e => e.id === s.employeeId);
-                            const comp = companies.find(c => c.id === s.companyId);
-                            return (
-                              <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: shiftColor[s.shiftType] + "22", border: `1px solid ${shiftColor[s.shiftType]}44`, borderRadius: 6, padding: "8px 12px", marginBottom: 6 }}>
-                                <div>
-                                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--isg-text)" }}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</div>
-                                  <div style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{comp?.nickName} · {s.shiftType} · {s.startTime}–{s.endTime}</div>
-                                </div>
-                                <button style={styles.btnDanger} onClick={() => deleteShift(s.id)}>Sil</button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {/* Hızlı vardiya ekle */}
-                      <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 8, fontWeight: 600 }}>YENİ VARDİYA EKLE</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                        <div>
-                          <label style={styles.label}>Firma *</label>
-                          <select style={styles.select} className="isg-input" value={quickShift.companyId} onChange={e => setQuickShift({ ...quickShift, companyId: e.target.value, employeeId: "" })}>
-                            <option value="">Seçin...</option>
-                            {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label style={styles.label}>Personel *</label>
-                          <select style={styles.select} className="isg-input" value={quickShift.employeeId} onChange={e => setQuickShift({ ...quickShift, employeeId: e.target.value })}>
-                            <option value="">Seçin...</option>
-                            {employees.filter(e => !quickShift.companyId || e.companyId === quickShift.companyId).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label style={styles.label}>Saat</label>
-                          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                            <TimePicker value={quickShift.startTime} onChange={v => setQuickShift({ ...quickShift, startTime: v })} />
-                            <span style={{ color: "var(--isg-text-muted)", padding: "0 4px" }}>–</span>
-                            <TimePicker value={quickShift.endTime} onChange={v => setQuickShift({ ...quickShift, endTime: v })} />
-                          </div>
-                        </div>
-                      </div>
-                      <button style={{ ...styles.btnPrimary, width: "100%" }} onClick={async () => {
-                        if (!quickShift.companyId || !quickShift.employeeId) return;
-                        const data = { ...quickShift, date: calendarModal.date };
-                        const ref = await addDoc(collection(db, "shifts"), data);
-                        setShifts(prev => [...prev, { id: ref.id, ...data }]);
-                        setQuickShift({ companyId: quickShift.companyId, employeeId: "", shiftType: "Gündüz", startTime: "08:00", endTime: "16:00", note: "" });
-                      }}>Vardiya Ekle</button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Legend */}
-                <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
-                  {(["Gündüz", "Akşam", "Gece"] as ShiftType[]).map(t => (
-                    <div key={t} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: shiftColor[t] }} />
-                      <span style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>{t}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Liste görünümü */}
-              <div style={styles.card} className="isg-card">
-                <p style={styles.sectionTitle} className="isg-text-muted">Tüm Vardiyalar</p>
-                <div style={{ ...styles.card, padding: 0, overflow: "auto", margin: 0 }}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        {["Firma", "Personel", "Tarih", "Tür", "Saat", "Not", "İşlem"].map(h => (
-                          <th key={h} style={styles.th} className="isg-th">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredShifts.sort((a, b) => b.date.localeCompare(a.date)).map(s => {
-                        const emp = employees.find(e => e.id === s.employeeId);
-                        const company = companies.find(c => c.id === s.companyId);
-                        return (
-                          <tr key={s.id}>
-                            <td style={{ ...styles.td, fontSize: 12 }}>{company?.nickName || "—"}</td>
-                            <td style={styles.td} className="isg-td">{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</td>
-                            <td style={{ ...styles.td, fontSize: 12 }}>{s.date}</td>
-                            <td style={styles.td} className="isg-td"><Badge text={s.shiftType} color={shiftColor[s.shiftType]} /></td>
-                            <td style={{ ...styles.td, fontSize: 12 }}>{s.startTime}–{s.endTime}</td>
-                            <td style={{ ...styles.td, fontSize: 12, color: "var(--isg-text-muted)" }}>{s.note || "—"}</td>
-                            <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteShift(s.id)}>Sil</button></td>
-                          </tr>
-                        );
-                      })}
-                      {filteredShifts.length === 0 && (
-                        <tr><td colSpan={7} style={{ ...styles.td, textAlign: "center", color: "var(--isg-text-muted)" }}>Vardiya kaydı yok</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
-        {activeTab === "ayarlar" && (
-          <div>
-            <div style={styles.card} className="isg-card">
-              <p style={styles.sectionTitle} className="isg-text-muted">E-posta Bildirim Ayarları</p>
-              <p style={{ fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 16 }}>
-                DÖF oluşturulduğunda otomatik e-posta bildirimi göndermek için ayarları yapılandırın. Ayarlar Firestore'da saklanır.
-              </p>
-
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, padding: 12, backgroundColor: emailSettings.enabled ? "#16a34a22" : "#dc262622", border: `1px solid ${emailSettings.enabled ? "#16a34a44" : "#dc262644"}`, borderRadius: 8 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14, fontWeight: 600, color: "var(--isg-text)" }}>
-                  <input type="checkbox" checked={emailSettings.enabled} onChange={e => setEmailSettings({ ...emailSettings, enabled: e.target.checked })} style={{ width: 18, height: 18, cursor: "pointer" }} />
-                  E-posta bildirimi {emailSettings.enabled ? "aktif" : "pasif"}
-                </label>
-              </div>
-
-              <div style={styles.formGrid}>
-                <FormField label="Ana Alıcı E-posta *">
-                  <input style={styles.input} className="isg-input" type="email" value={emailSettings.toEmail} onChange={e => setEmailSettings({ ...emailSettings, toEmail: e.target.value })} placeholder="firma@ornek.com" />
-                </FormField>
-                <FormField label="CC E-posta (Opsiyonel)">
-                  <input style={styles.input} className="isg-input" type="email" value={emailSettings.ccEmail} onChange={e => setEmailSettings({ ...emailSettings, ccEmail: e.target.value })} placeholder="yonetici@ornek.com" />
-                </FormField>
-                <FormField label="Mail Konusu">
-                  <input style={styles.input} className="isg-input" value={emailSettings.subject} onChange={e => setEmailSettings({ ...emailSettings, subject: e.target.value })} placeholder="[İSG] Yeni DÖF Bildirimi: {dofTitle}" />
-                  <div style={{ fontSize: 10, color: "var(--isg-text-muted)", marginTop: 4 }}>{"{dofTitle}"} → DÖF başlığı, {"{companyName}"} → Firma adı</div>
-                </FormField>
-              </div>
-
-              <div style={{ marginTop: 12 }}>
-                <FormField label="Mail İçeriği / Ek Açıklama">
-                  <textarea style={{ ...styles.input, minHeight: 80, resize: "vertical" as const }} className="isg-input" value={emailSettings.message} onChange={e => setEmailSettings({ ...emailSettings, message: e.target.value })} placeholder="Opsiyonel ek mesaj..." />
-                </FormField>
-              </div>
-
-              <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
-                <button style={styles.btnPrimary} disabled={emailSaving} onClick={async () => {
-                  setEmailSaving(true);
-                  setEmailSaveStatus(null);
-                  try {
-                    await setDoc(doc(db, "settings", "emailNotifications"), { ...emailSettings, updatedAt: new Date().toISOString() });
-                    setEmailSaveStatus("✅ Ayarlar kaydedildi");
-                  } catch (e: any) {
-                    setEmailSaveStatus(`❌ Kayıt hatası: ${e.message}`);
-                  }
-                  setEmailSaving(false);
-                  setTimeout(() => setEmailSaveStatus(null), 4000);
-                }}>{emailSaving ? "Kaydediliyor..." : "Ayarları Kaydet"}</button>
-
-                {emailSaveStatus && (
-                  <span style={{ fontSize: 13, padding: "8px 12px", color: emailSaveStatus.startsWith("✅") ? "#16a34a" : "#dc2626" }}>{emailSaveStatus}</span>
-                )}
-
-                <button style={styles.btnSecondary} disabled={!emailSettings.toEmail || !emailSettings.enabled} onClick={async () => {
-                  setEmailTestStatus("Gönderiliyor...");
-                  try {
-                    const res = await fetch("/api/send-test-email", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ toEmail: emailSettings.toEmail, ccEmail: emailSettings.ccEmail }),
-                    });
-                    const data = await res.json();
-                    setEmailTestStatus(res.ok ? "✅ Test maili gönderildi!" : `❌ Hata: ${data.error}`);
-                  } catch (e) {
-                    setEmailTestStatus("❌ Bağlantı hatası");
-                  }
-                  setTimeout(() => setEmailTestStatus(null), 5000);
-                }}>📧 Test Maili Gönder</button>
-
-                {emailTestStatus && (
-                  <span style={{ fontSize: 13, padding: "8px 12px", color: emailTestStatus.startsWith("✅") ? "#16a34a" : emailTestStatus.startsWith("❌") ? "#dc2626" : "var(--isg-text-muted)" }}>{emailTestStatus}</span>
-                )}
-              </div>
-            </div>
-
-            {/* Email Logları */}
-            <div style={styles.card} className="isg-card">
-              <p style={styles.sectionTitle} className="isg-text-muted">Son Gönderim Logları</p>
-              {emailLogs.length === 0 ? (
-                <p style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Henüz gönderim kaydı yok.</p>
-              ) : (
-                <div style={{ overflowX: "auto" }}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        {["Tarih", "DÖF ID", "Alıcı", "Durum", "Detay"].map(h => (
-                          <th key={h} style={styles.th} className="isg-th">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {emailLogs.map(log => (
-                        <tr key={log.id}>
-                          <td style={{ ...styles.td, fontSize: 12, whiteSpace: "nowrap" }}>{log.createdAt ? new Date(log.createdAt).toLocaleString("tr-TR") : "—"}</td>
-                          <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)" }}>{log.dofId?.substring(0, 8) || "—"}</td>
-                          <td style={{ ...styles.td, fontSize: 12 }}>{log.to || "—"}</td>
-                          <td style={styles.td}><Badge text={log.status === "success" ? "Başarılı" : "Başarısız"} color={log.status === "success" ? "#16a34a" : "#dc2626"} /></td>
-                          <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{log.detail || "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            {/* Email Adres Defteri */}
-            <div style={styles.card} className="isg-card">
-              <p style={styles.sectionTitle} className="isg-text-muted">📒 Email Adres Defteri</p>
-              <p style={{ fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 16 }}>
-                Risk raporu veya DÖF bildirimi gönderirken bu listeden alıcı seçebilirsiniz.
-              </p>
-
-              {/* Yeni Kişi Ekle */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10, marginBottom: 16, alignItems: "end" }}>
-                <FormField label="Ad Soyad *">
-                  <input style={styles.input} className="isg-input" value={newContact.name} onChange={e => setNewContact({ ...newContact, name: e.target.value })} placeholder="Ahmet Yılmaz" />
-                </FormField>
-                <FormField label="Email *">
-                  <input style={styles.input} className="isg-input" type="email" value={newContact.email} onChange={e => setNewContact({ ...newContact, email: e.target.value })} placeholder="ahmet@firma.com" />
-                </FormField>
-                <FormField label="Rol / Pozisyon">
-                  <input style={styles.input} className="isg-input" value={newContact.role} onChange={e => setNewContact({ ...newContact, role: e.target.value })} placeholder="İSG Uzmanı, Müdür..." />
-                </FormField>
-                <button style={{ ...styles.btnPrimary, height: 38 }} onClick={async () => {
-                  if (!newContact.name || !newContact.email) return;
-                  try {
-                    const ref = await addDoc(collection(db, "emailContacts"), newContact);
-                    setEmailContacts(prev => [...prev, { id: ref.id, ...newContact }]);
-                    setNewContact({ name: "", email: "", role: "" });
-                  } catch (e: any) {
-                    console.error("Kişi eklenemedi:", e);
-                  }
-                }}>+ Ekle</button>
-              </div>
-
-              {/* Mevcut Kişiler */}
-              {emailContacts.length === 0 ? (
-                <p style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Henüz kayıtlı kişi yok.</p>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {emailContacts.map(c => (
-                    <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderRadius: 8, border: "1px solid var(--isg-border)", backgroundColor: "var(--isg-bg)" }}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--isg-text)" }}>{c.name}</div>
-                        <div style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{c.email}{c.role ? ` · ${c.role}` : ""}</div>
-                      </div>
-                      <button style={styles.btnDanger} onClick={async () => {
-                        await deleteDoc(doc(db, "emailContacts", c.id));
-                        setEmailContacts(prev => prev.filter(x => x.id !== c.id));
-                      }}>Sil</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        {/* Vardiya ve Ayarlar sekmeleri kaldırıldı */}
 
       </main>
     </div>

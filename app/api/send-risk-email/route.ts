@@ -4,12 +4,19 @@ export async function POST(req: NextRequest) {
   try {
     const { toEmails, pdfBase64, companyName } = await req.json();
     if (!toEmails || !Array.isArray(toEmails) || toEmails.length === 0) {
-      return NextResponse.json({ error: "En az bir alıcı email adresi gerekli" }, { status: 400 });
+      return NextResponse.json({ error: "En az bir alici email adresi gerekli" }, { status: 400 });
+    }
+
+    // Email format validasyonu
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const invalidEmails = toEmails.filter((e: string) => !emailRegex.test(e));
+    if (invalidEmails.length > 0) {
+      return NextResponse.json({ error: `Gecersiz email adresi: ${invalidEmails.join(", ")}` }, { status: 400 });
     }
 
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: "RESEND_API_KEY tanımlı değil" }, { status: 500 });
+      return NextResponse.json({ error: "RESEND_API_KEY tanimli degil. Vercel Environment Variables'dan ekleyin." }, { status: 500 });
     }
 
     const today = new Date().toLocaleDateString("tr-TR").replace(/\./g, "_");
@@ -53,11 +60,14 @@ export async function POST(req: NextRequest) {
     const result = await response.json();
 
     if (!response.ok) {
-      return NextResponse.json({ error: JSON.stringify(result) }, { status: response.status });
+      const errMsg = result.message || result.error || JSON.stringify(result);
+      console.error("Resend API error:", result);
+      return NextResponse.json({ error: errMsg }, { status: response.status });
     }
 
     return NextResponse.json({ success: true, id: result.id });
   } catch (error: any) {
+    console.error("send-risk-email error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

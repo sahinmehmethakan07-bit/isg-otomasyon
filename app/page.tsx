@@ -1781,54 +1781,67 @@ export default function Page() {
 
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                     <button style={{ ...styles.btnPrimary, opacity: riskEmailSending || riskEmailSelectedContacts.length === 0 ? 0.5 : 1 }} disabled={riskEmailSending || riskEmailSelectedContacts.length === 0} onClick={async () => {
+                      if (!riskEmailModal) return;
                       setRiskEmailSending(true);
                       setRiskEmailStatus(null);
                       try {
                         const risksToSend = riskEmailModal.companyId ? risks.filter(r => r.companyId === riskEmailModal.companyId) : risks;
+                        if (risksToSend.length === 0) {
+                          setRiskEmailStatus("⚠️ Gönderilecek risk kaydı bulunamadı");
+                          setRiskEmailSending(false);
+                          return;
+                        }
                         const companiesToSend = riskEmailModal.companyId ? companies.filter(c => c.id === riskEmailModal.companyId) : companies;
                         const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
                         const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
                         const maker = pdfMake.default || pdfMake;
                         maker.vfs = (pdfFonts.default || pdfFonts).vfs;
-                        const pdfBase64: string = await new Promise((resolve) => {
-                          const docDef: any = {
-                            pageSize: "A4", pageOrientation: "landscape", pageMargins: [20, 20, 20, 20],
-                            content: [
-                              { text: "RISK DEGERLENDIRME RAPORU", fontSize: 14, bold: true, alignment: "center", margin: [0, 0, 0, 10] },
-                              {
-                                table: {
-                                  headerRows: 1,
-                                  widths: [15, 50, 60, 50, 40, 15, 15, 20, 70, 50, 40, 40, 15, 15, 20, 50],
-                                  body: [
-                                    ["No", "Bolum", "Tehlike Kaynagi", "Mevcut Onlem", "Tehlike/Risk", "O", "S", "RS", "Oneriler", "Etkilenecek", "Sorumlu", "Termin", "KO", "KS", "KRS", "Mevzuat"].map(h => ({ text: h, fontSize: 6, bold: true, color: "white", fillColor: "#1e293b", margin: [2, 3, 2, 3] })),
-                                    ...risksToSend.map((r, i) => [
-                                      { text: String(i + 1), fontSize: 6, margin: [2, 2, 2, 2] },
-                                      { text: r.section, fontSize: 6, margin: [2, 2, 2, 2] },
-                                      { text: r.hazard, fontSize: 6, margin: [2, 2, 2, 2] },
-                                      { text: r.currentMeasure, fontSize: 6, margin: [2, 2, 2, 2] },
-                                      { text: r.risk, fontSize: 6, margin: [2, 2, 2, 2] },
-                                      { text: String(r.probability), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
-                                      { text: String(r.severity), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
-                                      { text: String(r.score), fontSize: 7, bold: true, color: "white", fillColor: r.score >= 15 ? "#dc2626" : r.score >= 8 ? "#d97706" : "#16a34a", alignment: "center", margin: [2, 2, 2, 2] },
-                                      { text: r.actionToTake, fontSize: 6, margin: [2, 2, 2, 2] },
-                                      { text: r.affectedPersons || "Tum calisanlar", fontSize: 6, margin: [2, 2, 2, 2] },
-                                      { text: r.responsible, fontSize: 6, margin: [2, 2, 2, 2] },
-                                      { text: r.dueDate, fontSize: 6, margin: [2, 2, 2, 2] },
-                                      { text: String(r.residualProbability), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
-                                      { text: String(r.residualSeverity), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
-                                      { text: String(r.residualScore), fontSize: 7, bold: true, color: "white", fillColor: r.residualScore >= 15 ? "#dc2626" : r.residualScore >= 8 ? "#d97706" : "#16a34a", alignment: "center", margin: [2, 2, 2, 2] },
-                                      { text: r.lawReference || "", fontSize: 6, margin: [2, 2, 2, 2] },
-                                    ]),
-                                  ],
+                        const pdfBase64: string = await new Promise((resolve, reject) => {
+                          try {
+                            const docDef: any = {
+                              pageSize: "A4", pageOrientation: "landscape", pageMargins: [20, 20, 20, 20],
+                              content: [
+                                { text: "RISK DEGERLENDIRME RAPORU", fontSize: 14, bold: true, alignment: "center", margin: [0, 0, 0, 10] },
+                                {
+                                  table: {
+                                    headerRows: 1,
+                                    widths: [15, 50, 60, 50, 40, 15, 15, 20, 70, 50, 40, 40, 15, 15, 20, 50],
+                                    body: [
+                                      ["No", "Bolum", "Tehlike Kaynagi", "Mevcut Onlem", "Tehlike/Risk", "O", "S", "RS", "Oneriler", "Etkilenecek", "Sorumlu", "Termin", "KO", "KS", "KRS", "Mevzuat"].map(h => ({ text: h, fontSize: 6, bold: true, color: "white", fillColor: "#1e293b", margin: [2, 3, 2, 3] })),
+                                      ...risksToSend.map((r, i) => [
+                                        { text: String(i + 1), fontSize: 6, margin: [2, 2, 2, 2] },
+                                        { text: r.section || "", fontSize: 6, margin: [2, 2, 2, 2] },
+                                        { text: r.hazard || "", fontSize: 6, margin: [2, 2, 2, 2] },
+                                        { text: r.currentMeasure || "", fontSize: 6, margin: [2, 2, 2, 2] },
+                                        { text: r.risk || "", fontSize: 6, margin: [2, 2, 2, 2] },
+                                        { text: String(r.probability || 0), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
+                                        { text: String(r.severity || 0), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
+                                        { text: String(r.score || 0), fontSize: 7, bold: true, color: "white", fillColor: r.score >= 15 ? "#dc2626" : r.score >= 8 ? "#d97706" : "#16a34a", alignment: "center", margin: [2, 2, 2, 2] },
+                                        { text: r.actionToTake || "", fontSize: 6, margin: [2, 2, 2, 2] },
+                                        { text: r.affectedPersons || "Tum calisanlar", fontSize: 6, margin: [2, 2, 2, 2] },
+                                        { text: r.responsible || "", fontSize: 6, margin: [2, 2, 2, 2] },
+                                        { text: r.dueDate || "", fontSize: 6, margin: [2, 2, 2, 2] },
+                                        { text: String(r.residualProbability || 0), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
+                                        { text: String(r.residualSeverity || 0), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
+                                        { text: String(r.residualScore || 0), fontSize: 7, bold: true, color: "white", fillColor: (r.residualScore || 0) >= 15 ? "#dc2626" : (r.residualScore || 0) >= 8 ? "#d97706" : "#16a34a", alignment: "center", margin: [2, 2, 2, 2] },
+                                        { text: r.lawReference || "", fontSize: 6, margin: [2, 2, 2, 2] },
+                                      ]),
+                                    ],
+                                  },
+                                  layout: { hLineWidth: () => 0.3, vLineWidth: () => 0.3, hLineColor: () => "#d1d5db", vLineColor: () => "#d1d5db" },
                                 },
-                                layout: { hLineWidth: () => 0.3, vLineWidth: () => 0.3, hLineColor: () => "#d1d5db", vLineColor: () => "#d1d5db" },
-                              },
-                            ],
-                            defaultStyle: { font: "Roboto" },
-                          };
-                          maker.createPdf(docDef).getBase64((data: string) => resolve(data));
+                              ],
+                              defaultStyle: { font: "Roboto" },
+                            };
+                            maker.createPdf(docDef).getBase64((data: string) => resolve(data));
+                          } catch (pdfErr) { reject(pdfErr); }
                         });
                         const selectedEmails = emailContacts.filter(c => riskEmailSelectedContacts.includes(c.id)).map(c => c.email);
+                        if (selectedEmails.length === 0) {
+                          setRiskEmailStatus("⚠️ Seçili alıcı bulunamadı");
+                          setRiskEmailSending(false);
+                          return;
+                        }
                         const res = await fetch("/api/send-risk-email", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
@@ -1839,7 +1852,7 @@ export default function Page() {
                           setRiskEmailStatus("✅ Risk raporu başarıyla gönderildi!");
                           setTimeout(() => setRiskEmailModal(null), 2000);
                         } else {
-                          setRiskEmailStatus(`❌ Hata: ${data.error || "Bilinmeyen hata"}`);
+                          setRiskEmailStatus(`❌ Hata: ${typeof data.error === "string" ? data.error : JSON.stringify(data.error)}`);
                         }
                       } catch (e: any) {
                         setRiskEmailStatus(`❌ Hata: ${e.message}`);

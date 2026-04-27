@@ -1792,50 +1792,51 @@ export default function Page() {
                           return;
                         }
                         const companiesToSend = riskEmailModal.companyId ? companies.filter(c => c.id === riskEmailModal.companyId) : companies;
+
+                        // Güvenli string dönüşümü — undefined/null/number hepsini stringe çevir
+                        const s = (v: any) => (v === undefined || v === null) ? "" : String(v);
+                        const n = (v: any) => Number(v) || 0;
+
                         const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
                         const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
                         const maker = pdfMake.default || pdfMake;
                         maker.vfs = (pdfFonts.default || pdfFonts).vfs;
+
+                        // PDF oluştur — 15 saniye timeout ile
                         const pdfBase64: string = await new Promise((resolve, reject) => {
+                          const timeout = setTimeout(() => reject(new Error("PDF olusturma zaman asimina ugradi (15s)")), 15000);
                           try {
+                            const rows = risksToSend.map((r, i) => [
+                              { text: s(i + 1), fontSize: 6, margin: [2, 2, 2, 2] },
+                              { text: s(r.section), fontSize: 6, margin: [2, 2, 2, 2] },
+                              { text: s(r.hazard), fontSize: 6, margin: [2, 2, 2, 2] },
+                              { text: s(r.currentMeasure), fontSize: 6, margin: [2, 2, 2, 2] },
+                              { text: s(r.risk), fontSize: 6, margin: [2, 2, 2, 2] },
+                              { text: s(r.probability), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
+                              { text: s(r.severity), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
+                              { text: s(r.score), fontSize: 7, bold: true, color: "white", fillColor: n(r.score) >= 15 ? "#dc2626" : n(r.score) >= 8 ? "#d97706" : "#16a34a", alignment: "center", margin: [2, 2, 2, 2] },
+                              { text: s(r.actionToTake), fontSize: 6, margin: [2, 2, 2, 2] },
+                              { text: s(r.affectedPersons) || "Tum calisanlar", fontSize: 6, margin: [2, 2, 2, 2] },
+                              { text: s(r.responsible), fontSize: 6, margin: [2, 2, 2, 2] },
+                              { text: s(r.dueDate), fontSize: 6, margin: [2, 2, 2, 2] },
+                              { text: s(r.residualProbability), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
+                              { text: s(r.residualSeverity), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
+                              { text: s(r.residualScore), fontSize: 7, bold: true, color: "white", fillColor: n(r.residualScore) >= 15 ? "#dc2626" : n(r.residualScore) >= 8 ? "#d97706" : "#16a34a", alignment: "center", margin: [2, 2, 2, 2] },
+                              { text: s(r.lawReference), fontSize: 6, margin: [2, 2, 2, 2] },
+                            ]);
+                            const headerRow = ["No", "Bolum", "Tehlike Kaynagi", "Mevcut Onlem", "Tehlike/Risk", "O", "S", "RS", "Oneriler", "Etkilenecek", "Sorumlu", "Termin", "KO", "KS", "KRS", "Mevzuat"].map(h => ({ text: h, fontSize: 6, bold: true, color: "white", fillColor: "#1e293b", margin: [2, 3, 2, 3] }));
                             const docDef: any = {
                               pageSize: "A4", pageOrientation: "landscape", pageMargins: [20, 20, 20, 20],
                               content: [
                                 { text: "RISK DEGERLENDIRME RAPORU", fontSize: 14, bold: true, alignment: "center", margin: [0, 0, 0, 10] },
-                                {
-                                  table: {
-                                    headerRows: 1,
-                                    widths: [15, 50, 60, 50, 40, 15, 15, 20, 70, 50, 40, 40, 15, 15, 20, 50],
-                                    body: [
-                                      ["No", "Bolum", "Tehlike Kaynagi", "Mevcut Onlem", "Tehlike/Risk", "O", "S", "RS", "Oneriler", "Etkilenecek", "Sorumlu", "Termin", "KO", "KS", "KRS", "Mevzuat"].map(h => ({ text: h, fontSize: 6, bold: true, color: "white", fillColor: "#1e293b", margin: [2, 3, 2, 3] })),
-                                      ...risksToSend.map((r, i) => [
-                                        { text: String(i + 1), fontSize: 6, margin: [2, 2, 2, 2] },
-                                        { text: r.section || "", fontSize: 6, margin: [2, 2, 2, 2] },
-                                        { text: r.hazard || "", fontSize: 6, margin: [2, 2, 2, 2] },
-                                        { text: r.currentMeasure || "", fontSize: 6, margin: [2, 2, 2, 2] },
-                                        { text: r.risk || "", fontSize: 6, margin: [2, 2, 2, 2] },
-                                        { text: String(r.probability || 0), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
-                                        { text: String(r.severity || 0), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
-                                        { text: String(r.score || 0), fontSize: 7, bold: true, color: "white", fillColor: r.score >= 15 ? "#dc2626" : r.score >= 8 ? "#d97706" : "#16a34a", alignment: "center", margin: [2, 2, 2, 2] },
-                                        { text: r.actionToTake || "", fontSize: 6, margin: [2, 2, 2, 2] },
-                                        { text: r.affectedPersons || "Tum calisanlar", fontSize: 6, margin: [2, 2, 2, 2] },
-                                        { text: r.responsible || "", fontSize: 6, margin: [2, 2, 2, 2] },
-                                        { text: r.dueDate || "", fontSize: 6, margin: [2, 2, 2, 2] },
-                                        { text: String(r.residualProbability || 0), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
-                                        { text: String(r.residualSeverity || 0), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
-                                        { text: String(r.residualScore || 0), fontSize: 7, bold: true, color: "white", fillColor: (r.residualScore || 0) >= 15 ? "#dc2626" : (r.residualScore || 0) >= 8 ? "#d97706" : "#16a34a", alignment: "center", margin: [2, 2, 2, 2] },
-                                        { text: r.lawReference || "", fontSize: 6, margin: [2, 2, 2, 2] },
-                                      ]),
-                                    ],
-                                  },
-                                  layout: { hLineWidth: () => 0.3, vLineWidth: () => 0.3, hLineColor: () => "#d1d5db", vLineColor: () => "#d1d5db" },
-                                },
+                                { table: { headerRows: 1, widths: [15, 50, 60, 50, 40, 15, 15, 20, 70, 50, 40, 40, 15, 15, 20, 50], body: [headerRow, ...rows] }, layout: { hLineWidth: () => 0.3, vLineWidth: () => 0.3, hLineColor: () => "#d1d5db", vLineColor: () => "#d1d5db" } },
                               ],
                               defaultStyle: { font: "Roboto" },
                             };
-                            maker.createPdf(docDef).getBase64((data: string) => resolve(data));
-                          } catch (pdfErr) { reject(pdfErr); }
+                            maker.createPdf(docDef).getBase64((data: string) => { clearTimeout(timeout); resolve(data); });
+                          } catch (pdfErr) { clearTimeout(timeout); reject(pdfErr); }
                         });
+
                         const selectedEmails = emailContacts.filter(c => riskEmailSelectedContacts.includes(c.id)).map(c => c.email);
                         if (selectedEmails.length === 0) {
                           setRiskEmailStatus("⚠️ Seçili alıcı bulunamadı");

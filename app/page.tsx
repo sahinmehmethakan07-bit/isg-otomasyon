@@ -1785,59 +1785,83 @@ export default function Page() {
                       setRiskEmailSending(true);
                       setRiskEmailStatus(null);
                       try {
-                        const risksToSend = riskEmailModal.companyId ? risks.filter(r => r.companyId === riskEmailModal.companyId) : risks;
-                        if (risksToSend.length === 0) {
-                          setRiskEmailStatus("⚠️ Gönderilecek risk kaydı bulunamadı");
+                        const companiesToSend = riskEmailModal.companyId ? companies.filter(c => c.id === riskEmailModal.companyId) : companies;
+                        const selectedEmails = emailContacts.filter(c => riskEmailSelectedContacts.includes(c.id)).map(c => c.email);
+                        if (selectedEmails.length === 0) {
+                          setRiskEmailStatus("⚠️ Seçili alıcı bulunamadı");
                           setRiskEmailSending(false);
                           return;
                         }
-                        const companiesToSend = riskEmailModal.companyId ? companies.filter(c => c.id === riskEmailModal.companyId) : companies;
 
-                        // Güvenli string dönüşümü — undefined/null/number hepsini stringe çevir
-                        const s = (v: any) => (v === undefined || v === null) ? "" : String(v);
-                        const n = (v: any) => Number(v) || 0;
+                        setRiskEmailStatus("📄 PDF oluşturuluyor...");
 
-                        const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
-                        const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
-                        const maker = pdfMake.default || pdfMake;
-                        maker.vfs = (pdfFonts.default || pdfFonts).vfs;
-
-                        // PDF oluştur — 15 saniye timeout ile
-                        const pdfBase64: string = await new Promise((resolve, reject) => {
-                          const timeout = setTimeout(() => reject(new Error("PDF olusturma zaman asimina ugradi (15s)")), 15000);
-                          try {
-                            const rows = risksToSend.map((r, i) => [
-                              { text: s(i + 1), fontSize: 6, margin: [2, 2, 2, 2] },
-                              { text: s(r.section), fontSize: 6, margin: [2, 2, 2, 2] },
-                              { text: s(r.hazard), fontSize: 6, margin: [2, 2, 2, 2] },
-                              { text: s(r.currentMeasure), fontSize: 6, margin: [2, 2, 2, 2] },
-                              { text: s(r.risk), fontSize: 6, margin: [2, 2, 2, 2] },
-                              { text: s(r.probability), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
-                              { text: s(r.severity), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
-                              { text: s(r.score), fontSize: 7, bold: true, color: "white", fillColor: n(r.score) >= 15 ? "#dc2626" : n(r.score) >= 8 ? "#d97706" : "#16a34a", alignment: "center", margin: [2, 2, 2, 2] },
-                              { text: s(r.actionToTake), fontSize: 6, margin: [2, 2, 2, 2] },
-                              { text: s(r.affectedPersons) || "Tum calisanlar", fontSize: 6, margin: [2, 2, 2, 2] },
-                              { text: s(r.responsible), fontSize: 6, margin: [2, 2, 2, 2] },
-                              { text: s(r.dueDate), fontSize: 6, margin: [2, 2, 2, 2] },
-                              { text: s(r.residualProbability), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
-                              { text: s(r.residualSeverity), fontSize: 6, alignment: "center", margin: [2, 2, 2, 2] },
-                              { text: s(r.residualScore), fontSize: 7, bold: true, color: "white", fillColor: n(r.residualScore) >= 15 ? "#dc2626" : n(r.residualScore) >= 8 ? "#d97706" : "#16a34a", alignment: "center", margin: [2, 2, 2, 2] },
-                              { text: s(r.lawReference), fontSize: 6, margin: [2, 2, 2, 2] },
-                            ]);
-                            const headerRow = ["No", "Bolum", "Tehlike Kaynagi", "Mevcut Onlem", "Tehlike/Risk", "O", "S", "RS", "Oneriler", "Etkilenecek", "Sorumlu", "Termin", "KO", "KS", "KRS", "Mevzuat"].map(h => ({ text: h, fontSize: 6, bold: true, color: "white", fillColor: "#1e293b", margin: [2, 3, 2, 3] }));
-                            const docDef: any = {
-                              pageSize: "A4", pageOrientation: "landscape", pageMargins: [20, 20, 20, 20],
+                        // PDF oluştur
+                        let pdfBase64 = "";
+                        try {
+                          const risksToSend = riskEmailModal.companyId ? risks.filter(r => r.companyId === riskEmailModal.companyId) : risks;
+                          const safe = (v: any) => (v == null) ? "" : String(v);
+                          const num = (v: any) => Number(v) || 0;
+                          const pdfMod = await import("pdfmake/build/pdfmake");
+                          const pdfFontsMod = await import("pdfmake/build/vfs_fonts");
+                          const maker = (pdfMod as any).default || pdfMod;
+                          maker.vfs = ((pdfFontsMod as any).default || pdfFontsMod).vfs;
+                          const headerRow = ["No", "Bolum", "Tehlike", "Onlem", "Risk", "O", "S", "RS", "Oneriler", "Etkilenecek", "Sorumlu", "Termin", "Mevzuat"].map(h => ({ text: h, fontSize: 7, bold: true, color: "white", fillColor: "#1e293b", margin: [2, 3, 2, 3] as [number, number, number, number] }));
+                          const dataRows = risksToSend.map((r, i) => [
+                            { text: safe(i + 1), fontSize: 7, margin: [2, 2, 2, 2] as [number, number, number, number] },
+                            { text: safe(r.section), fontSize: 7, margin: [2, 2, 2, 2] as [number, number, number, number] },
+                            { text: safe(r.hazard), fontSize: 7, margin: [2, 2, 2, 2] as [number, number, number, number] },
+                            { text: safe(r.currentMeasure), fontSize: 7, margin: [2, 2, 2, 2] as [number, number, number, number] },
+                            { text: safe(r.risk), fontSize: 7, margin: [2, 2, 2, 2] as [number, number, number, number] },
+                            { text: safe(r.probability), fontSize: 7, margin: [2, 2, 2, 2] as [number, number, number, number] },
+                            { text: safe(r.severity), fontSize: 7, margin: [2, 2, 2, 2] as [number, number, number, number] },
+                            { text: safe(r.score), fontSize: 7, bold: true, margin: [2, 2, 2, 2] as [number, number, number, number] },
+                            { text: safe(r.actionToTake), fontSize: 7, margin: [2, 2, 2, 2] as [number, number, number, number] },
+                            { text: safe(r.affectedPersons) || "Tum calisanlar", fontSize: 7, margin: [2, 2, 2, 2] as [number, number, number, number] },
+                            { text: safe(r.responsible), fontSize: 7, margin: [2, 2, 2, 2] as [number, number, number, number] },
+                            { text: safe(r.dueDate), fontSize: 7, margin: [2, 2, 2, 2] as [number, number, number, number] },
+                            { text: safe(r.lawReference), fontSize: 7, margin: [2, 2, 2, 2] as [number, number, number, number] },
+                          ]);
+                          pdfBase64 = await new Promise<string>((resolve, reject) => {
+                            const timer = setTimeout(() => reject(new Error("PDF timeout 20s")), 20000);
+                            maker.createPdf({
+                              pageSize: "A4" as const, pageOrientation: "landscape" as const, pageMargins: [20, 20, 20, 20] as [number, number, number, number],
                               content: [
-                                { text: "RISK DEGERLENDIRME RAPORU", fontSize: 14, bold: true, alignment: "center", margin: [0, 0, 0, 10] },
-                                { table: { headerRows: 1, widths: [15, 50, 60, 50, 40, 15, 15, 20, 70, 50, 40, 40, 15, 15, 20, 50], body: [headerRow, ...rows] }, layout: { hLineWidth: () => 0.3, vLineWidth: () => 0.3, hLineColor: () => "#d1d5db", vLineColor: () => "#d1d5db" } },
+                                { text: "RISK DEGERLENDIRME RAPORU", fontSize: 14, bold: true, alignment: "center" as const, margin: [0, 0, 0, 10] as [number, number, number, number] },
+                                { table: { headerRows: 1, widths: [18, 45, 55, 45, 40, 16, 16, 18, 65, 50, 40, 40, 50], body: [headerRow, ...dataRows] }, layout: { hLineWidth: () => 0.3, vLineWidth: () => 0.3, hLineColor: () => "#ccc", vLineColor: () => "#ccc" } },
                               ],
                               defaultStyle: { font: "Roboto" },
-                            };
-                            maker.createPdf(docDef).getBase64((data: string) => { clearTimeout(timeout); resolve(data); });
-                          } catch (pdfErr) { clearTimeout(timeout); reject(pdfErr); }
-                        });
+                            }).getBase64((b64: string) => { clearTimeout(timer); resolve(b64); });
+                          });
+                        } catch (pdfErr: any) {
+                          console.error("PDF olusturma hatasi:", pdfErr);
+                          // PDF başarısız olsa bile eksiz email gönder
+                          setRiskEmailStatus("⚠️ PDF oluşturulamadı, eksiz gönderiliyor...");
+                        }
 
-                        const selectedEmails = emailContacts.filter(c => riskEmailSelectedContacts.includes(c.id)).map(c => c.email);
+                        setRiskEmailStatus("📧 Email gönderiliyor...");
+
+                        const res = await fetch("/api/send-risk-email", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            toEmails: selectedEmails,
+                            pdfBase64: pdfBase64 || "",
+                            companyName: companiesToSend.map(c => c.nickName).join(", "),
+                          }),
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                          setRiskEmailStatus("✅ Risk raporu başarıyla gönderildi!");
+                          setTimeout(() => setRiskEmailModal(null), 2000);
+                        } else {
+                          setRiskEmailStatus(`❌ API Hata (${res.status}): ${typeof data.error === "string" ? data.error : JSON.stringify(data.error)}`);
+                        }
+                      } catch (e: any) {
+                        console.error("Risk email genel hata:", e);
+                        setRiskEmailStatus(`❌ Hata: ${e.message}`);
+                      }
+                      setRiskEmailSending(false);
+                    }}>{riskEmailSending ? "Gönderiliyor..." : `📧 ${riskEmailSelectedContacts.length} Kişiye Gönder`}</button>
                         if (selectedEmails.length === 0) {
                           setRiskEmailStatus("⚠️ Seçili alıcı bulunamadı");
                           setRiskEmailSending(false);

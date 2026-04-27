@@ -1862,28 +1862,6 @@ export default function Page() {
                       }
                       setRiskEmailSending(false);
                     }}>{riskEmailSending ? "Gönderiliyor..." : `📧 ${riskEmailSelectedContacts.length} Kişiye Gönder`}</button>
-                        if (selectedEmails.length === 0) {
-                          setRiskEmailStatus("⚠️ Seçili alıcı bulunamadı");
-                          setRiskEmailSending(false);
-                          return;
-                        }
-                        const res = await fetch("/api/send-risk-email", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ toEmails: selectedEmails, pdfBase64, companyName: companiesToSend.map(c => c.nickName).join(", ") }),
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                          setRiskEmailStatus("✅ Risk raporu başarıyla gönderildi!");
-                          setTimeout(() => setRiskEmailModal(null), 2000);
-                        } else {
-                          setRiskEmailStatus(`❌ Hata: ${typeof data.error === "string" ? data.error : JSON.stringify(data.error)}`);
-                        }
-                      } catch (e: any) {
-                        setRiskEmailStatus(`❌ Hata: ${e.message}`);
-                      }
-                      setRiskEmailSending(false);
-                    }}>{riskEmailSending ? "Gönderiliyor..." : `📧 ${riskEmailSelectedContacts.length} Kişiye Gönder`}</button>
                     {riskEmailStatus && (
                       <span style={{ fontSize: 13, color: riskEmailStatus.startsWith("✅") ? "#16a34a" : "#dc2626" }}>{riskEmailStatus}</span>
                     )}

@@ -347,10 +347,7 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signer
       },
     });
 
-    // ── Sayfa numarası ──
-    content.push({ text: `Sayfa ${pageNum}`, alignment: "center", fontSize: 8, color: "#64748b", margin: [0, 6, 0, 6] });
-
-    // ── İmza bölümü ──
+    // ── İmza bölümü (sayfanın altına sabitlenmiş, çerçevesiz) ──
     const roles: SignerRole[] = ["İş Güvenliği Uzmanı", "İşveren / İşveren Vekili", "Çalışan Temsilcisi"];
     const companySigners = roles.map(role => {
       const found = signers.find(s => s.companyId === company.id && s.role === role);
@@ -360,26 +357,24 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signer
     content.push({
       table: {
         widths: ["*", "*", "*"],
-        body: [[
-          ...companySigners.map(s => ({
-            stack: [
-              { text: s.role, fontSize: 8, bold: true, alignment: "center" as const, color: "#334155" },
-              { text: s.name.toUpperCase(), fontSize: 9, bold: true, alignment: "center" as const, margin: [0, 4, 0, 0] as [number, number, number, number] },
-              { text: "\n\n", fontSize: 6 },
-              { text: "İmza", fontSize: 7, alignment: "center" as const, color: "#94a3b8" },
-            ],
-            margin: [6, 6, 6, 6] as [number, number, number, number],
+        body: [
+          companySigners.map(s => ({
+            text: s.role, fontSize: 8, bold: true, color: "#334155",
           })),
-        ]],
+          companySigners.map(s => ({
+            text: s.name.toUpperCase(), fontSize: 8, color: "#334155", margin: [0, 4, 0, 12] as [number, number, number, number],
+          })),
+          companySigners.map(() => ({
+            text: "____________________\nImza", fontSize: 7, color: "#94a3b8",
+          })),
+        ],
       },
-      layout: {
-        hLineWidth: () => 0.5,
-        vLineWidth: () => 0.5,
-        hLineColor: () => "#94a3b8",
-        vLineColor: () => "#94a3b8",
-      },
-      margin: [0, 8, 0, 0],
+      layout: "noBorders",
+      margin: [0, 80, 0, 0],
     });
+
+    // ── Sayfa numarası — sağ alt ──
+    content.push({ text: `Sayfa ${pageNum}`, alignment: "right", fontSize: 7, color: "#94a3b8", margin: [0, 8, 0, 0] });
 
     // ── Sayfa 2: Metodoloji Matrisi ──
     content.push({ text: "", pageBreak: "before" });
@@ -389,43 +384,47 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signer
       fontSize: 13, bold: true, alignment: "center", color: HL, margin: [0, 0, 0, 12],
     });
 
-    // Olasılık tablosu
     const mHdr = (t: string) => ({ text: t, fontSize: 8, bold: true, color: "white", fillColor: HL, margin: [4, 4, 4, 4] as [number, number, number, number] });
     const mCell = (t: string, bold?: boolean) => ({ text: t, fontSize: 8, bold: !!bold, margin: [4, 3, 4, 3] as [number, number, number, number] });
 
+    // Olasılık ve Şiddet tabloları yan yana
     content.push({
-      table: {
-        widths: [30, 100, "*"],
-        headerRows: 1,
-        body: [
-          [mHdr("Puan"), mHdr("Zararın Gerçekleşme Olasılığı"), mHdr("Derecelendirme Basamakları")],
-          [mCell("1", true), mCell("Çok Küçük"), mCell("Hemen hemen hiç")],
-          [mCell("2", true), mCell("Küçük"), mCell("Çok az (yılda bir kez), sadece anormal durumlarda")],
-          [mCell("3", true), mCell("Orta"), mCell("Az (yılda bir kaç kez)")],
-          [mCell("4", true), mCell("Yüksek"), mCell("Sıklıkla (ayda bir)")],
-          [mCell("5", true), mCell("Çok Yüksek"), mCell("Çok sıklıkla (haftada bir, her gün)")],
-        ],
-      },
-      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#94a3b8", vLineColor: () => "#94a3b8" },
-      margin: [0, 0, 0, 12],
-    });
-
-    // Şiddet tablosu
-    content.push({
-      table: {
-        widths: [30, 100, "*"],
-        headerRows: 1,
-        body: [
-          [mHdr("Puan"), mHdr("İhtimal"), mHdr("Derecelendirme")],
-          [mCell("1", true), mCell("Çok Hafif"), mCell("İş saati kaybı yok, hemen giderilebilen")],
-          [mCell("2", true), mCell("Hafif"), mCell("İş günü kaybı yok, kalıcı etkisi olmayan")],
-          [mCell("3", true), mCell("Orta"), mCell("Hafif yaralanma, yatarak tedavi")],
-          [mCell("4", true), mCell("Ciddi"), mCell("Ciddi yaralanma, meslek hastalığı")],
-          [mCell("5", true), mCell("Çok Ciddi"), mCell("Ölüm, sürekli iş göremezlik")],
-        ],
-      },
-      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#94a3b8", vLineColor: () => "#94a3b8" },
-      margin: [0, 0, 0, 12],
+      columns: [
+        {
+          width: "50%",
+          table: {
+            widths: [25, 80, "*"],
+            headerRows: 1,
+            body: [
+              [mHdr("Puan"), mHdr("Zararın Gerçekleşme Olasılığı"), mHdr("Derecelendirme Basamakları")],
+              [mCell("1", true), mCell("Çok Küçük"), mCell("Hemen hemen hiç")],
+              [mCell("2", true), mCell("Küçük"), mCell("Çok az (yılda bir kez), sadece anormal durumlarda")],
+              [mCell("3", true), mCell("Orta"), mCell("Az (yılda bir kaç kez)")],
+              [mCell("4", true), mCell("Yüksek"), mCell("Sıklıkla (ayda bir)")],
+              [mCell("5", true), mCell("Çok Yüksek"), mCell("Çok sıklıkla (haftada bir, her gün)")],
+            ],
+          },
+          layout: { hLineWidth: () => 0.3, vLineWidth: () => 0.3, hLineColor: () => "#d1d5db", vLineColor: () => "#d1d5db" },
+          margin: [0, 0, 8, 0],
+        },
+        {
+          width: "50%",
+          table: {
+            widths: [25, 60, "*"],
+            headerRows: 1,
+            body: [
+              [mHdr("Puan"), mHdr("İhtimal"), mHdr("Derecelendirme")],
+              [mCell("1", true), mCell("Çok Hafif"), mCell("İş saati kaybı yok, hemen giderilebilen")],
+              [mCell("2", true), mCell("Hafif"), mCell("İş günü kaybı yok, kalıcı etkisi olmayan")],
+              [mCell("3", true), mCell("Orta"), mCell("Hafif yaralanma, yatarak tedavi")],
+              [mCell("4", true), mCell("Ciddi"), mCell("Ciddi yaralanma, meslek hastalığı")],
+              [mCell("5", true), mCell("Çok Ciddi"), mCell("Ölüm, sürekli iş göremezlik")],
+            ],
+          },
+          layout: { hLineWidth: () => 0.3, vLineWidth: () => 0.3, hLineColor: () => "#d1d5db", vLineColor: () => "#d1d5db" },
+        },
+      ],
+      margin: [0, 0, 0, 20],
     });
 
     // Risk skoru tablosu
@@ -442,8 +441,8 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signer
           [{ text: "1", fontSize: 8, bold: true, fillColor: "#16a34a", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Önemsiz"), mCell("Önlem öncelikli değildir.")],
         ],
       },
-      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#94a3b8", vLineColor: () => "#94a3b8" },
-      margin: [0, 0, 0, 12],
+      layout: { hLineWidth: () => 0.3, vLineWidth: () => 0.3, hLineColor: () => "#d1d5db", vLineColor: () => "#d1d5db" },
+      margin: [0, 0, 0, 20],
     });
 
     // Renk skalası

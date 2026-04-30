@@ -1053,6 +1053,16 @@ export default function Page() {
     setDofs(prev => prev.map(d => d.id === id ? { ...d, status } : d));
   }
 
+  async function updateDofPhoto(id: string, field: "beforePhoto" | "afterPhoto", base64: string) {
+    await updateDoc(doc(db, "dofs", id), { [field]: base64 });
+    setDofs(prev => prev.map(d => d.id === id ? { ...d, [field]: base64 } : d));
+  }
+
+  async function removeDofPhoto(id: string, field: "beforePhoto" | "afterPhoto") {
+    await updateDoc(doc(db, "dofs", id), { [field]: "" });
+    setDofs(prev => prev.map(d => d.id === id ? { ...d, [field]: "" } : d));
+  }
+
   async function createRiskFromDof(dof: DofRecord) {
     // Zaten risk varsa Risk sekmesine git
     if (risks.some(r => r.sourceDofId === dof.id)) {
@@ -1539,9 +1549,33 @@ export default function Page() {
                     )}
                     {isEditing && (
                       <div style={{ marginBottom: 8 }}>
-                        <select style={styles.select} className="isg-input" value={dof.status} onChange={e => updateDofStatus(dof.id, e.target.value as any)}>
+                        <select style={{ ...styles.select, marginBottom: 10 }} className="isg-input" value={dof.status} onChange={e => updateDofStatus(dof.id, e.target.value as any)}>
                           <option>Açık</option><option>Bildirildi</option><option>Önlem Alındı</option><option>Çözüldü</option>
                         </select>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                          <div>
+                            <label style={{ fontSize: 11, color: "var(--isg-text-muted)", display: "block", marginBottom: 4 }}>Öncesi Fotoğraf (Uygunsuzluk)</label>
+                            {dof.beforePhoto ? (
+                              <div style={{ position: "relative", display: "inline-block" }}>
+                                <img src={dof.beforePhoto} alt="önce" style={{ width: 140, height: 100, objectFit: "cover", borderRadius: 6, border: "1px solid var(--isg-border)" }} />
+                                <button type="button" onClick={() => removeDofPhoto(dof.id, "beforePhoto")} style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                              </div>
+                            ) : (
+                              <input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => updateDofPhoto(dof.id, "beforePhoto", b64))} />
+                            )}
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 11, color: "var(--isg-text-muted)", display: "block", marginBottom: 4 }}>Sonrası Fotoğraf (Düzeltme)</label>
+                            {dof.afterPhoto ? (
+                              <div style={{ position: "relative", display: "inline-block" }}>
+                                <img src={dof.afterPhoto} alt="sonra" style={{ width: 140, height: 100, objectFit: "cover", borderRadius: 6, border: "1px solid var(--isg-border)" }} />
+                                <button type="button" onClick={() => removeDofPhoto(dof.id, "afterPhoto")} style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                              </div>
+                            ) : (
+                              <input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => updateDofPhoto(dof.id, "afterPhoto", b64))} />
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
                     <div style={{ display: "flex", gap: 6 }}>

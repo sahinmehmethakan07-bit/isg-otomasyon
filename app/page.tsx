@@ -100,13 +100,6 @@ type EmailSettings = {
   message: string;
 };
 
-type EmailContact = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-};
-
 type Signer = {
   id: string;
   companyId: string;
@@ -232,7 +225,7 @@ function tr(text: string): string {
     .replace(/Ç/g, "C").replace(/ç/g, "c");
 }
 
-async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signers: Signer[], returnBase64?: boolean): Promise<string | void> {
+async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signers: Signer[]) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -347,7 +340,10 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signer
       },
     });
 
-    // ── İmza bölümü (sayfanın altına sabitlenmiş, çerçevesiz) ──
+    // ── Sayfa numarası ──
+    content.push({ text: `Sayfa ${pageNum}`, alignment: "center", fontSize: 8, color: "#64748b", margin: [0, 6, 0, 6] });
+
+    // ── İmza bölümü ──
     const roles: SignerRole[] = ["İş Güvenliği Uzmanı", "İşveren / İşveren Vekili", "Çalışan Temsilcisi"];
     const companySigners = roles.map(role => {
       const found = signers.find(s => s.companyId === company.id && s.role === role);
@@ -357,24 +353,26 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signer
     content.push({
       table: {
         widths: ["*", "*", "*"],
-        body: [
-          companySigners.map(s => ({
-            text: s.role, fontSize: 8, bold: true, color: "#334155",
+        body: [[
+          ...companySigners.map(s => ({
+            stack: [
+              { text: s.role, fontSize: 8, bold: true, alignment: "center" as const, color: "#334155" },
+              { text: s.name.toUpperCase(), fontSize: 9, bold: true, alignment: "center" as const, margin: [0, 4, 0, 0] as [number, number, number, number] },
+              { text: "\n\n", fontSize: 6 },
+              { text: "İmza", fontSize: 7, alignment: "center" as const, color: "#94a3b8" },
+            ],
+            margin: [6, 6, 6, 6] as [number, number, number, number],
           })),
-          companySigners.map(s => ({
-            text: s.name.toUpperCase(), fontSize: 8, color: "#334155", margin: [0, 4, 0, 12] as [number, number, number, number],
-          })),
-          companySigners.map(() => ({
-            text: "____________________\nImza", fontSize: 7, color: "#94a3b8",
-          })),
-        ],
+        ]],
       },
-      layout: "noBorders",
-      margin: [0, 80, 0, 0],
+      layout: {
+        hLineWidth: () => 0.5,
+        vLineWidth: () => 0.5,
+        hLineColor: () => "#94a3b8",
+        vLineColor: () => "#94a3b8",
+      },
+      margin: [0, 8, 0, 0],
     });
-
-    // ── Sayfa numarası — sağ alt ──
-    content.push({ text: `Sayfa ${pageNum}`, alignment: "right", fontSize: 7, color: "#94a3b8", margin: [0, 8, 0, 0] });
 
     // ── Sayfa 2: Metodoloji Matrisi ──
     content.push({ text: "", pageBreak: "before" });
@@ -384,47 +382,43 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signer
       fontSize: 13, bold: true, alignment: "center", color: HL, margin: [0, 0, 0, 12],
     });
 
+    // Olasılık tablosu
     const mHdr = (t: string) => ({ text: t, fontSize: 8, bold: true, color: "white", fillColor: HL, margin: [4, 4, 4, 4] as [number, number, number, number] });
     const mCell = (t: string, bold?: boolean) => ({ text: t, fontSize: 8, bold: !!bold, margin: [4, 3, 4, 3] as [number, number, number, number] });
 
-    // Olasılık ve Şiddet tabloları yan yana
     content.push({
-      columns: [
-        {
-          width: "50%",
-          table: {
-            widths: [25, 80, "*"],
-            headerRows: 1,
-            body: [
-              [mHdr("Puan"), mHdr("Zararın Gerçekleşme Olasılığı"), mHdr("Derecelendirme Basamakları")],
-              [mCell("1", true), mCell("Çok Küçük"), mCell("Hemen hemen hiç")],
-              [mCell("2", true), mCell("Küçük"), mCell("Çok az (yılda bir kez), sadece anormal durumlarda")],
-              [mCell("3", true), mCell("Orta"), mCell("Az (yılda bir kaç kez)")],
-              [mCell("4", true), mCell("Yüksek"), mCell("Sıklıkla (ayda bir)")],
-              [mCell("5", true), mCell("Çok Yüksek"), mCell("Çok sıklıkla (haftada bir, her gün)")],
-            ],
-          },
-          layout: { hLineWidth: () => 0.3, vLineWidth: () => 0.3, hLineColor: () => "#d1d5db", vLineColor: () => "#d1d5db" },
-          margin: [0, 0, 8, 0],
-        },
-        {
-          width: "50%",
-          table: {
-            widths: [25, 60, "*"],
-            headerRows: 1,
-            body: [
-              [mHdr("Puan"), mHdr("İhtimal"), mHdr("Derecelendirme")],
-              [mCell("1", true), mCell("Çok Hafif"), mCell("İş saati kaybı yok, hemen giderilebilen")],
-              [mCell("2", true), mCell("Hafif"), mCell("İş günü kaybı yok, kalıcı etkisi olmayan")],
-              [mCell("3", true), mCell("Orta"), mCell("Hafif yaralanma, yatarak tedavi")],
-              [mCell("4", true), mCell("Ciddi"), mCell("Ciddi yaralanma, meslek hastalığı")],
-              [mCell("5", true), mCell("Çok Ciddi"), mCell("Ölüm, sürekli iş göremezlik")],
-            ],
-          },
-          layout: { hLineWidth: () => 0.3, vLineWidth: () => 0.3, hLineColor: () => "#d1d5db", vLineColor: () => "#d1d5db" },
-        },
-      ],
-      margin: [0, 0, 0, 20],
+      table: {
+        widths: [30, 100, "*"],
+        headerRows: 1,
+        body: [
+          [mHdr("Puan"), mHdr("Zararın Gerçekleşme Olasılığı"), mHdr("Derecelendirme Basamakları")],
+          [mCell("1", true), mCell("Çok Küçük"), mCell("Hemen hemen hiç")],
+          [mCell("2", true), mCell("Küçük"), mCell("Çok az (yılda bir kez), sadece anormal durumlarda")],
+          [mCell("3", true), mCell("Orta"), mCell("Az (yılda bir kaç kez)")],
+          [mCell("4", true), mCell("Yüksek"), mCell("Sıklıkla (ayda bir)")],
+          [mCell("5", true), mCell("Çok Yüksek"), mCell("Çok sıklıkla (haftada bir, her gün)")],
+        ],
+      },
+      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#94a3b8", vLineColor: () => "#94a3b8" },
+      margin: [0, 0, 0, 12],
+    });
+
+    // Şiddet tablosu
+    content.push({
+      table: {
+        widths: [30, 100, "*"],
+        headerRows: 1,
+        body: [
+          [mHdr("Puan"), mHdr("İhtimal"), mHdr("Derecelendirme")],
+          [mCell("1", true), mCell("Çok Hafif"), mCell("İş saati kaybı yok, hemen giderilebilen")],
+          [mCell("2", true), mCell("Hafif"), mCell("İş günü kaybı yok, kalıcı etkisi olmayan")],
+          [mCell("3", true), mCell("Orta"), mCell("Hafif yaralanma, yatarak tedavi")],
+          [mCell("4", true), mCell("Ciddi"), mCell("Ciddi yaralanma, meslek hastalığı")],
+          [mCell("5", true), mCell("Çok Ciddi"), mCell("Ölüm, sürekli iş göremezlik")],
+        ],
+      },
+      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#94a3b8", vLineColor: () => "#94a3b8" },
+      margin: [0, 0, 0, 12],
     });
 
     // Risk skoru tablosu
@@ -441,8 +435,8 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signer
           [{ text: "1", fontSize: 8, bold: true, fillColor: "#16a34a", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Önemsiz"), mCell("Önlem öncelikli değildir.")],
         ],
       },
-      layout: { hLineWidth: () => 0.3, vLineWidth: () => 0.3, hLineColor: () => "#d1d5db", vLineColor: () => "#d1d5db" },
-      margin: [0, 0, 0, 20],
+      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#94a3b8", vLineColor: () => "#94a3b8" },
+      margin: [0, 0, 0, 12],
     });
 
     // Renk skalası
@@ -469,13 +463,7 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signer
     defaultStyle: { font: "Roboto" },
   };
 
-  if (returnBase64) {
-    return new Promise<string>((resolve) => {
-      maker.createPdf(docDef).getBase64((data: string) => resolve(data));
-    });
-  } else {
-    maker.createPdf(docDef).download(`Risk_Degerlendirme_Raporu_${today.replace(/\./g, "_")}.pdf`);
-  }
+  maker.createPdf(docDef).download(`Risk_Degerlendirme_Raporu_${today.replace(/\./g, "_")}.pdf`);
 }
 
 
@@ -655,12 +643,6 @@ export default function Page() {
   const [emailSettings, setEmailSettings] = useState<EmailSettings>({ enabled: true, toEmail: "", ccEmail: "", subject: "[İSG] Yeni DÖF Bildirimi: {dofTitle}", message: "" });
   const [dofAdding, setDofAdding] = useState(false);
   const [dofAddStatus, setDofAddStatus] = useState<string | null>(null);
-  const [emailContacts, setEmailContacts] = useState<EmailContact[]>([]);
-  const [newContact, setNewContact] = useState({ name: "", email: "", role: "" });
-  const [riskEmailModal, setRiskEmailModal] = useState<{ companyId: string } | null>(null);
-  const [riskEmailSelectedContacts, setRiskEmailSelectedContacts] = useState<string[]>([]);
-  const [riskEmailSending, setRiskEmailSending] = useState(false);
-  const [riskEmailStatus, setRiskEmailStatus] = useState<string | null>(null);
 
   async function loadAll() {
     setLoading(true);
@@ -689,9 +671,6 @@ export default function Page() {
         setEmailSettings(ed);
       }
 
-      // Email adres defterini yükle
-      const contactSnap = await getDocs(collection(db, "emailContacts"));
-      setEmailContacts(contactSnap.docs.map(d => ({ id: d.id, ...d.data() } as EmailContact)));
     } catch (e) {
       console.error("Firestore yükleme hatası", e);
     } finally {
@@ -1640,17 +1619,6 @@ export default function Page() {
               >
                 {pdfLoading ? "⏳ Hazırlanıyor..." : "📄 PDF Rapor İndir"}
               </button>
-              <button
-                style={{ ...styles.btnPrimary, opacity: risks.length === 0 ? 0.6 : 1 }}
-                disabled={risks.length === 0}
-                onClick={() => {
-                  setRiskEmailModal({ companyId: selectedCompanyId === "all" ? "" : selectedCompanyId });
-                  setRiskEmailSelectedContacts([]);
-                  setRiskEmailStatus(null);
-                }}
-              >
-                📧 Risk Raporu Email Gönder
-              </button>
             </div>
 
             <div style={{ ...styles.card, padding: 0, overflow: "auto" }}>
@@ -1694,14 +1662,7 @@ export default function Page() {
                           ) : <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>Manuel</span>}
                         </td>
                         <td style={styles.td} className="isg-td">
-                          <div style={{ display: "flex", gap: 4 }}>
-                            <button style={styles.btnDanger} onClick={() => deleteRisk(r.id)}>Sil</button>
-                            <button style={{ ...styles.btnSecondary, fontSize: 11, padding: "2px 6px" }} title="Risk Raporu Email Gönder" onClick={() => {
-                              setRiskEmailModal({ companyId: r.companyId });
-                              setRiskEmailSelectedContacts([]);
-                              setRiskEmailStatus(null);
-                            }}>📧</button>
-                          </div>
+                          <button style={styles.btnDanger} onClick={() => deleteRisk(r.id)}>Sil</button>
                         </td>
                       </tr>
                     );
@@ -1710,145 +1671,9 @@ export default function Page() {
               </table>
             </div>
 
-            {/* Risk Email Gönder Modal */}
-            {riskEmailModal && (
-              <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setRiskEmailModal(null)}>
-                <div style={{ backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 12, padding: 24, width: 500, maxWidth: "90vw", maxHeight: "80vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: "var(--isg-text)" }}>📧 Risk Raporu Email Gönder</div>
-                    <button style={{ ...styles.btnSecondary, fontSize: 16, padding: "2px 8px" }} onClick={() => setRiskEmailModal(null)}>✕</button>
-                  </div>
-
-                  <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 12 }}>
-                    {riskEmailModal.companyId
-                      ? `${companies.find(c => c.id === riskEmailModal.companyId)?.nickName || ""} firmasına ait risk raporu PDF olarak seçili adreslere gönderilecektir.`
-                      : "Tüm firmalara ait risk raporu PDF olarak seçili adreslere gönderilecektir."}
-                  </div>
-
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--isg-text)", marginBottom: 8 }}>Alıcıları Seçin:</div>
-
-                  {emailContacts.length > 0 && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
-                      {emailContacts.map(c => {
-                        const isSelected = riskEmailSelectedContacts.includes(c.id);
-                        return (
-                          <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, border: `1px solid ${isSelected ? "#3b82f6" : "var(--isg-border)"}`, backgroundColor: isSelected ? "#3b82f622" : "transparent", cursor: "pointer" }}>
-                            <input type="checkbox" checked={isSelected} onChange={() => {
-                              setRiskEmailSelectedContacts(prev => isSelected ? prev.filter(id => id !== c.id) : [...prev, c.id]);
-                            }} style={{ width: 16, height: 16 }} />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--isg-text)" }}>{c.name}</div>
-                              <div style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{c.email}{c.role ? ` · ${c.role}` : ""}</div>
-                            </div>
-                            <button style={{ ...styles.btnDanger, fontSize: 10, padding: "2px 6px" }} onClick={async (e) => {
-                              e.preventDefault(); e.stopPropagation();
-                              await deleteDoc(doc(db, "emailContacts", c.id));
-                              setEmailContacts(prev => prev.filter(x => x.id !== c.id));
-                              setRiskEmailSelectedContacts(prev => prev.filter(id => id !== c.id));
-                            }}>✕</button>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {emailContacts.length === 0 && (
-                    <p style={{ fontSize: 12, color: "var(--isg-text-muted)", padding: 12, backgroundColor: "var(--isg-bg)", borderRadius: 6, marginBottom: 12 }}>
-                      Henüz kayıtlı alıcı yok. Aşağıdan ekleyin.
-                    </p>
-                  )}
-
-                  {/* Inline Kişi Ekleme */}
-                  <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap", alignItems: "end" }}>
-                    <div style={{ flex: 1, minWidth: 120 }}>
-                      <label style={{ fontSize: 10, color: "var(--isg-text-muted)" }}>Ad Soyad</label>
-                      <input style={{ ...styles.input, fontSize: 12, padding: "6px 8px" }} className="isg-input" value={newContact.name} onChange={e => setNewContact({ ...newContact, name: e.target.value })} placeholder="Ad Soyad" />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 160 }}>
-                      <label style={{ fontSize: 10, color: "var(--isg-text-muted)" }}>Email</label>
-                      <input style={{ ...styles.input, fontSize: 12, padding: "6px 8px" }} className="isg-input" type="email" value={newContact.email} onChange={e => setNewContact({ ...newContact, email: e.target.value })} placeholder="email@firma.com" />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 100 }}>
-                      <label style={{ fontSize: 10, color: "var(--isg-text-muted)" }}>Rol</label>
-                      <input style={{ ...styles.input, fontSize: 12, padding: "6px 8px" }} className="isg-input" value={newContact.role} onChange={e => setNewContact({ ...newContact, role: e.target.value })} placeholder="İSG Uzmanı..." />
-                    </div>
-                    <button style={{ ...styles.btnSuccess, fontSize: 12, padding: "6px 12px", whiteSpace: "nowrap" }} onClick={async () => {
-                      if (!newContact.name || !newContact.email) return;
-                      try {
-                        const ref = await addDoc(collection(db, "emailContacts"), newContact);
-                        const added = { id: ref.id, ...newContact };
-                        setEmailContacts(prev => [...prev, added]);
-                        setRiskEmailSelectedContacts(prev => [...prev, ref.id]);
-                        setNewContact({ name: "", email: "", role: "" });
-                      } catch (e: any) { console.error(e); }
-                    }}>+ Ekle</button>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                    <button style={{ ...styles.btnPrimary, opacity: riskEmailSending || riskEmailSelectedContacts.length === 0 ? 0.5 : 1 }} disabled={riskEmailSending || riskEmailSelectedContacts.length === 0} onClick={async () => {
-                      if (!riskEmailModal) return;
-                      setRiskEmailSending(true);
-                      setRiskEmailStatus(null);
-                      try {
-                        const companiesToSend = riskEmailModal.companyId ? companies.filter(c => c.id === riskEmailModal.companyId) : companies;
-                        const risksToSend = riskEmailModal.companyId ? risks.filter(r => r.companyId === riskEmailModal.companyId) : risks;
-                        const selectedEmails = emailContacts.filter(c => riskEmailSelectedContacts.includes(c.id)).map(c => c.email);
-                        if (selectedEmails.length === 0) {
-                          setRiskEmailStatus("⚠️ Seçili alıcı bulunamadı");
-                          setRiskEmailSending(false);
-                          return;
-                        }
-                        if (risksToSend.length === 0) {
-                          setRiskEmailStatus("⚠️ Gönderilecek risk kaydı bulunamadı");
-                          setRiskEmailSending(false);
-                          return;
-                        }
-
-                        setRiskEmailStatus("📄 PDF oluşturuluyor...");
-
-                        // Mevcut generateRiskPDF fonksiyonunu base64 modunda kullan
-                        let pdfBase64 = "";
-                        try {
-                          const result = await generateRiskPDF(risksToSend, companiesToSend, signers, true);
-                          pdfBase64 = result || "";
-                        } catch (pdfErr: any) {
-                          console.error("PDF olusturma hatasi:", pdfErr);
-                          setRiskEmailStatus("⚠️ PDF oluşturulamadı, eksiz gönderiliyor...");
-                        }
-
-                        setRiskEmailStatus("📧 Email gönderiliyor...");
-
-                        const res = await fetch("/api/send-risk-email", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            toEmails: selectedEmails,
-                            pdfBase64: pdfBase64 || "",
-                            companyName: companiesToSend.map(c => c.nickName).join(", "),
-                          }),
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                          setRiskEmailStatus("✅ Risk raporu başarıyla gönderildi!");
-                          setTimeout(() => setRiskEmailModal(null), 2000);
-                        } else {
-                          setRiskEmailStatus(`❌ API Hata (${res.status}): ${typeof data.error === "string" ? data.error : JSON.stringify(data.error)}`);
-                        }
-                      } catch (e: any) {
-                        console.error("Risk email genel hata:", e);
-                        setRiskEmailStatus(`❌ Hata: ${e.message}`);
-                      }
-                      setRiskEmailSending(false);
-                    }}>{riskEmailSending ? "Gönderiliyor..." : `📧 ${riskEmailSelectedContacts.length} Kişiye Gönder`}</button>
-                    {riskEmailStatus && (
-                      <span style={{ fontSize: 13, color: riskEmailStatus.startsWith("✅") ? "#16a34a" : "#dc2626" }}>{riskEmailStatus}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
+
 
         {activeTab === "imzacilar" && (
           <div>

@@ -10,6 +10,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { generateEk2PDF } from "./ek2PdfGenerator";
 import { db } from "../../lib/firebase";
 import {
   collection,
@@ -572,6 +573,7 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
               {saving ? "Kaydediliyor..." : editingId ? "Güncelle" : "Kaydet"}
             </button>
           )}
+          <button style={{ ...styles.btnPrimary, backgroundColor: "#7c3aed" }} onClick={() => generateEk2PDF(form)}>PDF İndir</button>
           <button style={styles.btnSecondary} onClick={() => setShowForm(false)}>Geri</button>
         </div>
       </div>

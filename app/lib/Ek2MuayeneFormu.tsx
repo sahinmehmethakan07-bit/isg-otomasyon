@@ -336,42 +336,8 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
   const companyEmployees = employees.filter(e => e.companyId === form.companyId);
   const readOnly = !canEdit;
 
-  const SectionTitle = ({ title }: { title: string }) => (
-    <div style={{ fontSize: 14, fontWeight: 700, color: "#38bdf8", marginTop: 24, marginBottom: 12, paddingBottom: 6, borderBottom: "1px solid var(--isg-border)" }}>
-      {title}
-    </div>
-  );
-
-  const Field = ({ label, field, wide, textarea }: { label: string; field: string; wide?: boolean; textarea?: boolean }) => (
-    <div style={wide ? { gridColumn: "1 / -1" } : {}}>
-      <label style={styles.label}>{label}</label>
-      {textarea ? (
-        <textarea style={{ ...styles.input, minHeight: 60, resize: "vertical" }} value={(form as any)[field] || ""} onChange={e => updateField(field, e.target.value)} readOnly={readOnly} />
-      ) : (
-        <input style={styles.input} value={(form as any)[field] || ""} onChange={e => updateField(field, e.target.value)} readOnly={readOnly} />
-      )}
-    </div>
-  );
-
-  const YesNo = ({ label, data, field }: { label: string; data: { hayir: boolean; evet: boolean; [key: string]: any }; field: string }) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 0", borderBottom: "1px solid var(--isg-border)" }}>
-      <span style={{ flex: 1, fontSize: 13 }}>{label}</span>
-      <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
-        <input type="radio" checked={data.hayir} onChange={() => {
-          if (readOnly) return;
-          const updated = { ...data, hayir: true, evet: false };
-          updateField(field, updated);
-        }} disabled={readOnly} /> Hayır
-      </label>
-      <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
-        <input type="radio" checked={data.evet} onChange={() => {
-          if (readOnly) return;
-          const updated = { ...data, hayir: false, evet: true };
-          updateField(field, updated);
-        }} disabled={readOnly} /> Evet
-      </label>
-    </div>
-  );
+  // Field, SectionTitle, YesNo artik asagida component disinda tanimli
+  // readOnly ve styles'i props olarak aliyorlar
 
   return (
     <div>
@@ -391,7 +357,7 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
 
       <div style={styles.card}>
         {/* ── İŞYERİ BİLGİLERİ ── */}
-        <SectionTitle title="İŞYERİNİN / İŞVERENİN BİLGİLERİ" />
+        <Ek2SectionTitle title="İŞYERİNİN / İŞVERENİN BİLGİLERİ" />
         <div style={styles.formGrid}>
           <div>
             <label style={styles.label}>Firma Seçin</label>
@@ -400,15 +366,15 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
               {companies.map(c => <option key={c.id} value={c.id}>{c.nickName} ({c.officialName})</option>)}
             </select>
           </div>
-          <Field label="Unvanı" field="companyName" />
-          <Field label="SGK Sicil No" field="sgkSicilNo" />
-          <Field label="Adresi" field="companyAddress" wide />
-          <Field label="Tel ve Faks" field="companyTel" />
-          <Field label="E-Posta" field="companyEmail" />
+          <Ek2Field label="Unvanı" value={(form as any)["companyName"] || ""} onChange={(val) => updateField("companyName", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="SGK Sicil No" value={(form as any)["sgkSicilNo"] || ""} onChange={(val) => updateField("sgkSicilNo", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Adresi" value={(form as any)["companyAddress"] || ""} onChange={(val) => updateField("companyAddress", val)} readOnly={readOnly} styles={styles} wide />
+          <Ek2Field label="Tel ve Faks" value={(form as any)["companyTel"] || ""} onChange={(val) => updateField("companyTel", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="E-Posta" value={(form as any)["companyEmail"] || ""} onChange={(val) => updateField("companyEmail", val)} readOnly={readOnly} styles={styles} />
         </div>
 
         {/* ── ÇALIŞAN BİLGİLERİ ── */}
-        <SectionTitle title="ÇALIŞANIN / İŞE GİRENİN BİLGİLERİ" />
+        <Ek2SectionTitle title="ÇALIŞANIN / İŞE GİRENİN BİLGİLERİ" />
         <div style={styles.formGrid}>
           {form.companyId && (
             <div>
@@ -419,9 +385,9 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
               </select>
             </div>
           )}
-          <Field label="Adı ve Soyadı" field="employeeName" />
-          <Field label="T.C. Kimlik No" field="tcKimlikNo" />
-          <Field label="Doğum Yeri ve Tarihi" field="dogumYeriTarihi" />
+          <Ek2Field label="Adı ve Soyadı" value={(form as any)["employeeName"] || ""} onChange={(val) => updateField("employeeName", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="T.C. Kimlik No" value={(form as any)["tcKimlikNo"] || ""} onChange={(val) => updateField("tcKimlikNo", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Doğum Yeri ve Tarihi" value={(form as any)["dogumYeriTarihi"] || ""} onChange={(val) => updateField("dogumYeriTarihi", val)} readOnly={readOnly} styles={styles} />
           <div>
             <label style={styles.label}>Cinsiyeti</label>
             <select style={styles.select} value={form.cinsiyet} onChange={e => updateField("cinsiyet", e.target.value)} disabled={readOnly}>
@@ -430,44 +396,44 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
               <option value="Kadın">Kadın</option>
             </select>
           </div>
-          <Field label="Eğitim Durumu" field="egitimDurumu" />
-          <Field label="Medeni Durumu" field="medeniDurum" />
-          <Field label="Çocuk Sayısı" field="cocukSayisi" />
-          <Field label="Ev Adresi" field="evAdresi" wide />
-          <Field label="Tel No" field="telNo" />
-          <Field label="Mesleği / Meslek Dalı" field="meslegi" />
-          <Field label="Yaptığı İş" field="yaptigiIs" wide />
-          <Field label="Çalıştığı Bölüm" field="calistigiBolum" />
+          <Ek2Field label="Eğitim Durumu" value={(form as any)["egitimDurumu"] || ""} onChange={(val) => updateField("egitimDurumu", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Medeni Durumu" value={(form as any)["medeniDurum"] || ""} onChange={(val) => updateField("medeniDurum", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Çocuk Sayısı" value={(form as any)["cocukSayisi"] || ""} onChange={(val) => updateField("cocukSayisi", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Ev Adresi" value={(form as any)["evAdresi"] || ""} onChange={(val) => updateField("evAdresi", val)} readOnly={readOnly} styles={styles} wide />
+          <Ek2Field label="Tel No" value={(form as any)["telNo"] || ""} onChange={(val) => updateField("telNo", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Mesleği / Meslek Dalı" value={(form as any)["meslegi"] || ""} onChange={(val) => updateField("meslegi", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Yaptığı İş" value={(form as any)["yaptigiIs"] || ""} onChange={(val) => updateField("yaptigiIs", val)} readOnly={readOnly} styles={styles} wide />
+          <Ek2Field label="Çalıştığı Bölüm" value={(form as any)["calistigiBolum"] || ""} onChange={(val) => updateField("calistigiBolum", val)} readOnly={readOnly} styles={styles} />
         </div>
 
         {/* ── ÖZGEÇMİŞ ── */}
-        <SectionTitle title="ÖZGEÇMİŞ" />
+        <Ek2SectionTitle title="ÖZGEÇMİŞ" />
         <div style={styles.formGrid}>
-          <Field label="Kan Grubu" field="kanGrubu" />
-          <Field label="Konjenital / Kronik Hastalık" field="konjenitalKronikHastalik" />
-          <Field label="Bağışıklama - Tetanoz" field="bagisiklamaTetanoz" />
-          <Field label="Bağışıklama - Hepatit" field="bagisiklamaHepatit" />
-          <Field label="Bağışıklama - Diğer" field="bagisiklamaDiger" />
+          <Ek2Field label="Kan Grubu" value={(form as any)["kanGrubu"] || ""} onChange={(val) => updateField("kanGrubu", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Konjenital / Kronik Hastalık" value={(form as any)["konjenitalKronikHastalik"] || ""} onChange={(val) => updateField("konjenitalKronikHastalik", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Bağışıklama - Tetanoz" value={(form as any)["bagisiklamaTetanoz"] || ""} onChange={(val) => updateField("bagisiklamaTetanoz", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Bağışıklama - Hepatit" value={(form as any)["bagisiklamaHepatit"] || ""} onChange={(val) => updateField("bagisiklamaHepatit", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Bağışıklama - Diğer" value={(form as any)["bagisiklamaDiger"] || ""} onChange={(val) => updateField("bagisiklamaDiger", val)} readOnly={readOnly} styles={styles} />
         </div>
 
         {/* ── SOYGEÇMİŞ ── */}
-        <SectionTitle title="SOYGEÇMİŞ" />
+        <Ek2SectionTitle title="SOYGEÇMİŞ" />
         <div style={styles.formGrid}>
-          <Field label="Anne" field="soygecmisAnne" />
-          <Field label="Baba" field="soygecmisBaba" />
-          <Field label="Kardeş" field="soygecmisKardes" />
-          <Field label="Çocuk" field="soygecmisCocuk" />
+          <Ek2Field label="Anne" value={(form as any)["soygecmisAnne"] || ""} onChange={(val) => updateField("soygecmisAnne", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Baba" value={(form as any)["soygecmisBaba"] || ""} onChange={(val) => updateField("soygecmisBaba", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Kardeş" value={(form as any)["soygecmisKardes"] || ""} onChange={(val) => updateField("soygecmisKardes", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Çocuk" value={(form as any)["soygecmisCocuk"] || ""} onChange={(val) => updateField("soygecmisCocuk", val)} readOnly={readOnly} styles={styles} />
         </div>
 
         {/* ── TIBBİ ANAMNEZ ── */}
-        <SectionTitle title="TIBBİ ANAMNEZ" />
+        <Ek2SectionTitle title="TIBBİ ANAMNEZ" />
 
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--isg-text-muted)", marginBottom: 8 }}>
             1. Aşağıdaki yakınmalardan herhangi birini yaşadınız mı?
           </div>
           {defaultYakinmalar.map(y => (
-            <YesNo key={y} label={`- ${y}`} data={form.yakınmalar?.[y] || { hayir: true, evet: false, aciklama: "" }} field={`yakınmalar`} />
+            <Ek2YesNo key={y} label={`- ${y}`} data={form.yakınmalar?.[y] || { hayir: true, evet: false }} onChange={(val) => updateField("yakınmalar", {...form.yakınmalar, [y]: val})} readOnly={readOnly} />
           ))}
         </div>
 
@@ -476,19 +442,19 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
             2. Aşağıdaki hastalıklardan herhangi birini geçirdiniz mi?
           </div>
           {defaultHastaliklar.map(h => (
-            <YesNo key={h} label={`- ${h}`} data={form.hastaliklar?.[h] || { hayir: true, evet: false, aciklama: "" }} field={`hastaliklar`} />
+            <Ek2YesNo key={h} label={`- ${h}`} data={form.hastaliklar?.[h] || { hayir: true, evet: false }} onChange={(val) => updateField("hastaliklar", {...form.hastaliklar, [h]: val})} readOnly={readOnly} />
           ))}
         </div>
 
         <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
-          <YesNo label="3. Hastanede yattınız mı?" data={form.hastaneYatis} field="hastaneYatis" />
-          {form.hastaneYatis.evet && <Field label="Tanı" field="hastaneYatis" />}
+          <Ek2YesNo label="3. Hastanede yattınız mı?" data={form.hastaneYatis} onChange={(val) => updateField("hastaneYatis", val)} readOnly={readOnly} />
+          {form.hastaneYatis.evet && <Ek2Field label="Tanı" value={(form as any)["hastaneYatis"] || ""} onChange={(val) => updateField("hastaneYatis", val)} readOnly={readOnly} styles={styles} />}
 
-          <YesNo label="4. Ameliyat geçirdiniz mi?" data={form.ameliyat} field="ameliyat" />
-          <YesNo label="5. İş kazası geçirdiniz mi?" data={form.isKazasi} field="isKazasi" />
-          <YesNo label="6. Meslek hastalığı şüphesi ile tetkik/muayeneye tabi tutuldunuz mu?" data={form.meslekHastaligi} field="meslekHastaligi" />
-          <YesNo label="7. Maluliyet aldınız mı?" data={form.maluliyet} field="maluliyet" />
-          <YesNo label="8. Şu anda herhangi bir tedavi görüyor musunuz?" data={form.tedavi} field="tedavi" />
+          <Ek2YesNo label="4. Ameliyat geçirdiniz mi?" data={form.ameliyat} onChange={(val) => updateField("ameliyat", val)} readOnly={readOnly} />
+          <Ek2YesNo label="5. İş kazası geçirdiniz mi?" data={form.isKazasi} onChange={(val) => updateField("isKazasi", val)} readOnly={readOnly} />
+          <Ek2YesNo label="6. Meslek hastalığı şüphesi ile tetkik/muayeneye tabi tutuldunuz mu?" data={form.meslekHastaligi} onChange={(val) => updateField("meslekHastaligi", val)} readOnly={readOnly} />
+          <Ek2YesNo label="7. Maluliyet aldınız mı?" data={form.maluliyet} onChange={(val) => updateField("maluliyet", val)} readOnly={readOnly} />
+          <Ek2YesNo label="8. Şu anda herhangi bir tedavi görüyor musunuz?" data={form.tedavi} onChange={(val) => updateField("tedavi", val)} readOnly={readOnly} />
         </div>
 
         <div style={styles.formGrid}>
@@ -502,8 +468,8 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
           </div>
           {form.sigara.durum !== "hayir" && (
             <>
-              <Field label="Kaç yıldır" field="sigara" />
-              <Field label="Adet/gün" field="sigara" />
+              <Ek2Field label="Kaç yıldır" value={(form as any)["sigara"] || ""} onChange={(val) => updateField("sigara", val)} readOnly={readOnly} styles={styles} />
+              <Ek2Field label="Adet/gün" value={(form as any)["sigara"] || ""} onChange={(val) => updateField("sigara", val)} readOnly={readOnly} styles={styles} />
             </>
           )}
           <div>
@@ -517,53 +483,53 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
         </div>
 
         {/* ── FİZİK MUAYENE ── */}
-        <SectionTitle title="FİZİK MUAYENE SONUÇLARI" />
+        <Ek2SectionTitle title="FİZİK MUAYENE SONUÇLARI" />
         <div style={styles.formGrid}>
-          <Field label="a) Göz" field="goz" />
-          <Field label="Kulak-Burun-Boğaz" field="kulakBurunBogaz" />
-          <Field label="Deri" field="deri" />
-          <Field label="b) Kardiyovasküler Sistem" field="kardiyovaskuler" />
-          <Field label="c) Solunum Sistemi" field="solunum" />
-          <Field label="d) Sindirim Sistemi" field="sindirim" />
-          <Field label="e) Ürogenital Sistem" field="urogenital" />
-          <Field label="f) Kas-İskelet Sistemi" field="kasIskelet" />
-          <Field label="g) Nörolojik Muayene" field="norolojik" />
-          <Field label="ğ) Psikiyatrik Muayene" field="psikiyatrik" />
-          <Field label="h) Diğer" field="fizikDiger" />
-          <Field label="TA (mm-Hg)" field="ta" />
-          <Field label="Nb (/dk)" field="nb" />
-          <Field label="Boy" field="boy" />
-          <Field label="Kilo" field="kilo" />
-          <Field label="Vücut Kitle İndeksi" field="vki" />
+          <Ek2Field label="a) Göz" value={(form as any)["goz"] || ""} onChange={(val) => updateField("goz", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Kulak-Burun-Boğaz" value={(form as any)["kulakBurunBogaz"] || ""} onChange={(val) => updateField("kulakBurunBogaz", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Deri" value={(form as any)["deri"] || ""} onChange={(val) => updateField("deri", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="b) Kardiyovasküler Sistem" value={(form as any)["kardiyovaskuler"] || ""} onChange={(val) => updateField("kardiyovaskuler", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="c) Solunum Sistemi" value={(form as any)["solunum"] || ""} onChange={(val) => updateField("solunum", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="d) Sindirim Sistemi" value={(form as any)["sindirim"] || ""} onChange={(val) => updateField("sindirim", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="e) Ürogenital Sistem" value={(form as any)["urogenital"] || ""} onChange={(val) => updateField("urogenital", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="f) Kas-İskelet Sistemi" value={(form as any)["kasIskelet"] || ""} onChange={(val) => updateField("kasIskelet", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="g) Nörolojik Muayene" value={(form as any)["norolojik"] || ""} onChange={(val) => updateField("norolojik", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="ğ) Psikiyatrik Muayene" value={(form as any)["psikiyatrik"] || ""} onChange={(val) => updateField("psikiyatrik", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="h) Diğer" value={(form as any)["fizikDiger"] || ""} onChange={(val) => updateField("fizikDiger", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="TA (mm-Hg)" value={(form as any)["ta"] || ""} onChange={(val) => updateField("ta", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Nb (/dk)" value={(form as any)["nb"] || ""} onChange={(val) => updateField("nb", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Boy" value={(form as any)["boy"] || ""} onChange={(val) => updateField("boy", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Kilo" value={(form as any)["kilo"] || ""} onChange={(val) => updateField("kilo", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Vücut Kitle İndeksi" value={(form as any)["vki"] || ""} onChange={(val) => updateField("vki", val)} readOnly={readOnly} styles={styles} />
         </div>
 
         {/* ── LABORATUVAR ── */}
-        <SectionTitle title="LABORATUVAR BULGULARI" />
+        <Ek2SectionTitle title="LABORATUVAR BULGULARI" />
         <div style={styles.formGrid}>
-          <Field label="a) Kan" field="kan" />
-          <Field label="İdrar" field="idrar" />
-          <Field label="b) Radyolojik Analizler" field="radyolojik" />
-          <Field label="c) Odyometre" field="odyometre" />
-          <Field label="SFT" field="sft" />
-          <Field label="d) Psikolojik Testler" field="psikolojik" />
-          <Field label="e) Diğer" field="labDiger" />
+          <Ek2Field label="a) Kan" value={(form as any)["kan"] || ""} onChange={(val) => updateField("kan", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="İdrar" value={(form as any)["idrar"] || ""} onChange={(val) => updateField("idrar", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="b) Radyolojik Analizler" value={(form as any)["radyolojik"] || ""} onChange={(val) => updateField("radyolojik", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="c) Odyometre" value={(form as any)["odyometre"] || ""} onChange={(val) => updateField("odyometre", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="SFT" value={(form as any)["sft"] || ""} onChange={(val) => updateField("sft", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="d) Psikolojik Testler" value={(form as any)["psikolojik"] || ""} onChange={(val) => updateField("psikolojik", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="e) Diğer" value={(form as any)["labDiger"] || ""} onChange={(val) => updateField("labDiger", val)} readOnly={readOnly} styles={styles} />
         </div>
 
         {/* ── KANAAT VE SONUÇ ── */}
-        <SectionTitle title="KANAAT VE SONUÇ" />
+        <Ek2SectionTitle title="KANAAT VE SONUÇ" />
         <div style={styles.formGrid}>
-          <Field label="İşinde bedenen ve ruhen çalışmaya elverişlidir" field="kanaatSonuc" wide textarea />
-          <Field label="Şartı ile çalışmaya elverişlidir (koşullar)" field="kanaatSart" wide textarea />
+          <Ek2Field label="İşinde bedenen ve ruhen çalışmaya elverişlidir" value={(form as any)["kanaatSonuc"] || ""} onChange={(val) => updateField("kanaatSonuc", val)} readOnly={readOnly} styles={styles} wide textarea />
+          <Ek2Field label="Şartı ile çalışmaya elverişlidir (koşullar)" value={(form as any)["kanaatSart"] || ""} onChange={(val) => updateField("kanaatSart", val)} readOnly={readOnly} styles={styles} wide textarea />
         </div>
 
         {/* ── DOKTOR BİLGİLERİ ── */}
-        <SectionTitle title="İŞYERİ HEKİMİ BİLGİLERİ" />
+        <Ek2SectionTitle title="İŞYERİ HEKİMİ BİLGİLERİ" />
         <div style={styles.formGrid}>
-          <Field label="Adı ve Soyadı" field="doktorAdi" />
-          <Field label="Diploma Tarih ve No" field="diplomaTarihNo" />
-          <Field label="Diploma Tescil Tarih ve No" field="diplomaTescilNo" />
-          <Field label="İşyeri Hekimliği Belgesi Tarih ve No" field="isyeriHekimBelgeNo" />
-          <Field label="Form Tarihi" field="formTarihi" />
+          <Ek2Field label="Adı ve Soyadı" value={(form as any)["doktorAdi"] || ""} onChange={(val) => updateField("doktorAdi", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Diploma Tarih ve No" value={(form as any)["diplomaTarihNo"] || ""} onChange={(val) => updateField("diplomaTarihNo", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Diploma Tescil Tarih ve No" value={(form as any)["diplomaTescilNo"] || ""} onChange={(val) => updateField("diplomaTescilNo", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="İşyeri Hekimliği Belgesi Tarih ve No" value={(form as any)["isyeriHekimBelgeNo"] || ""} onChange={(val) => updateField("isyeriHekimBelgeNo", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Form Tarihi" value={(form as any)["formTarihi"] || ""} onChange={(val) => updateField("formTarihi", val)} readOnly={readOnly} styles={styles} />
         </div>
 
         {/* Kaydet / Geri butonları */}
@@ -577,6 +543,44 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
           <button style={styles.btnSecondary} onClick={() => setShowForm(false)}>Geri</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+
+// ── Yardimci Bilesenler (component disinda, re-render'da yeniden olusturulmaz) ──
+
+function Ek2SectionTitle({ title }: { title: string }) {
+  return (
+    <div style={{ fontSize: 14, fontWeight: 700, color: "#38bdf8", marginTop: 24, marginBottom: 12, paddingBottom: 6, borderBottom: "1px solid #1e293b" }}>
+      {title}
+    </div>
+  );
+}
+
+function Ek2Field({ label, value, onChange, wide, textarea, readOnly, styles }: { label: string; value: string; onChange: (val: string) => void; wide?: boolean; textarea?: boolean; readOnly: boolean; styles: any }) {
+  return (
+    <div style={wide ? { gridColumn: "1 / -1" } : {}}>
+      <label style={styles.label}>{label}</label>
+      {textarea ? (
+        <textarea style={{ ...styles.input, minHeight: 60, resize: "vertical" }} value={value} onChange={e => onChange(e.target.value)} readOnly={readOnly} />
+      ) : (
+        <input style={styles.input} value={value} onChange={e => onChange(e.target.value)} readOnly={readOnly} />
+      )}
+    </div>
+  );
+}
+
+function Ek2YesNo({ label, data, onChange, readOnly }: { label: string; data: { hayir: boolean; evet: boolean; [key: string]: any }; onChange: (val: any) => void; readOnly: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 0", borderBottom: "1px solid #1e293b" }}>
+      <span style={{ flex: 1, fontSize: 13 }}>{label}</span>
+      <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
+        <input type="radio" checked={data.hayir} onChange={() => { if (!readOnly) onChange({ ...data, hayir: true, evet: false }); }} disabled={readOnly} /> Hayır
+      </label>
+      <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
+        <input type="radio" checked={data.evet} onChange={() => { if (!readOnly) onChange({ ...data, hayir: false, evet: true }); }} disabled={readOnly} /> Evet
+      </label>
     </div>
   );
 }

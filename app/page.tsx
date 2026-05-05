@@ -1,6 +1,6 @@
 "use client";
-import { SessionGuard } from "./lib/SessionGuard";
-import { destroySession } from "./lib/sessionManager";
+// SessionGuard devre disi
+// destroySession devre disi
 import { useUserRole } from "./lib/useUserRole";
 import { getUserProfile, UserProfile, UserRole, ROLE_CONFIG, getRoleFilteredQuery, withCreatedBy } from "./lib/roleManager";
 import { AdminUserPanel } from "./lib/AdminUserPanel";
@@ -1169,7 +1169,7 @@ export default function Page() {
   const incompleteEmployees = employees.filter(e => !e.trainingComplete).length;
 
   return (
-    <SessionGuard>
+    
     <div style={styles.app} className="isg-app">
       <header style={styles.header} className="isg-header">
         <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 700, fontSize: 17 }} className="isg-text">
@@ -1182,7 +1182,7 @@ export default function Page() {
           </button>
           <button style={{ ...styles.btnSecondary, fontSize: 11 }} onClick={loadAll}>🔄 Yenile</button>
           <button style={{ ...styles.btnDanger, fontSize: 11 }} onClick={async () => {
-            const user = auth.currentUser; if (user) await destroySession(user.uid); await signOut(auth);
+            await signOut(auth);
             router.push("/login?reason=logged_out");
           }}>Çıkış</button>
         </div>
@@ -1800,6 +1800,6 @@ export default function Page() {
 
       </main>
     </div>
-    </SessionGuard>
+    
   );
 }

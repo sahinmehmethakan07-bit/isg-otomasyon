@@ -24,10 +24,7 @@ import {
 } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import { useRouter } from "next/navigation";
-import {
-  checkExistingSession,
-  createSession,
-} from "../lib/sessionManager";
+// Session yonetimi devre disi
 import {
   getUserProfile,
   UserRole,
@@ -101,19 +98,7 @@ export default function LoginPage() {
       }
       profile.activeRole = selectedRole;
 
-      // 4. Tek oturum kontrolü
-      const sessionCheck = await checkExistingSession(user.uid);
-      if (sessionCheck.blocked) {
-        await signOut(auth);
-        setError(sessionCheck.reason || "Bu hesap başka bir cihazda aktif.");
-        setLoading(false);
-        return;
-      }
-
-      // 5. Session oluştur
-      await createSession(user.uid);
-
-      // 6. Dashboard'a yönlendir
+      // Dashboard'a yönlendir
       router.push("/");
     } catch (err: any) {
       const msgs: Record<string, string> = {

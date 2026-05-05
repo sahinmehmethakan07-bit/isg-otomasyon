@@ -90,14 +90,16 @@ export default function LoginPage() {
         return;
       }
 
-      // 3. Rol eşleşmesi
-      if (profile.role !== selectedRole) {
+      // 3. Rol eşleşmesi (çoklu rol desteği)
+      const userRoles = profile.roles || [profile.role];
+      if (!userRoles.includes(selectedRole)) {
         await signOut(auth);
-        const correctLabel = ROLE_CONFIG[profile.role].label;
-        setError(`Bu hesap "${correctLabel}" olarak kayıtlı. Lütfen doğru girişi seçin.`);
+        const allowedLabels = userRoles.map((r: any) => (ROLE_CONFIG as any)[r]?.label).join(", ");
+        setError(`Bu hesap sadece "${allowedLabels}" olarak kayıtlı. Lütfen doğru girişi seçin.`);
         setLoading(false);
         return;
       }
+      profile.activeRole = selectedRole;
 
       // 4. Tek oturum kontrolü
       const sessionCheck = await checkExistingSession(user.uid);

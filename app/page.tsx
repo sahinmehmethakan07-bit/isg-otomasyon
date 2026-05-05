@@ -747,7 +747,7 @@ export default function Page() {
     const naceCode = newCompany.naceCode || extractNaceFromSgk(newCompany.sgkSicil);
     const officialName = newCompany.officialName || officialNameFromSgk(newCompany.sgkSicil) || newCompany.nickName;
     const data = { nickName: newCompany.nickName, officialName, sgkSicil: newCompany.sgkSicil, naceCode, dangerClass: dangerFromNace(naceCode), employeeCount: parseInt(newCompany.employeeCount) || 0, contractEnd: newCompany.contractEnd, serviceType: newCompany.serviceType, contactEmail: newCompany.contactEmail };
-    const ref = await addDoc(collection(db, "companies"), withCreatedBy(data, userProfile!.uid));
+    const ref = await addDoc(collection(db, "companies"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
     setCompanies(prev => [...prev, { id: ref.id, ...data }]);
     setNewCompany({ nickName: "", officialName: "", sgkSicil: "", naceCode: "", dangerClass: "Az Tehlikeli", employeeCount: "", contractEnd: "", serviceType: "İş Güvenliği", contactEmail: "" });
   }
@@ -779,7 +779,7 @@ export default function Page() {
   async function addEmployee() {
     if (!newEmployee.firstName || !newEmployee.companyId) return;
     const data = { companyId: newEmployee.companyId, firstName: newEmployee.firstName, lastName: newEmployee.lastName, tcNo: newEmployee.tcNo, title: newEmployee.title, hireDate: newEmployee.hireDate, isActive: true, trainingComplete: false, checklist: { ...emptyChecklist } };
-    const ref = await addDoc(collection(db, "employees"), withCreatedBy(data, userProfile!.uid));
+    const ref = await addDoc(collection(db, "employees"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
     setEmployees(prev => [...prev, { id: ref.id, ...data }]);
     setNewEmployee({ companyId: "", firstName: "", lastName: "", tcNo: "", title: "", hireDate: "" });
   }
@@ -804,7 +804,7 @@ export default function Page() {
   async function addDocument() {
     if (!newDocument.companyId || !newDocument.type || !newDocument.issueDate) return;
     const data = { companyId: newDocument.companyId, employeeId: newDocument.employeeId || null, type: newDocument.type, issueDate: newDocument.issueDate, expiryDate: newDocument.expiryDate };
-    const ref = await addDoc(collection(db, "documents"), withCreatedBy(data, userProfile!.uid));
+    const ref = await addDoc(collection(db, "documents"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
     setDocuments(prev => [...prev, { id: ref.id, ...data }]);
     setNewDocument({ companyId: "", employeeId: "", type: "Risk Değerlendirme Raporu", issueDate: "", expiryDate: "" });
   }
@@ -817,7 +817,7 @@ export default function Page() {
   async function addObserver() {
     if (!newObserver.fullName) return;
     const data = { fullName: newObserver.fullName, title: newObserver.title, certificateNo: newObserver.certificateNo, phone: newObserver.phone };
-    const ref = await addDoc(collection(db, "observers"), withCreatedBy(data, userProfile!.uid));
+    const ref = await addDoc(collection(db, "observers"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
     setObservers(prev => [...prev, { id: ref.id, ...data }]);
     setNewObserver({ fullName: "", title: "", certificateNo: "", phone: "" });
   }
@@ -1016,7 +1016,7 @@ export default function Page() {
       const data: Omit<DofRecord, "id"> = { companyId: newDof.companyId, observerId: newDof.observerId, title: newDof.title, description: newDof.description, lawReference: newDof.lawReference, priority: newDof.priority, responsible: newDof.responsible, dueDate: newDof.dueDate, status: newDof.status, location: newDof.location, affectedPersons: newDof.affectedPersons || "" };
       if (newDof.beforePhoto) (data as any).beforePhoto = newDof.beforePhoto;
       if (newDof.afterPhoto) (data as any).afterPhoto = newDof.afterPhoto;
-      const ref = await addDoc(collection(db, "dofs"), withCreatedBy(data, userProfile!.uid));
+      const ref = await addDoc(collection(db, "dofs"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
       setDofs(prev => [...prev, { id: ref.id, ...data }]);
 
       // E-mail bildirimi — sadece email aktifse gönder
@@ -1106,7 +1106,7 @@ export default function Page() {
       lawReference: dof.lawReference || "",
       controlDate: "",
     };
-    const ref = await addDoc(collection(db, "risks"), withCreatedBy(data, userProfile!.uid));
+    const ref = await addDoc(collection(db, "risks"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
     setRisks(prev => [...prev, { id: ref.id, ...data }]);
     // DÖF durumunu güncelle
     await updateDoc(doc(db, "dofs", dof.id), { status: "Riske Aktarıldı" });
@@ -1129,7 +1129,7 @@ export default function Page() {
       responsible: newRisk.responsible, dueDate: newRisk.dueDate, status: newRisk.status,
       affectedPersons: newRisk.affectedPersons, lawReference: newRisk.lawReference, controlDate: newRisk.controlDate,
     };
-    const ref = await addDoc(collection(db, "risks"), withCreatedBy(data, userProfile!.uid));
+    const ref = await addDoc(collection(db, "risks"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
     setRisks(prev => [...prev, { id: ref.id, ...data }]);
     setNewRisk({ companyId: "", section: "", hazard: "", risk: "", currentMeasure: "", actionToTake: "", probability: "1", severity: "1", residualProbability: "1", residualSeverity: "1", responsible: "", dueDate: "", status: "Açık", affectedPersons: "", lawReference: "", controlDate: "" });
   }
@@ -1760,7 +1760,7 @@ export default function Page() {
                                     if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
                                       const name = (e.target as HTMLInputElement).value.trim();
                                       const data = { companyId: company.id, role, fullName: name };
-                                      const ref = await addDoc(collection(db, "signers"), withCreatedBy(data, userProfile!.uid));
+                                      const ref = await addDoc(collection(db, "signers"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
                                       setSigners(prev => [...prev, { id: ref.id, ...data }]);
                                       (e.target as HTMLInputElement).value = "";
                                     }

@@ -34,6 +34,8 @@ export type UserProfile = {
   email: string;
   displayName: string;
   role: UserRole;
+  roles: UserRole[];
+  activeRole?: UserRole;
   createdAt: any;
 };
 
@@ -141,12 +143,13 @@ export function getRoleFilteredQuery(
 ) {
   const col = collection(db, collectionName);
 
-  if (userProfile.role === "admin") {
+  if (userProfile.activeRole === "admin" || userProfile.role === "admin") {
     return col; // filtre yok
   }
 
-  // Doctor ve Nurse sadece kendi verilerini görür
-  return query(col, where("createdBy", "==", userProfile.uid));
+  // Kullanici sadece kendi roluyle ekledigi verileri gorur
+  const activeRole = userProfile.activeRole || userProfile.role;
+  return query(col, where("createdBy", "==", userProfile.uid), where("createdAsRole", "==", activeRole));
 }
 
 /**
@@ -155,11 +158,13 @@ export function getRoleFilteredQuery(
  */
 export function withCreatedBy<T extends Record<string, any>>(
   data: T,
-  uid: string
-): T & { createdBy: string; createdAt: any } {
+  uid: string,
+  activeRole?: UserRole
+): T & { createdBy: string; createdAsRole: string; createdAt: any } {
   return {
     ...data,
     createdBy: uid,
+    createdAsRole: activeRole || "admin",
     createdAt: serverTimestamp(),
   };
 }

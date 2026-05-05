@@ -1,6 +1,9 @@
 "use client";
 import { SessionGuard } from "./lib/SessionGuard";
 import { destroySession } from "./lib/sessionManager";
+import { useUserRole } from "./lib/useUserRole";
+import { getUserProfile, UserProfile, UserRole, ROLE_CONFIG, getRoleFilteredQuery, withCreatedBy } from "./lib/roleManager";
+import { AdminUserPanel } from "./lib/AdminUserPanel";
 
 import React, { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { db, auth } from "../lib/firebase";
@@ -605,6 +608,7 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Page() {
   const router = useRouter();
+  const { user: userProfile, isAdmin, loading: roleLoading } = useUserRole();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -1141,6 +1145,7 @@ export default function Page() {
     { id: "dof", label: "⚠️ DÖF" },
     { id: "risk", label: "🛡 Risk" },
     { id: "imzacilar", label: "✍️ İmzacılar" },
+    ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
   ];
 
   if (!mounted || loading) {
@@ -1770,6 +1775,10 @@ export default function Page() {
               })}
             </div>
           </div>
+        )}
+
+                {activeTab === "kullanicilar" && isAdmin && (
+          <AdminUserPanel styles={styles} />
         )}
 
         {/* Vardiya ve Ayarlar sekmeleri kaldırıldı */}

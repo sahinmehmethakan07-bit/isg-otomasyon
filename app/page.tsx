@@ -1787,7 +1787,7 @@ export default function Page() {
             styles={styles}
             companies={companies}
             employees={employees}
-            userRole={userProfile?.activeRole || userProfile?.role || ""}
+            userRole={typeof window !== "undefined" ? localStorage.getItem("isg_activeRole") || userProfile?.role || "" : userProfile?.role || ""}
             userId={userProfile?.uid || ""}
           />
         )}

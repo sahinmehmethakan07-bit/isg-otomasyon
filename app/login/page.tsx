@@ -97,6 +97,7 @@ export default function LoginPage() {
         return;
       }
       profile.activeRole = selectedRole;
+      localStorage.setItem("isg_activeRole", selectedRole);
 
       // Dashboard'a yönlendir
       router.push("/");

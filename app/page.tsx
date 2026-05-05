@@ -4,6 +4,7 @@ import { destroySession } from "./lib/sessionManager";
 import { useUserRole } from "./lib/useUserRole";
 import { getUserProfile, UserProfile, UserRole, ROLE_CONFIG, getRoleFilteredQuery, withCreatedBy } from "./lib/roleManager";
 import { AdminUserPanel } from "./lib/AdminUserPanel";
+import { Ek2MuayeneFormu } from "./lib/Ek2MuayeneFormu";
 
 import React, { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { db, auth } from "../lib/firebase";
@@ -1148,6 +1149,7 @@ export default function Page() {
     { id: "dof", label: "⚠️ DÖF" },
     { id: "risk", label: "🛡 Risk" },
     { id: "imzacilar", label: "✍️ İmzacılar" },
+    { id: "ek2muayene", label: "🏥 EK-2 Muayene" },
     ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
   ];
 
@@ -1780,7 +1782,17 @@ export default function Page() {
           </div>
         )}
 
-                {activeTab === "kullanicilar" && isAdmin && (
+                {activeTab === "ek2muayene" && (
+          <Ek2MuayeneFormu
+            styles={styles}
+            companies={companies}
+            employees={employees}
+            userRole={userProfile?.activeRole || userProfile?.role || ""}
+            userId={userProfile?.uid || ""}
+          />
+        )}
+
+        {activeTab === "kullanicilar" && isAdmin && (
           <AdminUserPanel styles={styles} />
         )}
 

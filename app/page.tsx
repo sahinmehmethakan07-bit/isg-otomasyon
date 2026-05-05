@@ -656,13 +656,13 @@ export default function Page() {
     setLoading(true);
     try {
       const [compSnap, empSnap, docSnap, obsSnap, dofSnap, riskSnap, signerSnap] = await Promise.all([
-        getDocs(getRoleFilteredQuery("companies", userProfile)),
-        getDocs(getRoleFilteredQuery("employees", userProfile)),
-        getDocs(getRoleFilteredQuery("documents", userProfile)),
-        getDocs(getRoleFilteredQuery("observers", userProfile)),
+        getDocs(collection(db, "companies")),
+        getDocs(collection(db, "employees")),
+        getDocs(collection(db, "documents")),
+        getDocs(collection(db, "observers")),
         getDocs(getRoleFilteredQuery("dofs", userProfile)),
         getDocs(getRoleFilteredQuery("risks", userProfile)),
-        getDocs(getRoleFilteredQuery("signers", userProfile)),
+        getDocs(collection(db, "signers")),
       ]);
       setCompanies(compSnap.docs.map(d => ({ id: d.id, ...d.data() } as Company)));
       setEmployees(empSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));

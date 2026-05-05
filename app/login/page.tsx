@@ -186,7 +186,7 @@ export default function LoginPage() {
               Giriş türünüzü seçin
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-              {(Object.entries(ROLE_CONFIG) as [UserRole, typeof ROLE_CONFIG["admin"]][]).map(([role, config]) => (
+              {(Object.entries(ROLE_CONFIG).filter(([role]) => role !== "admin") as [UserRole, typeof ROLE_CONFIG["admin"]][]).map(([role, config]) => (
                 <button
                   key={role}
                   onClick={() => selectRole(role)}
@@ -233,7 +233,34 @@ export default function LoginPage() {
                 </button>
               ))}
             </div>
-            <p style={{ textAlign: "center", fontSize: 11, color: "#334155", marginTop: 24 }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24 }}>
+              <button
+                onClick={() => selectRole("admin")}
+                style={{
+                  backgroundColor: "transparent",
+                  border: "1px solid #1e293b",
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 12,
+                  color: "#64748b",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "#8b5cf6";
+                  (e.currentTarget as HTMLElement).style.color = "#8b5cf6";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "#1e293b";
+                  (e.currentTarget as HTMLElement).style.color = "#64748b";
+                }}
+              >
+                🛡️ Admin Girişi
+              </button>
+            </div>
+            <p style={{ textAlign: "center", fontSize: 11, color: "#334155", marginTop: 12 }}>
               🔒 Her hesap aynı anda sadece 1 cihazdan kullanılabilir
             </p>
           </div>

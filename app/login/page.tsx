@@ -65,7 +65,7 @@ export default function LoginPage() {
       await createSession(user.uid);
 
       // 5. Dashboard'a yönlendir
-      router.push("/dashboard");
+      router.push("/");
     } catch (err: any) {
       console.error("Login error:", err);
 

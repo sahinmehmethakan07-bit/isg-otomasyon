@@ -27,7 +27,7 @@ import {
 
 // ── Tipler ───────────────────────────────────────────────────────────────────
 
-export type UserRole = "admin" | "doctor" | "nurse";
+export type UserRole = "admin" | "doctor" | "nurse" | "safety_expert";
 
 export type UserProfile = {
   uid: string;
@@ -59,6 +59,12 @@ export const ROLE_CONFIG: Record<
     label: "Hemşire",
     icon: "💉",
     color: "#10b981",
+    description: "Sadece kendi eklediği verileri görür",
+  },
+  safety_expert: {
+    label: "İş Güvenliği Uzmanı",
+    icon: "🦺",
+    color: "#f59e0b",
     description: "Sadece kendi eklediği verileri görür",
   },
 };

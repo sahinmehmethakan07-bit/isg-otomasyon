@@ -180,6 +180,7 @@ export function AdminUserPanel({ styles }: Props) {
                   <option value="doctor">🩺 Doktor</option>
                   <option value="nurse">💉 Hemşire</option>
                   <option value="admin">🛡️ Admin</option>
+                  <option value="safety_expert">🦺 İş Güvenliği Uzmanı</option>
                 </select>
               </div>
             </div>
@@ -233,6 +234,7 @@ export function AdminUserPanel({ styles }: Props) {
                     <option value="doctor">Doktor</option>
                     <option value="nurse">Hemşire</option>
                     <option value="admin">Admin</option>
+                    <option value="safety_expert">İş Güvenliği Uzmanı</option>
                   </select>
                 </td>
               </tr>

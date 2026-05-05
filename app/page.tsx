@@ -1,4 +1,6 @@
 "use client";
+import { SessionGuard } from "./lib/SessionGuard";
+import { destroySession } from "./lib/sessionManager";
 
 import React, { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { db, auth } from "../lib/firebase";
@@ -1157,6 +1159,7 @@ export default function Page() {
   const incompleteEmployees = employees.filter(e => !e.trainingComplete).length;
 
   return (
+    <SessionGuard>
     <div style={styles.app} className="isg-app">
       <header style={styles.header} className="isg-header">
         <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 700, fontSize: 17 }} className="isg-text">
@@ -1169,9 +1172,8 @@ export default function Page() {
           </button>
           <button style={{ ...styles.btnSecondary, fontSize: 11 }} onClick={loadAll}>🔄 Yenile</button>
           <button style={{ ...styles.btnDanger, fontSize: 11 }} onClick={async () => {
-            await signOut(auth);
-            document.cookie = "isg_session=; path=/; max-age=0";
-            router.push("/login");
+            const user = auth.currentUser; if (user) await destroySession(user.uid); await signOut(auth);
+            router.push("/login?reason=logged_out");
           }}>Çıkış</button>
         </div>
       </header>
@@ -1774,5 +1776,6 @@ export default function Page() {
 
       </main>
     </div>
+    </SessionGuard>
   );
 }

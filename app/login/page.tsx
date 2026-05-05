@@ -1,29 +1,83 @@
+/**
+ * login/page.tsx — Login Sayfası (İlk Giriş Kazanır)
+ * 
+ * Akış:
+ * 1. Firebase Auth ile email/şifre doğrula
+ * 2. checkExistingSession() → aktif oturum var mı bak
+ * 3. Varsa → GİRİŞİ REDDET, hata mesajı göster
+ * 4. Yoksa → createSession() ile oturum aç, dashboard'a yönlendir
+ */
+
 "use client";
 
-import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import React, { useState, useEffect } from "react";
+import {
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import { useRouter } from "next/navigation";
+import { checkExistingSession, createSession } from "../lib/sessionManager";
 
 export default function LoginPage() {
+  const router = useRouter();
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
-  async function handleLogin() {
-    if (!email || !password) return;
-    setLoading(true);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reason = params.get("reason");
+    if (reason === "expired") {
+      setInfoMessage("Oturum süreniz doldu. Lütfen tekrar giriş yapın.");
+    } else if (reason === "logged_out") {
+      setInfoMessage("Başarıyla çıkış yaptınız.");
+    }
+  }, []);
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
     setError("");
+    setInfoMessage(null);
+    setLoading(true);
+
     try {
+      // 1. Firebase Auth ile doğrula
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const token = await userCredential.user.getIdToken();
-      // Session cookie set et (middleware bunu okur)
-      document.cookie = `isg_session=${token}; path=/; max-age=3600; SameSite=Strict`;
-      router.push("/");
-    } catch (e: any) {
-      setError("E-posta veya şifre hatalı.");
+      const user = userCredential.user;
+
+      // 2. Aktif oturum var mı kontrol et
+      const sessionCheck = await checkExistingSession(user.uid);
+
+      if (sessionCheck.blocked) {
+        // 3. AKTİF OTURUM VAR → girişi reddet
+        // Firebase Auth oturumunu da kapat (çünkü signIn zaten çağrıldı)
+        await signOut(auth);
+        setError(sessionCheck.reason || "Bu hesap başka bir cihazda aktif.");
+        setLoading(false);
+        return;
+      }
+
+      // 4. Oturum yok → yeni oturum oluştur
+      await createSession(user.uid);
+
+      // 5. Dashboard'a yönlendir
+      router.push("/dashboard");
+    } catch (err: any) {
+      console.error("Login error:", err);
+
+      const errorMessages: Record<string, string> = {
+        "auth/user-not-found": "Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.",
+        "auth/wrong-password": "Şifre hatalı.",
+        "auth/invalid-email": "Geçersiz e-posta adresi.",
+        "auth/too-many-requests": "Çok fazla başarısız deneme. Lütfen biraz bekleyin.",
+        "auth/invalid-credential": "E-posta veya şifre hatalı.",
+      };
+
+      setError(errorMessages[err.code] || `Giriş başarısız: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -32,111 +86,130 @@ export default function LoginPage() {
   return (
     <div style={{
       minHeight: "100vh",
-      backgroundColor: "#0f172a",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
+      backgroundColor: "#0f172a",
       fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
     }}>
       <div style={{
         backgroundColor: "#1e293b",
         border: "1px solid #334155",
         borderRadius: 12,
-        padding: 40,
-        width: 360,
+        padding: 32,
+        width: "100%",
+        maxWidth: 400,
       }}>
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 36, marginBottom: 8 }}>🦺</div>
-          <div style={{ fontWeight: 700, fontSize: 20, color: "#f1f5f9" }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <span style={{ fontSize: 36 }}>🦺</span>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#f1f5f9", marginTop: 8 }}>
             İSG <span style={{ color: "#38bdf8" }}>Otomasyon</span>
-          </div>
-          <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
-            Yönetim Paneli
-          </div>
+          </h1>
+          <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>Sisteme giriş yapın</p>
         </div>
 
-        {/* Form */}
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4, display: "block" }}>
-            E-posta
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleLogin()}
-            placeholder="ornek@mail.com"
-            style={{
-              width: "100%",
-              backgroundColor: "#0f172a",
-              border: "1px solid #334155",
-              borderRadius: 6,
-              color: "#e2e8f0",
-              padding: "10px 12px",
-              fontSize: 14,
-              outline: "none",
-              boxSizing: "border-box",
-            }}
-          />
-        </div>
-
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4, display: "block" }}>
-            Şifre
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleLogin()}
-            placeholder="••••••••"
-            style={{
-              width: "100%",
-              backgroundColor: "#0f172a",
-              border: "1px solid #334155",
-              borderRadius: 6,
-              color: "#e2e8f0",
-              padding: "10px 12px",
-              fontSize: 14,
-              outline: "none",
-              boxSizing: "border-box",
-            }}
-          />
-        </div>
+        {infoMessage && (
+          <div style={{
+            backgroundColor: "#0ea5e922",
+            border: "1px solid #0ea5e944",
+            borderRadius: 8,
+            padding: "10px 14px",
+            marginBottom: 16,
+            fontSize: 13,
+            color: "#7dd3fc",
+            lineHeight: 1.5,
+          }}>
+            {infoMessage}
+          </div>
+        )}
 
         {error && (
           <div style={{
             backgroundColor: "#dc262622",
             border: "1px solid #dc262644",
-            borderRadius: 6,
-            padding: "8px 12px",
-            color: "#fca5a5",
-            fontSize: 13,
+            borderRadius: 8,
+            padding: "10px 14px",
             marginBottom: 16,
+            fontSize: 13,
+            color: "#fca5a5",
+            lineHeight: 1.5,
           }}>
             {error}
           </div>
         )}
 
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          style={{
-            width: "100%",
-            backgroundColor: loading ? "#0369a1" : "#0ea5e9",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            padding: "11px",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: loading ? "not-allowed" : "pointer",
-            transition: "background 0.2s",
-          }}
-        >
-          {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
-        </button>
+        <form onSubmit={handleLogin}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>
+              E-posta
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={{
+                width: "100%",
+                backgroundColor: "#0f172a",
+                border: "1px solid #334155",
+                borderRadius: 6,
+                color: "#f1f5f9",
+                padding: "10px 14px",
+                fontSize: 14,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+              placeholder="ornek@firma.com"
+            />
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>
+              Şifre
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={{
+                width: "100%",
+                backgroundColor: "#0f172a",
+                border: "1px solid #334155",
+                borderRadius: 6,
+                color: "#f1f5f9",
+                padding: "10px 14px",
+                fontSize: 14,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+              placeholder="••••••••"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              backgroundColor: loading ? "#0369a1" : "#0ea5e9",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              padding: "12px 0",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
+          </button>
+        </form>
+
+        <p style={{ textAlign: "center", fontSize: 11, color: "#475569", marginTop: 20 }}>
+          🔒 Her hesap aynı anda sadece 1 cihazdan kullanılabilir.
+        </p>
       </div>
     </div>
   );

@@ -651,16 +651,17 @@ export default function Page() {
   const [dofAddStatus, setDofAddStatus] = useState<string | null>(null);
 
   async function loadAll() {
+    if (!userProfile) return;
     setLoading(true);
     try {
       const [compSnap, empSnap, docSnap, obsSnap, dofSnap, riskSnap, signerSnap] = await Promise.all([
-        getDocs(collection(db, "companies")),
-        getDocs(collection(db, "employees")),
-        getDocs(collection(db, "documents")),
-        getDocs(collection(db, "observers")),
-        getDocs(collection(db, "dofs")),
-        getDocs(collection(db, "risks")),
-        getDocs(collection(db, "signers")),
+        getDocs(getRoleFilteredQuery("companies", userProfile)),
+        getDocs(getRoleFilteredQuery("employees", userProfile)),
+        getDocs(getRoleFilteredQuery("documents", userProfile)),
+        getDocs(getRoleFilteredQuery("observers", userProfile)),
+        getDocs(getRoleFilteredQuery("dofs", userProfile)),
+        getDocs(getRoleFilteredQuery("risks", userProfile)),
+        getDocs(getRoleFilteredQuery("signers", userProfile)),
       ]);
       setCompanies(compSnap.docs.map(d => ({ id: d.id, ...d.data() } as Company)));
       setEmployees(empSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
@@ -689,12 +690,14 @@ export default function Page() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
         router.push("/login");
-      } else {
-        loadAll();
       }
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (userProfile) loadAll();
+  }, [userProfile]);
 
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) ?? null;
   const selectedEmployeeCompany = selectedEmployee ? companies.find(c => c.id === selectedEmployee.companyId) ?? null : null;
@@ -744,7 +747,7 @@ export default function Page() {
     const naceCode = newCompany.naceCode || extractNaceFromSgk(newCompany.sgkSicil);
     const officialName = newCompany.officialName || officialNameFromSgk(newCompany.sgkSicil) || newCompany.nickName;
     const data = { nickName: newCompany.nickName, officialName, sgkSicil: newCompany.sgkSicil, naceCode, dangerClass: dangerFromNace(naceCode), employeeCount: parseInt(newCompany.employeeCount) || 0, contractEnd: newCompany.contractEnd, serviceType: newCompany.serviceType, contactEmail: newCompany.contactEmail };
-    const ref = await addDoc(collection(db, "companies"), data);
+    const ref = await addDoc(collection(db, "companies"), withCreatedBy(data, userProfile!.uid));
     setCompanies(prev => [...prev, { id: ref.id, ...data }]);
     setNewCompany({ nickName: "", officialName: "", sgkSicil: "", naceCode: "", dangerClass: "Az Tehlikeli", employeeCount: "", contractEnd: "", serviceType: "İş Güvenliği", contactEmail: "" });
   }
@@ -776,7 +779,7 @@ export default function Page() {
   async function addEmployee() {
     if (!newEmployee.firstName || !newEmployee.companyId) return;
     const data = { companyId: newEmployee.companyId, firstName: newEmployee.firstName, lastName: newEmployee.lastName, tcNo: newEmployee.tcNo, title: newEmployee.title, hireDate: newEmployee.hireDate, isActive: true, trainingComplete: false, checklist: { ...emptyChecklist } };
-    const ref = await addDoc(collection(db, "employees"), data);
+    const ref = await addDoc(collection(db, "employees"), withCreatedBy(data, userProfile!.uid));
     setEmployees(prev => [...prev, { id: ref.id, ...data }]);
     setNewEmployee({ companyId: "", firstName: "", lastName: "", tcNo: "", title: "", hireDate: "" });
   }
@@ -801,7 +804,7 @@ export default function Page() {
   async function addDocument() {
     if (!newDocument.companyId || !newDocument.type || !newDocument.issueDate) return;
     const data = { companyId: newDocument.companyId, employeeId: newDocument.employeeId || null, type: newDocument.type, issueDate: newDocument.issueDate, expiryDate: newDocument.expiryDate };
-    const ref = await addDoc(collection(db, "documents"), data);
+    const ref = await addDoc(collection(db, "documents"), withCreatedBy(data, userProfile!.uid));
     setDocuments(prev => [...prev, { id: ref.id, ...data }]);
     setNewDocument({ companyId: "", employeeId: "", type: "Risk Değerlendirme Raporu", issueDate: "", expiryDate: "" });
   }
@@ -814,7 +817,7 @@ export default function Page() {
   async function addObserver() {
     if (!newObserver.fullName) return;
     const data = { fullName: newObserver.fullName, title: newObserver.title, certificateNo: newObserver.certificateNo, phone: newObserver.phone };
-    const ref = await addDoc(collection(db, "observers"), data);
+    const ref = await addDoc(collection(db, "observers"), withCreatedBy(data, userProfile!.uid));
     setObservers(prev => [...prev, { id: ref.id, ...data }]);
     setNewObserver({ fullName: "", title: "", certificateNo: "", phone: "" });
   }
@@ -1013,7 +1016,7 @@ export default function Page() {
       const data: Omit<DofRecord, "id"> = { companyId: newDof.companyId, observerId: newDof.observerId, title: newDof.title, description: newDof.description, lawReference: newDof.lawReference, priority: newDof.priority, responsible: newDof.responsible, dueDate: newDof.dueDate, status: newDof.status, location: newDof.location, affectedPersons: newDof.affectedPersons || "" };
       if (newDof.beforePhoto) (data as any).beforePhoto = newDof.beforePhoto;
       if (newDof.afterPhoto) (data as any).afterPhoto = newDof.afterPhoto;
-      const ref = await addDoc(collection(db, "dofs"), data);
+      const ref = await addDoc(collection(db, "dofs"), withCreatedBy(data, userProfile!.uid));
       setDofs(prev => [...prev, { id: ref.id, ...data }]);
 
       // E-mail bildirimi — sadece email aktifse gönder
@@ -1103,7 +1106,7 @@ export default function Page() {
       lawReference: dof.lawReference || "",
       controlDate: "",
     };
-    const ref = await addDoc(collection(db, "risks"), data);
+    const ref = await addDoc(collection(db, "risks"), withCreatedBy(data, userProfile!.uid));
     setRisks(prev => [...prev, { id: ref.id, ...data }]);
     // DÖF durumunu güncelle
     await updateDoc(doc(db, "dofs", dof.id), { status: "Riske Aktarıldı" });
@@ -1126,7 +1129,7 @@ export default function Page() {
       responsible: newRisk.responsible, dueDate: newRisk.dueDate, status: newRisk.status,
       affectedPersons: newRisk.affectedPersons, lawReference: newRisk.lawReference, controlDate: newRisk.controlDate,
     };
-    const ref = await addDoc(collection(db, "risks"), data);
+    const ref = await addDoc(collection(db, "risks"), withCreatedBy(data, userProfile!.uid));
     setRisks(prev => [...prev, { id: ref.id, ...data }]);
     setNewRisk({ companyId: "", section: "", hazard: "", risk: "", currentMeasure: "", actionToTake: "", probability: "1", severity: "1", residualProbability: "1", residualSeverity: "1", responsible: "", dueDate: "", status: "Açık", affectedPersons: "", lawReference: "", controlDate: "" });
   }
@@ -1757,7 +1760,7 @@ export default function Page() {
                                     if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
                                       const name = (e.target as HTMLInputElement).value.trim();
                                       const data = { companyId: company.id, role, fullName: name };
-                                      const ref = await addDoc(collection(db, "signers"), data);
+                                      const ref = await addDoc(collection(db, "signers"), withCreatedBy(data, userProfile!.uid));
                                       setSigners(prev => [...prev, { id: ref.id, ...data }]);
                                       (e.target as HTMLInputElement).value = "";
                                     }

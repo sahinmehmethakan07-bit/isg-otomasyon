@@ -70,10 +70,13 @@ export async function generateEk2PDF(form: any) {
 
     // ── ÇALIŞANIN BİLGİLERİ ──
     {
-      table: {
-        widths: [140, "*", 80, "*"],
-        body: [
-          [{ text: "ÇALIŞANIN/İŞE GİRENİN", bold: true, fontSize: 10, colSpan: 4, fillColor: "#f0f0f0" }, {}, {}, {}],
+      columns: [
+        {
+          width: "*",
+          table: {
+            widths: [140, "*", 80, "*"],
+            body: [
+              [{ text: "ÇALIŞANIN/İŞE GİRENİN", bold: true, fontSize: 10, colSpan: 4, fillColor: "#f0f0f0" }, {}, {}, {}],
           [{ text: "Adı ve soyadı", fontSize: 9, bold: true }, { text: v(form.employeeName), fontSize: 9, colSpan: 3 }, {}, {}],
           [{ text: "T.C.Kimlik No", fontSize: 9, bold: true }, { text: v(form.tcKimlikNo), fontSize: 9, colSpan: 3 }, {}, {}],
           [{ text: "Doğum Yeri ve Tarihi", fontSize: 9, bold: true }, { text: v(form.dogumYeriTarihi), fontSize: 9 }, { text: "Cinsiyeti", fontSize: 9, bold: true }, { text: v(form.cinsiyet), fontSize: 9 }],
@@ -84,9 +87,23 @@ export async function generateEk2PDF(form: any) {
           [{ text: "Mesleği/Meslek Dalı", fontSize: 9, bold: true }, { text: v(form.meslegi), fontSize: 9, colSpan: 3 }, {}, {}],
           [{ text: "Yaptığı iş", fontSize: 9, bold: true }, { text: v(form.yaptigiIs), fontSize: 9, colSpan: 3 }, {}, {}],
           [{ text: "Çalıştığı bölüm", fontSize: 9, bold: true }, { text: v(form.calistigiBolum), fontSize: 9, colSpan: 3 }, {}, {}],
-        ],
-      },
-      layout: LN,
+            ],
+          },
+          layout: LN,
+        },
+        {
+          width: 85,
+          margin: [8, 0, 0, 0],
+          table: {
+            widths: [75],
+            heights: [90],
+            body: [
+              [{ text: "Fotoğraf", fontSize: 8, color: "#999", alignment: "center", margin: [0, 35, 0, 0] }],
+            ],
+          },
+          layout: LN,
+        },
+      ],
       margin: [0, 0, 0, 6],
     },
 

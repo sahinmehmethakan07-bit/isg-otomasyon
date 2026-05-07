@@ -124,7 +124,7 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
           🍪 Çerez ve Veri İşleme Politikası", textAlign: "center
         </h2>
 
-        <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7, marginBottom: 12 }}>
+        <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7, marginBottom: 12, textAlign: "center" as const }}>
           Bu uygulama, size güvenli ve işlevsel bir deneyim sunabilmek için belirli verileri
           işlemekte ve çerezler kullanmaktadır. Devam etmeden önce lütfen aşağıdaki bilgileri
           inceleyiniz.

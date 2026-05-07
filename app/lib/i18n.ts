@@ -74,6 +74,8 @@ const translations: Record<Language, Record<string, string>> = {
     "role.doctor.desc": "Sadece kendi eklediği verileri görür",
     "role.nurse": "Hemşire",
     "role.nurse.desc": "Sadece kendi eklediği verileri görür",
+    "role.safety_expert": "İş Güvenliği Uzmanı",
+    "role.safety_expert.desc": "İş güvenliği değerlendirmelerini yönetir",
     "role.login": "Girişi",
 
     // Dashboard / Sekmeler
@@ -223,6 +225,8 @@ const translations: Record<Language, Record<string, string>> = {
     "role.doctor.desc": "Views only their own data",
     "role.nurse": "Nurse",
     "role.nurse.desc": "Views only their own data",
+    "role.safety_expert": "Safety Expert",
+    "role.safety_expert.desc": "Manages occupational safety assessments",
     "role.login": "Login",
 
     // Dashboard / Tabs

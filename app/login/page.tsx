@@ -50,6 +50,7 @@ export default function LoginPage() {
     admin: { label: t("role.admin"), desc: t("role.admin.desc") },
     doctor: { label: t("role.doctor"), desc: t("role.doctor.desc") },
     nurse: { label: t("role.nurse"), desc: t("role.nurse.desc") },
+    safety_expert: { label: t("role.safety_expert"), desc: t("role.safety_expert.desc") },
   };
 
   function selectRole(role: UserRole) {

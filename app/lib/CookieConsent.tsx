@@ -120,8 +120,8 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
           </h1>
         </div>
 
-        <h2 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", marginBottom: 12 }}>
-          🍪 Çerez ve Veri İşleme Politikası
+        <h2 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", marginBottom: 12, textAlign: "center" as const }}>
+          🍪 Çerez ve Veri İşleme Politikası", textAlign: "center
         </h2>
 
         <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7, marginBottom: 12 }}>

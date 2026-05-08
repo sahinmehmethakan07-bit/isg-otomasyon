@@ -82,13 +82,6 @@ export default function LoginPage() {
         return;
       }
 
-      if (profile.role !== selectedRole) {
-        await signOut(auth);
-        setError(t("login.wrongRole", { role: roleLabels[profile.role].label }));
-        setLoading(false);
-        return;
-      }
-
       router.push("/");
     } catch (err: any) {
       console.error("[Login] Error:", err);

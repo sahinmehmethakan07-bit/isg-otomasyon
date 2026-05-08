@@ -12,10 +12,6 @@ import {
 import { auth } from "../../lib/firebase";
 import { useRouter } from "next/navigation";
 import {
-  checkExistingSession,
-  createSession,
-} from "../lib/sessionManager";
-import {
   getUserProfile,
   UserRole,
   ROLE_CONFIG,
@@ -93,15 +89,6 @@ export default function LoginPage() {
         return;
       }
 
-      const sessionCheck = await checkExistingSession(user.uid);
-      if (sessionCheck.blocked) {
-        await signOut(auth);
-        setError(t("login.activeSession"));
-        setLoading(false);
-        return;
-      }
-
-      await createSession(user.uid);
       router.push("/");
     } catch (err: any) {
       console.error("[Login] Error:", err);

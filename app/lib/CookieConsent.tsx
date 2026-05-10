@@ -1,11 +1,5 @@
 /**
- * CookieConsent.tsx — GDPR-Uyumlu Çerez/Veri İzni Bileşeni
- *
- * Kullanıcı ilk kez siteye girdiğinde gösterilir.
- * Kabul edene kadar uygulama kullanılamaz.
- * Tercih localStorage'da saklanır.
- *
- * Türkçe — ISG Otomasyon'a özel
+ * CookieConsent.tsx — GDPR-Uyumlu Çerez/Veri İzni Bileşeni (Mobil Uyumlu)
  */
 
 "use client";
@@ -21,13 +15,18 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
   const [consent, setConsent] = useState<ConsentStatus>("pending");
   const [showDetails, setShowDetails] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(CONSENT_KEY);
     if (stored === "accepted") {
       setConsent("accepted");
     }
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
     setLoading(false);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   function handleAcceptAll() {
@@ -55,21 +54,22 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
         justifyContent: "center",
         backgroundColor: "#0a0e1a",
         fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-        padding: 20,
+        padding: isMobile ? 12 : 20,
       }}>
         <div style={{
           backgroundColor: "#111827",
           border: "1px solid #1e293b",
           borderRadius: 16,
-          padding: 32,
+          padding: isMobile ? 20 : 32,
           maxWidth: 480,
+          width: "100%",
           textAlign: "center",
         }}>
           <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#f1f5f9", marginBottom: 12 }}>
+          <h2 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: "#f1f5f9", marginBottom: 12 }}>
             Çerez İzni Gerekli
           </h2>
-          <p style={{ fontSize: 14, color: "#94a3b8", lineHeight: 1.6, marginBottom: 20 }}>
+          <p style={{ fontSize: isMobile ? 13 : 14, color: "#94a3b8", lineHeight: 1.6, marginBottom: 20 }}>
             Bu uygulama, oturum yönetimi ve temel işlevler için çerez kullanımını gerektirir.
             Çerezleri kabul etmeden uygulamayı kullanmanız mümkün değildir.
           </p>
@@ -84,6 +84,7 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
               fontSize: 14,
               fontWeight: 600,
               cursor: "pointer",
+              width: isMobile ? "100%" : "auto",
             }}
           >
             Geri Dön
@@ -98,40 +99,46 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
     <div style={{
       minHeight: "100vh",
       display: "flex",
-      alignItems: "center",
+      alignItems: isMobile ? "flex-start" : "center",
       justifyContent: "center",
       backgroundColor: "#0a0e1a",
       fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-      padding: 20,
+      padding: isMobile ? "40px 12px 20px" : 20,
+      overflowY: "auto",
     }}>
       <div style={{
         backgroundColor: "#111827",
         border: "1px solid #1e293b",
-        borderRadius: 16,
-        padding: 32,
+        borderRadius: isMobile ? 12 : 16,
+        padding: isMobile ? 16 : 32,
         maxWidth: 560,
         width: "100%",
       }}>
         {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <span style={{ fontSize: 36 }}>🦺</span>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#f1f5f9", marginTop: 8 }}>
+        <div style={{ textAlign: "center", marginBottom: isMobile ? 12 : 20 }}>
+          <span style={{ fontSize: isMobile ? 28 : 36 }}>🦺</span>
+          <h1 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 700, color: "#f1f5f9", marginTop: 8 }}>
             İSG <span style={{ color: "#38bdf8" }}>Otomasyon</span>
           </h1>
         </div>
 
-        <h2 style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", marginBottom: 12, textAlign: "center" as const }}>
-          🍪 Çerez ve Veri İşleme Politikası", textAlign: "center
+        <h2 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 700, color: "#f1f5f9", marginBottom: 12 }}>
+          🍪 Çerez ve Veri İşleme Politikası
         </h2>
 
-        <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7, marginBottom: 12, textAlign: "center" as const }}>
+        <p style={{ fontSize: isMobile ? 12 : 13, color: "#94a3b8", lineHeight: 1.7, marginBottom: 12 }}>
           Bu uygulama, size güvenli ve işlevsel bir deneyim sunabilmek için belirli verileri
           işlemekte ve çerezler kullanmaktadır. Devam etmeden önce lütfen aşağıdaki bilgileri
           inceleyiniz.
         </p>
 
-        {/* Özet kutuları */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+        {/* Özet kutuları — Mobil: 1 kolon, Desktop: 2 kolon */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+          gap: isMobile ? 8 : 10,
+          marginBottom: 16,
+        }}>
           {[
             { icon: "🔐", title: "Oturum Yönetimi", desc: "Güvenli giriş ve tek cihaz kontrolü" },
             { icon: "📋", title: "Form Verileri", desc: "Muayene ve risk değerlendirme kayıtları" },
@@ -142,11 +149,16 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
               backgroundColor: "#0f172a",
               border: "1px solid #1e293b",
               borderRadius: 10,
-              padding: "10px 12px",
+              padding: isMobile ? "8px 12px" : "10px 12px",
+              display: isMobile ? "flex" : "block",
+              alignItems: "center",
+              gap: isMobile ? 10 : 0,
             }}>
-              <div style={{ fontSize: 18, marginBottom: 4 }}>{item.icon}</div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", marginBottom: 2 }}>{item.title}</div>
-              <div style={{ fontSize: 11, color: "#64748b" }}>{item.desc}</div>
+              <div style={{ fontSize: isMobile ? 16 : 18, marginBottom: isMobile ? 0 : 4 }}>{item.icon}</div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", marginBottom: 2 }}>{item.title}</div>
+                <div style={{ fontSize: 11, color: "#64748b" }}>{item.desc}</div>
+              </div>
             </div>
           ))}
         </div>
@@ -173,13 +185,14 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
             backgroundColor: "#0f172a",
             border: "1px solid #1e293b",
             borderRadius: 10,
-            padding: 16,
+            padding: isMobile ? 12 : 16,
             marginBottom: 16,
-            fontSize: 12,
+            fontSize: isMobile ? 11 : 12,
             color: "#94a3b8",
             lineHeight: 1.7,
-            maxHeight: 240,
+            maxHeight: isMobile ? 200 : 240,
             overflowY: "auto",
+            WebkitOverflowScrolling: "touch",
           }}>
             <p style={{ fontWeight: 600, color: "#e2e8f0", marginBottom: 8 }}>
               1. İşlenen Veriler
@@ -249,8 +262,13 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        {/* Butonlar */}
-        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+        {/* Butonlar — Mobil: dikey, Desktop: yatay */}
+        <div style={{
+          display: "flex",
+          flexDirection: isMobile ? "column" : "row",
+          gap: 10,
+          marginTop: 8,
+        }}>
           <button
             onClick={handleAcceptAll}
             style={{
@@ -259,7 +277,7 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
               color: "#fff",
               border: "none",
               borderRadius: 10,
-              padding: "13px 0",
+              padding: isMobile ? "15px 0" : "13px 0",
               fontSize: 14,
               fontWeight: 600,
               cursor: "pointer",
@@ -270,12 +288,12 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
           <button
             onClick={handleReject}
             style={{
-              flex: 0.6,
+              flex: isMobile ? 1 : 0.6,
               backgroundColor: "transparent",
               color: "#64748b",
               border: "1px solid #334155",
               borderRadius: 10,
-              padding: "13px 0",
+              padding: isMobile ? "15px 0" : "13px 0",
               fontSize: 13,
               cursor: "pointer",
             }}
@@ -293,17 +311,11 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
   );
 }
 
-/**
- * Consent durumunu kontrol etmek için yardımcı fonksiyon
- */
 export function hasConsent(): boolean {
   if (typeof window === "undefined") return false;
   return localStorage.getItem(CONSENT_KEY) === "accepted";
 }
 
-/**
- * Consent'i sıfırlamak için (ayarlardan kullanılabilir)
- */
 export function resetConsent(): void {
   localStorage.removeItem(CONSENT_KEY);
   localStorage.removeItem(CONSENT_DATE_KEY);

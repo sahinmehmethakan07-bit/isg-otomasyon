@@ -1,5 +1,5 @@
 /**
- * login/page.tsx — Rol Tabanlı Login Sayfası (TR/EN Dil Destekli)
+ * login/page.tsx — Rol Tabanlı Login Sayfası (TR/EN Dil Destekli + Mobil Uyumlu)
  */
 
 "use client";
@@ -32,6 +32,15 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  /* ── Mobil ekran algılama ── */
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -121,9 +130,11 @@ export default function LoginPage() {
         fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
         position: "relative",
         overflow: "hidden",
+        /* Mobil: padding ayarı */
+        padding: isMobile ? "20px 12px" : 0,
       }}>
         {/* Dil değiştirici — sağ üst */}
-        <div style={{ position: "absolute", top: 16, right: 20, zIndex: 10 }}>
+        <div style={{ position: "absolute", top: 16, right: isMobile ? 12 : 20, zIndex: 10 }}>
           <LanguageSwitcher lang={lang} setLang={setLang} />
         </div>
 
@@ -138,14 +149,27 @@ export default function LoginPage() {
           pointerEvents: "none",
         }} />
 
-        <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: step === "select_role" ? 680 : 420, padding: "0 20px" }}>
+        <div style={{
+          position: "relative",
+          zIndex: 1,
+          width: "100%",
+          /* Mobil: tam genişlik, desktop: sabit max */
+          maxWidth: isMobile ? "100%" : (step === "select_role" ? 680 : 420),
+          padding: isMobile ? 0 : "0 20px",
+        }}>
           {/* Logo */}
-          <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <span style={{ fontSize: 44 }}>🦺</span>
-            <h1 style={{ fontSize: 24, fontWeight: 700, color: "#f1f5f9", marginTop: 8, letterSpacing: "-0.02em" }}>
+          <div style={{ textAlign: "center", marginBottom: isMobile ? 20 : 32 }}>
+            <span style={{ fontSize: isMobile ? 36 : 44 }}>🦺</span>
+            <h1 style={{
+              fontSize: isMobile ? 20 : 24,
+              fontWeight: 700,
+              color: "#f1f5f9",
+              marginTop: 8,
+              letterSpacing: "-0.02em",
+            }}>
               {lang === "tr" ? "İSG" : "OHS"} <span style={{ color: "#38bdf8" }}>{lang === "tr" ? "Otomasyon" : "Automation"}</span>
             </h1>
-            <p style={{ fontSize: 14, color: "#64748b", marginTop: 4 }}>
+            <p style={{ fontSize: isMobile ? 12 : 14, color: "#64748b", marginTop: 4 }}>
               {t("app.subtitle")}
             </p>
           </div>
@@ -169,10 +193,15 @@ export default function LoginPage() {
           {/* ── ADIM 1: Rol Seçimi ── */}
           {step === "select_role" && (
             <div>
-              <p style={{ textAlign: "center", fontSize: 15, color: "#94a3b8", marginBottom: 24 }}>
+              <p style={{ textAlign: "center", fontSize: isMobile ? 13 : 15, color: "#94a3b8", marginBottom: isMobile ? 16 : 24 }}>
                 {t("login.selectRole")}
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+              {/* Mobil: dikey layout (1 kolon), Desktop: 3 kolon */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+                gap: isMobile ? 10 : 16,
+              }}>
                 {(Object.entries(ROLE_CONFIG) as [UserRole, typeof ROLE_CONFIG["admin"]][])
                   .filter(([role]) => role !== "admin")
                   .map(([role, config]) => (
@@ -182,18 +211,22 @@ export default function LoginPage() {
                     style={{
                       backgroundColor: "#111827",
                       border: "1px solid #1e293b",
-                      borderRadius: 16,
-                      padding: "32px 20px",
+                      borderRadius: isMobile ? 12 : 16,
+                      /* Mobil: yatay layout, Desktop: dikey */
+                      padding: isMobile ? "16px 16px" : "32px 20px",
                       cursor: "pointer",
                       transition: "all 0.2s ease",
-                      textAlign: "center",
+                      textAlign: isMobile ? "left" : "center",
                       position: "relative",
                       overflow: "hidden",
+                      display: isMobile ? "flex" : "block",
+                      alignItems: "center",
+                      gap: isMobile ? 12 : 0,
                     }}
                     onMouseEnter={(e) => {
                       (e.currentTarget as HTMLElement).style.borderColor = config.color;
-                      (e.currentTarget as HTMLElement).style.transform = "translateY(-4px)";
-                      (e.currentTarget as HTMLElement).style.boxShadow = `0 12px 40px ${config.color}22`;
+                      (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+                      (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${config.color}22`;
                     }}
                     onMouseLeave={(e) => {
                       (e.currentTarget as HTMLElement).style.borderColor = "#1e293b";
@@ -201,18 +234,20 @@ export default function LoginPage() {
                       (e.currentTarget as HTMLElement).style.boxShadow = "none";
                     }}
                   >
-                    <div style={{ fontSize: 40, marginBottom: 12 }}>{config.icon}</div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", marginBottom: 6 }}>
-                      {roleLabels[role].label}
-                    </div>
-                    <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.4 }}>
-                      {roleLabels[role].desc}
+                    <div style={{ fontSize: isMobile ? 28 : 40, marginBottom: isMobile ? 0 : 12 }}>{config.icon}</div>
+                    <div>
+                      <div style={{ fontSize: isMobile ? 14 : 16, fontWeight: 700, color: "#f1f5f9", marginBottom: isMobile ? 2 : 6 }}>
+                        {roleLabels[role].label}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.4 }}>
+                        {roleLabels[role].desc}
+                      </div>
                     </div>
                     <div style={{
                       position: "absolute",
                       bottom: 0,
-                      left: "20%",
-                      right: "20%",
+                      left: isMobile ? 0 : "20%",
+                      right: isMobile ? 0 : "20%",
                       height: 3,
                       backgroundColor: config.color,
                       borderRadius: "3px 3px 0 0",
@@ -221,8 +256,15 @@ export default function LoginPage() {
                   </button>
                 ))}
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24 }}>
-                <p style={{ fontSize: 11, color: "#334155" }}>
+              <div style={{
+                display: "flex",
+                flexDirection: isMobile ? "column" : "row",
+                justifyContent: "space-between",
+                alignItems: isMobile ? "stretch" : "center",
+                gap: isMobile ? 10 : 0,
+                marginTop: isMobile ? 16 : 24,
+              }}>
+                <p style={{ fontSize: 11, color: "#334155", textAlign: isMobile ? "center" : "left" }}>
                   🔒 {t("login.singleDevice")}
                 </p>
                 <button
@@ -233,7 +275,7 @@ export default function LoginPage() {
                     borderRadius: 8,
                     color: "#64748b",
                     fontSize: 12,
-                    padding: "5px 14px",
+                    padding: isMobile ? "10px 14px" : "5px 14px",
                     cursor: "pointer",
                     transition: "all 0.2s",
                   }}
@@ -257,10 +299,16 @@ export default function LoginPage() {
             <div style={{
               backgroundColor: "#111827",
               border: `1px solid ${roleConfig.color}33`,
-              borderRadius: 16,
-              padding: 32,
+              borderRadius: isMobile ? 12 : 16,
+              padding: isMobile ? 20 : 32,
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: isMobile ? 8 : 12,
+                marginBottom: isMobile ? 16 : 24,
+                flexWrap: "wrap",
+              }}>
                 <button
                   onClick={goBack}
                   style={{
@@ -275,10 +323,17 @@ export default function LoginPage() {
                 >
                   ← {t("back")}
                 </button>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-                  <span style={{ fontSize: 24 }}>{roleConfig.icon}</span>
-                  <div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: isMobile ? 20 : 24 }}>{roleConfig.icon}</span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{
+                      fontSize: isMobile ? 14 : 16,
+                      fontWeight: 700,
+                      color: "#f1f5f9",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}>
                       {roleLabels[selectedRole!].label} {t("role.login")}
                     </div>
                     <div style={{ fontSize: 11, color: "#64748b" }}>
@@ -313,15 +368,15 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    autoFocus
+                    autoFocus={!isMobile}
                     style={{
                       width: "100%",
                       backgroundColor: "#0a0e1a",
                       border: "1px solid #1e293b",
                       borderRadius: 8,
                       color: "#f1f5f9",
-                      padding: "12px 14px",
-                      fontSize: 14,
+                      padding: isMobile ? "14px" : "12px 14px",
+                      fontSize: 16, /* 16px: iOS zoom engelleyici */
                       outline: "none",
                       boxSizing: "border-box",
                     }}
@@ -344,8 +399,8 @@ export default function LoginPage() {
                       border: "1px solid #1e293b",
                       borderRadius: 8,
                       color: "#f1f5f9",
-                      padding: "12px 14px",
-                      fontSize: 14,
+                      padding: isMobile ? "14px" : "12px 14px",
+                      fontSize: 16, /* 16px: iOS zoom engelleyici */
                       outline: "none",
                       boxSizing: "border-box",
                     }}
@@ -362,8 +417,8 @@ export default function LoginPage() {
                     color: "#fff",
                     border: "none",
                     borderRadius: 10,
-                    padding: "13px 0",
-                    fontSize: 14,
+                    padding: isMobile ? "15px 0" : "13px 0",
+                    fontSize: isMobile ? 15 : 14,
                     fontWeight: 600,
                     cursor: loading ? "not-allowed" : "pointer",
                     transition: "opacity 0.2s",

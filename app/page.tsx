@@ -474,30 +474,33 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signer
 
 
 // ── Styles ────────────────────────────────────────────────────────────────────
+// ── Mobil algılama yardımcısı (styles dışında kullanılır) ──
+const isMobileScreen = () => typeof window !== "undefined" && window.innerWidth <= 768;
+
 const styles: Record<string, React.CSSProperties> = {
-  app: { minHeight: "100vh", backgroundColor: "var(--isg-bg)", color: "var(--isg-text)", fontFamily: "'IBM Plex Sans', system-ui, sans-serif" },
-  header: { backgroundColor: "var(--isg-header)", borderBottom: "1px solid var(--isg-border)", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 },
-  nav: { display: "flex", gap: 2, padding: "12px 24px 0", borderBottom: "1px solid var(--isg-border)", backgroundColor: "var(--isg-nav)", overflowX: "auto" as const },
-  content: { padding: 24, maxWidth: 1400, margin: "0 auto" },
-  card: { backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 10, padding: 20, marginBottom: 16 },
+  app: { minHeight: "100vh", backgroundColor: "var(--isg-bg)", color: "var(--isg-text)", fontFamily: "'IBM Plex Sans', system-ui, sans-serif", overflowX: "hidden" as const },
+  header: { backgroundColor: "var(--isg-header)", borderBottom: "1px solid var(--isg-border)", padding: "0 12px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, gap: 8 },
+  nav: { display: "flex", gap: 2, padding: "8px 12px 0", borderBottom: "1px solid var(--isg-border)", backgroundColor: "var(--isg-nav)", overflowX: "auto" as const, WebkitOverflowScrolling: "touch" as const, msOverflowStyle: "none" as const, scrollbarWidth: "none" as const },
+  content: { padding: "16px 12px", maxWidth: 1400, margin: "0 auto" },
+  card: { backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 10, padding: "16px 12px", marginBottom: 16 },
   sectionTitle: { fontSize: 13, fontWeight: 600, color: "var(--isg-text-muted)", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 16 },
-  input: { width: "100%", backgroundColor: "var(--isg-input-bg)", border: "1px solid var(--isg-border)", borderRadius: 6, color: "var(--isg-text)", padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" as const },
-  select: { width: "100%", backgroundColor: "var(--isg-input-bg)", border: "1px solid var(--isg-border)", borderRadius: 6, color: "var(--isg-text)", padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" as const },
+  input: { width: "100%", backgroundColor: "var(--isg-input-bg)", border: "1px solid var(--isg-border)", borderRadius: 6, color: "var(--isg-text)", padding: "10px 12px", fontSize: 16, outline: "none", boxSizing: "border-box" as const },
+  select: { width: "100%", backgroundColor: "var(--isg-input-bg)", border: "1px solid var(--isg-border)", borderRadius: 6, color: "var(--isg-text)", padding: "10px 12px", fontSize: 16, outline: "none", boxSizing: "border-box" as const },
   label: { fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 4, display: "block" },
-  formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 },
-  btnPrimary: { backgroundColor: "#0ea5e9", color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
-  btnDanger: { backgroundColor: "#dc2626", color: "#fff", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer" },
-  btnSecondary: { backgroundColor: "var(--isg-btn-secondary)", color: "var(--isg-text)", border: "1px solid var(--isg-border)", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer" },
-  btnSuccess: { backgroundColor: "#16a34a", color: "#fff", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
+  formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(200px, 100%), 1fr))", gap: 12 },
+  btnPrimary: { backgroundColor: "#0ea5e9", color: "#fff", border: "none", borderRadius: 6, padding: "10px 16px", fontSize: 14, fontWeight: 600, cursor: "pointer" },
+  btnDanger: { backgroundColor: "#dc2626", color: "#fff", border: "none", borderRadius: 6, padding: "8px 12px", fontSize: 12, cursor: "pointer" },
+  btnSecondary: { backgroundColor: "var(--isg-btn-secondary)", color: "var(--isg-text)", border: "1px solid var(--isg-border)", borderRadius: 6, padding: "8px 12px", fontSize: 12, cursor: "pointer" },
+  btnSuccess: { backgroundColor: "#16a34a", color: "#fff", border: "none", borderRadius: 6, padding: "10px 16px", fontSize: 14, fontWeight: 600, cursor: "pointer" },
   badge: { display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600 },
   table: { width: "100%", borderCollapse: "collapse" as const, fontSize: 13 },
-  th: { textAlign: "left" as const, padding: "8px 12px", borderBottom: "1px solid var(--isg-border)", color: "var(--isg-text-muted)", fontWeight: 600, fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" },
-  td: { padding: "10px 12px", borderBottom: "1px solid var(--isg-border)", verticalAlign: "top" as const, color: "var(--isg-text)" },
+  th: { textAlign: "left" as const, padding: "8px 10px", borderBottom: "1px solid var(--isg-border)", color: "var(--isg-text-muted)", fontWeight: 600, fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.05em", whiteSpace: "nowrap" as const },
+  td: { padding: "10px 10px", borderBottom: "1px solid var(--isg-border)", verticalAlign: "top" as const, color: "var(--isg-text)" },
   searchBar: { display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" as const },
-  statGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12, marginBottom: 20 },
-  statCard: { backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 8, padding: 16 },
-  statValue: { fontSize: 28, fontWeight: 700, lineHeight: 1, marginBottom: 4 },
-  statLabel: { fontSize: 12, color: "var(--isg-text-muted)" },
+  statGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(140px, 45%), 1fr))", gap: 10, marginBottom: 20 },
+  statCard: { backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 8, padding: 12 },
+  statValue: { fontSize: 24, fontWeight: 700, lineHeight: 1, marginBottom: 4 },
+  statLabel: { fontSize: 11, color: "var(--isg-text-muted)" },
 };
 
 function DatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -1172,11 +1175,11 @@ export default function Page() {
     
     <div style={styles.app} className="isg-app">
       <header style={styles.header} className="isg-header">
-        <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 700, fontSize: 17 }} className="isg-text">
-          <span style={{ fontSize: 20 }}>🦺</span>
-          <span>İSG <span style={{ color: "#38bdf8" }}>Otomasyon</span></span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 15, minWidth: 0 }} className="isg-text">
+          <span style={{ fontSize: 18 }}>🦺</span>
+          <span style={{ whiteSpace: "nowrap" }}>İSG <span style={{ color: "#38bdf8" }}>Otomasyon</span></span>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
           <button style={{ fontSize: 20, padding: "4px 8px", backgroundColor: "transparent", border: "none", cursor: "pointer" }} onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Açık tema" : "Koyu tema"}>
             {darkMode ? "☀️" : "🌙"}
           </button>
@@ -1262,7 +1265,7 @@ export default function Page() {
               <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
               <span style={{ color: "#64748b", fontSize: 13 }}>{filteredCompanies.length} firma</span>
             </div>
-            <div style={{ ...styles.card, padding: 0, overflow: "auto" }}>
+            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
               <table style={styles.table}>
                 <thead><tr>{["Kısa Ad", "Resmi Unvan", "SGK Sicil", "NACE", "Tehlike", "Personel", "Sözleşme", "Hizmet", "Durum", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
                 <tbody>
@@ -1310,7 +1313,7 @@ export default function Page() {
                 <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
                 <span style={{ color: "#64748b", fontSize: 13 }}>{filteredEmployees.length} kişi</span>
               </div>
-              <div style={{ ...styles.card, padding: 0, overflow: "auto" }}>
+              <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
                 <table style={styles.table}>
                   <thead><tr>{["Ad Soyad", "TC No", "Unvan", "Firma", "İşe Giriş", "Eğitim", "Kontrol Listesi", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
                   <tbody>
@@ -1395,7 +1398,7 @@ export default function Page() {
               <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
               <span style={{ color: "#64748b", fontSize: 13 }}>{filteredDocuments.length} belge</span>
             </div>
-            <div style={{ ...styles.card, padding: 0, overflow: "auto" }}>
+            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
               <table style={styles.table}>
                 <thead><tr>{["Belge Türü", "Firma", "Personel", "Düzenleme", "Geçerlilik", "Durum", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
                 <tbody>
@@ -1667,7 +1670,7 @@ export default function Page() {
               </button>
             </div>
 
-            <div style={{ ...styles.card, padding: 0, overflow: "auto" }}>
+            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
               <table style={styles.table}>
                 <thead>
                   <tr>

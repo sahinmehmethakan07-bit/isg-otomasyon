@@ -1,9 +1,26 @@
 @import "tailwindcss";
 
-body {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+/* ── Temel Reset — mobil taşma engelleyici ── */
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+}
+
+body {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  background-color: #0f172a;
+  color: #e2e8f0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ── Dark tema (varsayılan) ── */
 body, body.dark {
   --isg-bg: #0f172a;
   --isg-card: #1e293b;
@@ -14,8 +31,10 @@ body, body.dark {
   --isg-header: #1e293b;
   --isg-nav: #0f172a;
   --isg-btn-secondary: #334155;
+  --isg-today-bg: #1e3a5f;
 }
 
+/* ── Light tema ── */
 body.light {
   --isg-bg: #f1f5f9;
   --isg-card: #ffffff;
@@ -26,12 +45,20 @@ body.light {
   --isg-header: #ffffff;
   --isg-nav: #f8fafc;
   --isg-btn-secondary: #e2e8f0;
-}
-
-body, body.dark {
-  --isg-today-bg: #1e3a5f;
-}
-
-body.light {
   --isg-today-bg: #dbeafe;
+}
+
+/* ── Mobil responsive — input zoom engelleyici ── */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important; /* iOS zoom engelleyici */
+  }
+
+  /* Tablo taşma engelleyici */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
 }

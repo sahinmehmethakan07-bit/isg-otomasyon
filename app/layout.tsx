@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "İSG Otomasyon",
   description: "İş Sağlığı ve Güvenliği Yönetim Sistemi",
+  manifest: "/manifest.json",
 };
 
 /* ── Viewport meta — mobil uyumluluk için zorunlu ── */
@@ -23,6 +24,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: "#0f3460",
 };
 
 export default function RootLayout({

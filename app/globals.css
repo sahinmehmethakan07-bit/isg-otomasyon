@@ -1,64 +1,137 @@
 @import "tailwindcss";
 
-/* ── Temel Reset — mobil taşma engelleyici ── */
-*, *::before, *::after {
-  box-sizing: border-box;
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-html, body {
-  overflow-x: hidden;
-  width: 100%;
-  max-width: 100vw;
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  background-color: #0f172a;
-  color: #e2e8f0;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #0c0c0e;
+  color: #e8e8ed;
 }
 
-/* ── Dark tema (varsayılan) ── */
+/* ── CSS VARIABLES ─────────────────────────────────────────── */
 body, body.dark {
-  --isg-bg: #0f172a;
-  --isg-card: #1e293b;
-  --isg-border: #334155;
-  --isg-text: #e2e8f0;
-  --isg-text-muted: #94a3b8;
-  --isg-input-bg: #0f172a;
-  --isg-header: #1e293b;
-  --isg-nav: #0f172a;
-  --isg-btn-secondary: #334155;
+  --isg-bg: #0c0c0e;
+  --isg-card: #161618;
+  --isg-card-hover: #1c1c1f;
+  --isg-border: rgba(255,255,255,0.07);
+  --isg-text: #e8e8ed;
+  --isg-text-muted: rgba(255,255,255,0.35);
+  --isg-input-bg: #1c1c1f;
+  --isg-header: rgba(12,12,14,0.92);
+  --isg-nav: rgba(12,12,14,0.8);
+  --isg-btn-secondary: rgba(255,255,255,0.06);
   --isg-today-bg: #1e3a5f;
+  --isg-accent: #3b82f6;
+  --isg-accent-glow: rgba(59,130,246,0.3);
 }
 
-/* ── Light tema ── */
 body.light {
-  --isg-bg: #f1f5f9;
+  --isg-bg: #fafafa;
   --isg-card: #ffffff;
-  --isg-border: #e2e8f0;
-  --isg-text: #1e293b;
-  --isg-text-muted: #64748b;
-  --isg-input-bg: #f8fafc;
-  --isg-header: #ffffff;
-  --isg-nav: #f8fafc;
-  --isg-btn-secondary: #e2e8f0;
+  --isg-card-hover: #f5f5f5;
+  --isg-border: rgba(0,0,0,0.08);
+  --isg-text: #111111;
+  --isg-text-muted: rgba(0,0,0,0.4);
+  --isg-input-bg: #f5f5f5;
+  --isg-header: rgba(250,250,250,0.92);
+  --isg-nav: rgba(250,250,250,0.8);
+  --isg-btn-secondary: rgba(0,0,0,0.05);
   --isg-today-bg: #dbeafe;
+  --isg-accent: #2563eb;
+  --isg-accent-glow: rgba(37,99,235,0.2);
 }
 
-/* ── Mobil responsive — input zoom engelleyici ── */
-@media (max-width: 768px) {
-  input, select, textarea {
-    font-size: 16px !important; /* iOS zoom engelleyici */
-  }
+/* ── HEADER STICKY ─────────────────────────────────────────── */
+.isg-header {
+  position: sticky !important;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
 
-  /* Tablo taşma engelleyici */
-  table {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    max-width: 100%;
-  }
+.isg-nav {
+  position: sticky;
+  top: 52px;
+  z-index: 40;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ── SUBTLE NOISE TEXTURE ──────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* ── BUTTONS ───────────────────────────────────────────────── */
+button {
+  transition: all 0.15s ease;
+}
+
+button:hover {
+  opacity: 0.85;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+/* Primary button hover */
+button[style*="background-color: rgb(255, 255, 255)"],
+button[style*="backgroundColor: \"#fff\""] {
+  box-shadow: 0 0 0 0 rgba(255,255,255,0);
+}
+
+/* ── INPUTS ────────────────────────────────────────────────── */
+input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: rgba(255,255,255,0.2) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.04) !important;
+  background-color: #222226 !important;
+}
+
+/* ── TABLE ROWS ────────────────────────────────────────────── */
+tbody tr:hover td {
+  background-color: rgba(255,255,255,0.03);
+}
+
+/* ── CARDS ─────────────────────────────────────────────────── */
+.isg-stat-card {
+  transition: all 0.2s ease !important;
+}
+
+/* ── FADE IN ANIMATION ─────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+main > div {
+  animation: fadeUp 0.35s ease-out;
+}
+
+/* ── SCROLLBAR ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+.isg-nav::-webkit-scrollbar { display: none; }
+
+/* ── SELECTION ─────────────────────────────────────────────── */
+::selection {
+  background: rgba(59,130,246,0.3);
+  color: #fff;
 }

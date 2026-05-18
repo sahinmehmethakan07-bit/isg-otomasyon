@@ -478,29 +478,29 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signer
 const isMobileScreen = () => typeof window !== "undefined" && window.innerWidth <= 768;
 
 const styles: Record<string, React.CSSProperties> = {
-  app: { minHeight: "100vh", backgroundColor: "var(--isg-bg)", color: "var(--isg-text)", fontFamily: "'IBM Plex Sans', system-ui, sans-serif", overflowX: "hidden" as const },
-  header: { backgroundColor: "var(--isg-header)", borderBottom: "1px solid var(--isg-border)", padding: "0 12px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, gap: 8 },
-  nav: { display: "flex", gap: 2, padding: "8px 12px 0", borderBottom: "1px solid var(--isg-border)", backgroundColor: "var(--isg-nav)", overflowX: "auto" as const, WebkitOverflowScrolling: "touch" as const, msOverflowStyle: "none" as const, scrollbarWidth: "none" as const },
-  content: { padding: "16px 12px", maxWidth: 1400, margin: "0 auto" },
-  card: { backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 10, padding: "16px 12px", marginBottom: 16 },
-  sectionTitle: { fontSize: 13, fontWeight: 600, color: "var(--isg-text-muted)", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 16 },
-  input: { width: "100%", backgroundColor: "var(--isg-input-bg)", border: "1px solid var(--isg-border)", borderRadius: 6, color: "var(--isg-text)", padding: "10px 12px", fontSize: 16, outline: "none", boxSizing: "border-box" as const },
-  select: { width: "100%", backgroundColor: "var(--isg-input-bg)", border: "1px solid var(--isg-border)", borderRadius: 6, color: "var(--isg-text)", padding: "10px 12px", fontSize: 16, outline: "none", boxSizing: "border-box" as const },
-  label: { fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 4, display: "block" },
-  formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(200px, 100%), 1fr))", gap: 12 },
-  btnPrimary: { backgroundColor: "#0ea5e9", color: "#fff", border: "none", borderRadius: 6, padding: "10px 16px", fontSize: 14, fontWeight: 600, cursor: "pointer" },
-  btnDanger: { backgroundColor: "#dc2626", color: "#fff", border: "none", borderRadius: 6, padding: "8px 12px", fontSize: 12, cursor: "pointer" },
-  btnSecondary: { backgroundColor: "var(--isg-btn-secondary)", color: "var(--isg-text)", border: "1px solid var(--isg-border)", borderRadius: 6, padding: "8px 12px", fontSize: 12, cursor: "pointer" },
-  btnSuccess: { backgroundColor: "#16a34a", color: "#fff", border: "none", borderRadius: 6, padding: "10px 16px", fontSize: 14, fontWeight: 600, cursor: "pointer" },
-  badge: { display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600 },
+  app: { minHeight: "100vh", backgroundColor: "#0c0c0e", color: "#e8e8ed", fontFamily: "'IBM Plex Sans', -apple-system, sans-serif", overflowX: "hidden" as const },
+  header: { backgroundColor: "rgba(12,12,14,0.92)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 52, gap: 8, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", position: "sticky" as const, top: 0, zIndex: 50 },
+  nav: { display: "flex", gap: 2, padding: "0 24px", borderBottom: "1px solid rgba(255,255,255,0.06)", backgroundColor: "rgba(12,12,14,0.8)", overflowX: "auto" as const, WebkitOverflowScrolling: "touch" as const, msOverflowStyle: "none" as const, scrollbarWidth: "none" as const, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", position: "sticky" as const, top: 52, zIndex: 40, height: 44, alignItems: "flex-end" },
+  content: { padding: "28px 24px", maxWidth: 1400, margin: "0 auto" },
+  card: { backgroundColor: "#161618", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "20px", marginBottom: 14, transition: "border-color 0.2s" },
+  sectionTitle: { fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.35)", textTransform: "uppercase" as const, letterSpacing: "0.14em", marginBottom: 16 },
+  input: { width: "100%", backgroundColor: "#1c1c1f", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, color: "#e8e8ed", padding: "9px 13px", fontSize: 14, outline: "none", boxSizing: "border-box" as const, transition: "border-color 0.15s, box-shadow 0.15s" },
+  select: { width: "100%", backgroundColor: "#1c1c1f", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, color: "#e8e8ed", padding: "9px 13px", fontSize: 14, outline: "none", boxSizing: "border-box" as const },
+  label: { fontSize: 11, fontWeight: 500, color: "rgba(255,255,255,0.4)", marginBottom: 6, display: "block", letterSpacing: "0.04em" },
+  formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(200px, 100%), 1fr))", gap: 14 },
+  btnPrimary: { backgroundColor: "#fff", color: "#0c0c0e", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", letterSpacing: "-0.01em", transition: "opacity 0.15s, transform 0.15s" },
+  btnDanger: { backgroundColor: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 7, padding: "6px 13px", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "all 0.15s" },
+  btnSecondary: { backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "8px 15px", fontSize: 13, cursor: "pointer", transition: "all 0.15s" },
+  btnSuccess: { backgroundColor: "rgba(52,211,153,0.15)", color: "#34d399", border: "1px solid rgba(52,211,153,0.25)", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" },
+  badge: { display: "inline-block", padding: "2px 9px", borderRadius: 5, fontSize: 11, fontWeight: 600, letterSpacing: "0.02em" },
   table: { width: "100%", borderCollapse: "collapse" as const, fontSize: 13 },
-  th: { textAlign: "left" as const, padding: "8px 10px", borderBottom: "1px solid var(--isg-border)", color: "var(--isg-text-muted)", fontWeight: 600, fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.05em", whiteSpace: "nowrap" as const },
-  td: { padding: "10px 10px", borderBottom: "1px solid var(--isg-border)", verticalAlign: "top" as const, color: "var(--isg-text)" },
-  searchBar: { display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" as const },
-  statGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(140px, 45%), 1fr))", gap: 10, marginBottom: 20 },
-  statCard: { backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 8, padding: 12 },
-  statValue: { fontSize: 24, fontWeight: 700, lineHeight: 1, marginBottom: 4 },
-  statLabel: { fontSize: 11, color: "var(--isg-text-muted)" },
+  th: { textAlign: "left" as const, padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.3)", fontWeight: 500, fontSize: 10, textTransform: "uppercase" as const, letterSpacing: "0.1em", whiteSpace: "nowrap" as const },
+  td: { padding: "12px 14px", borderBottom: "1px solid rgba(255,255,255,0.04)", verticalAlign: "top" as const, color: "#e8e8ed", transition: "background 0.1s" },
+  searchBar: { display: "flex", gap: 10, marginBottom: 18, alignItems: "center", flexWrap: "wrap" as const },
+  statGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(150px, 45%), 1fr))", gap: 12, marginBottom: 28 },
+  statCard: { backgroundColor: "#161618", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "18px 16px", transition: "all 0.2s ease", cursor: "default", position: "relative" as const, overflow: "hidden" as const },
+  statValue: { fontSize: 30, fontWeight: 700, lineHeight: 1, marginBottom: 8, letterSpacing: "-0.03em" },
+  statLabel: { fontSize: 11, fontWeight: 400, color: "rgba(255,255,255,0.35)", letterSpacing: "0.02em" },
 };
 
 function DatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -1175,16 +1175,17 @@ export default function Page() {
     
     <div style={styles.app} className="isg-app">
       <header style={styles.header} className="isg-header">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 15, minWidth: 0 }} className="isg-text">
-          <span style={{ fontSize: 18 }}>🦺</span>
-          <span style={{ whiteSpace: "nowrap" }}>İSG <span style={{ color: "#38bdf8" }}>Otomasyon</span></span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 7, background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>🦺</div>
+          <span style={{ fontWeight: 600, fontSize: 14, letterSpacing: "-0.02em", color: "#fff" }}>İSG <span style={{ color: "rgba(255,255,255,0.45)" }}>Otomasyon</span></span>
+          {userProfile && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginLeft: 4, paddingLeft: 10, borderLeft: "1px solid rgba(255,255,255,0.1)" }}>{userProfile.activeRole || userProfile.role}</span>}
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
-          <button style={{ fontSize: 20, padding: "4px 8px", backgroundColor: "transparent", border: "none", cursor: "pointer" }} onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Açık tema" : "Koyu tema"}>
+          <button style={{ width: 32, height: 32, borderRadius: 7, backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setDarkMode(!darkMode)}>
             {darkMode ? "☀️" : "🌙"}
           </button>
-          <button style={{ ...styles.btnSecondary, fontSize: 11 }} onClick={loadAll}>🔄 Yenile</button>
-          <button style={{ ...styles.btnDanger, fontSize: 11 }} onClick={async () => {
+          <button style={{ ...styles.btnSecondary, fontSize: 12, padding: "6px 12px" }} onClick={loadAll}>Yenile</button>
+          <button style={{ backgroundColor: "rgba(239,68,68,0.1)", color: "#f87171", border: "1px solid rgba(239,68,68,0.18)", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer" }} onClick={async () => {
             await signOut(auth);
             router.push("/login?reason=logged_out");
           }}>Çıkış</button>
@@ -1193,7 +1194,16 @@ export default function Page() {
 
       <nav style={styles.nav} className="isg-nav">
         {tabs.map(tab => (
-          <button key={tab.id} style={{ padding: "8px 16px", borderRadius: "6px 6px 0 0", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, whiteSpace: "nowrap" as const, backgroundColor: activeTab === tab.id ? "#0ea5e9" : "transparent", color: activeTab === tab.id ? "#fff" : "var(--isg-text-muted)" }}
+          <button key={tab.id}
+            style={{ padding: "0 14px", height: 40, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, whiteSpace: "nowrap" as const,
+              backgroundColor: "transparent",
+              color: activeTab === tab.id ? "#fff" : "rgba(255,255,255,0.35)",
+              borderBottom: activeTab === tab.id ? "2px solid #fff" : "2px solid transparent",
+              transition: "color 0.15s, border-color 0.15s",
+              letterSpacing: "-0.01em",
+            }}
+            onMouseEnter={e => { if (activeTab !== tab.id) (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.65)"; }}
+            onMouseLeave={e => { if (activeTab !== tab.id) (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.35)"; }}
             onClick={() => { setActiveTab(tab.id); setSearch(""); }}>
             {tab.label}
           </button>
@@ -1215,7 +1225,9 @@ export default function Page() {
                 { value: highRisks, label: "Yüksek Risk (≥15)", color: highRisks > 0 ? "#dc2626" : "#16a34a" },
                 { value: incompleteEmployees, label: "Eğitim Eksik", color: incompleteEmployees > 0 ? "#d97706" : "#16a34a" },
               ].map(({ value, label, color }) => (
-                <div key={label} style={styles.statCard} className="isg-stat-card">
+                <div key={label} style={styles.statCard} className="isg-stat-card"
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.15)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.07)"; (e.currentTarget as HTMLElement).style.transform = ""; }}>
                   <div style={{ ...styles.statValue, color }}>{value}</div>
                   <div style={styles.statLabel}>{label}</div>
                 </div>

@@ -27,7 +27,7 @@ import {
   UserProfile,
   UserRole,
   ROLE_CONFIG,
-} from "./roleManager";
+} from "@/app/roleManager";
 
 type Props = {
   styles: Record<string, React.CSSProperties>;

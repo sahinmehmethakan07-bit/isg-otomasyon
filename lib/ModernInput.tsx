@@ -66,7 +66,7 @@ export function ModernInput({
             focus:outline-none
             ${className}
           `}
-          {...props}
+          {...(props as any)}
         />
       </div>
 

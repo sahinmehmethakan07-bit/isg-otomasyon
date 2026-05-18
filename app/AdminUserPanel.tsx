@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { auth } from "@/lib/firebase";
-import { toggleUserRole } from "./lib/roleManager";
+import { setUserProfile } from "./lib/roleManager";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 
 export default function AdminUserPanel() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("doktor");
+  const [role, setRole] = useState<"admin" | "doctor" | "nurse" | "safety_expert">("doctor");
   const [adminPassword, setAdminPassword] = useState("");
   const [showAdminPassModal, setShowAdminPassModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -33,8 +33,12 @@ export default function AdminUserPanel() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
 
-      // 2. Rolü tanımla
-      await toggleUserRole(uid, role, true);
+      // 2. Rolü ve profili tanımla (displayName için geçici olarak e-mail başını alıyoruz)
+      await setUserProfile(uid, {
+        email: email,
+        displayName: email.split("@")[0], 
+        role: role
+      });
 
       // 3. Yeni kullanıcının oturumunu kapat
       await auth.signOut();
@@ -60,9 +64,10 @@ export default function AdminUserPanel() {
       <form onSubmit={handleCreateUserClick}>
         <input type="email" placeholder="E-Mail" value={email} onChange={(e) => setEmail(e.target.value)} style={{ display: "block", marginBottom: "10px", width: "100%" }} />
         <input type="password" placeholder="Şifre" value={password} onChange={(e) => setPassword(e.target.value)} style={{ display: "block", marginBottom: "10px", width: "100%" }} />
-        <select value={role} onChange={(e) => setRole(e.target.value)} style={{ display: "block", marginBottom: "10px", width: "100%" }}>
-          <option value="doktor">Doktor</option>
-          <option value="isg_uzmani">ISG Uzmanı</option>
+        <select value={role} onChange={(e) => setRole(e.target.value as any)} style={{ display: "block", marginBottom: "10px", width: "100%" }}>
+          <option value="doctor">Doktor</option>
+          <option value="safety_expert">İSG Uzmanı</option>
+          <option value="nurse">Hemşire</option>
           <option value="admin">Admin</option>
         </select>
         <button type="submit" disabled={loading}>Kullanıcı Oluştur</button>

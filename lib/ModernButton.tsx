@@ -51,7 +51,7 @@ export function ModernButton({
         flex items-center justify-center gap-2
       `}
       disabled={disabled || loading}
-      {...props}
+      {...(props as any)}
     >
       {/* Loading spinner */}
       {loading && (

@@ -777,6 +777,12 @@ export default function Page() {
     if (userProfile) loadAll();
   }, [userProfile]);
 
+  useEffect(() => {
+    if (isHumanResources && !isAdmin && activeTab !== "personel") {
+      setActiveTab("personel");
+    }
+  }, [activeTab, isAdmin, isHumanResources]);
+
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) ?? null;
   const selectedEmployeeCompany = selectedEmployee ? companies.find(c => c.id === selectedEmployee.companyId) ?? null : null;
 
@@ -1259,18 +1265,20 @@ export default function Page() {
     setRisks(prev => prev.filter(r => r.id !== id));
   }
 
-  const tabs = [
-    { id: "ozet", label: "📊 Özet" },
-    { id: "firmalar", label: "🏢 Firmalar" },
-    { id: "personel", label: isHumanResources ? "👥 İnsan Kaynakları" : "👤 Personel" },
-    { id: "belgeler", label: "📄 Belgeler" },
-    { id: "gozlemciler", label: "🔍 Gözlemciler" },
-    { id: "dof", label: "⚠️ DÖF" },
-    { id: "risk", label: "🛡 Risk" },
-    { id: "imzacilar", label: "✍️ İmzacılar" },
-    { id: "ek2muayene", label: "🏥 EK-2 Muayene" },
-    ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
-  ];
+  const tabs = isHumanResources && !isAdmin
+    ? [{ id: "personel", label: "👥 İnsan Kaynakları" }]
+    : [
+      { id: "ozet", label: "📊 Özet" },
+      { id: "firmalar", label: "🏢 Firmalar" },
+      { id: "personel", label: "👤 Personel" },
+      { id: "belgeler", label: "📄 Belgeler" },
+      { id: "gozlemciler", label: "🔍 Gözlemciler" },
+      { id: "dof", label: "⚠️ DÖF" },
+      { id: "risk", label: "🛡 Risk" },
+      { id: "imzacilar", label: "✍️ İmzacılar" },
+      { id: "ek2muayene", label: "🏥 EK-2 Muayene" },
+      ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
+    ];
 
   if (!mounted || loading) {
     return (

@@ -6,7 +6,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "fire
 export default function AdminUserPanel() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"admin" | "doctor" | "nurse" | "safety_expert">("doctor");
+  const [role, setRole] = useState<"admin" | "doctor" | "nurse" | "safety_expert" | "human_resources">("doctor");
   const [adminPassword, setAdminPassword] = useState("");
   const [showAdminPassModal, setShowAdminPassModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -68,6 +68,7 @@ export default function AdminUserPanel() {
           <option value="doctor">Doktor</option>
           <option value="safety_expert">İSG Uzmanı</option>
           <option value="nurse">Hemşire</option>
+          <option value="human_resources">İnsan Kaynakları</option>
           <option value="admin">Admin</option>
         </select>
         <button type="submit" disabled={loading}>Kullanıcı Oluştur</button>

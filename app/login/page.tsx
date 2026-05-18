@@ -56,6 +56,7 @@ export default function LoginPage() {
     doctor: { label: t("role.doctor"), desc: t("role.doctor.desc") },
     nurse: { label: t("role.nurse"), desc: t("role.nurse.desc") },
     safety_expert: { label: t("role.safety_expert"), desc: t("role.safety_expert.desc") },
+    human_resources: { label: t("role.human_resources"), desc: t("role.human_resources.desc") },
   };
 
   function selectRole(role: UserRole) {
@@ -91,6 +92,15 @@ export default function LoginPage() {
         return;
       }
 
+      const allowedRoles = profile.roles?.length ? profile.roles : [profile.role];
+      if (!allowedRoles.includes(selectedRole)) {
+        await signOut(auth);
+        setError(t("login.wrongRole").replace("{role}", ROLE_CONFIG[profile.role]?.label || profile.role));
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem("isg_activeRole", selectedRole);
       router.push("/");
     } catch (err: any) {
       console.error("[Login] Error:", err);
@@ -154,7 +164,7 @@ export default function LoginPage() {
           zIndex: 1,
           width: "100%",
           /* Mobil: tam genişlik, desktop: sabit max */
-          maxWidth: isMobile ? "100%" : (step === "select_role" ? 680 : 420),
+          maxWidth: isMobile ? "100%" : (step === "select_role" ? 920 : 420),
           padding: isMobile ? 0 : "0 20px",
         }}>
           {/* Logo */}
@@ -196,10 +206,10 @@ export default function LoginPage() {
               <p style={{ textAlign: "center", fontSize: isMobile ? 13 : 15, color: "#94a3b8", marginBottom: isMobile ? 16 : 24 }}>
                 {t("login.selectRole")}
               </p>
-              {/* Mobil: dikey layout (1 kolon), Desktop: 3 kolon */}
+              {/* Mobil: dikey layout (1 kolon), Desktop: 4 kolon */}
               <div style={{
                 display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+                gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)",
                 gap: isMobile ? 10 : 16,
               }}>
                 {(Object.entries(ROLE_CONFIG) as [UserRole, typeof ROLE_CONFIG["admin"]][])

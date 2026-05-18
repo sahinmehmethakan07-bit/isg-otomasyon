@@ -49,17 +49,40 @@ type EmployeeChecklist = {
   attendanceDoc: boolean;
 };
 
+type OnboardingTaskKey = "doctorEk2" | "safetyTraining" | "safetyDocuments";
+type OnboardingStatus = "pending" | "completed";
+
+type OnboardingTask = {
+  key: OnboardingTaskKey;
+  label: string;
+  ownerRole: "doctor" | "safety_expert";
+  completed: boolean;
+  completedAt?: string;
+};
+
+type EmployeeOnboarding = {
+  status: OnboardingStatus;
+  tasks: Record<OnboardingTaskKey, OnboardingTask>;
+  missingSteps: string[];
+  notifiedAt?: string;
+  lastReminderAt?: string;
+};
+
 type Employee = {
   id: string;
   companyId: string;
   firstName: string;
   lastName: string;
   tcNo: string;
+  department?: string;
+  diplomaInfo?: string;
+  address?: string;
   title: string;
   hireDate: string;
   isActive: boolean;
   trainingComplete: boolean;
   checklist: EmployeeChecklist;
+  onboarding?: EmployeeOnboarding;
 };
 
 type DocumentRecord = {
@@ -102,6 +125,8 @@ type EmailSettings = {
   enabled: boolean;
   toEmail: string;
   ccEmail: string;
+  doctorEmail?: string;
+  safetyExpertEmail?: string;
   subject: string;
   message: string;
 };
@@ -146,6 +171,37 @@ const emptyChecklist: EmployeeChecklist = {
   kkdMinutes: false,
   attendanceDoc: false,
 };
+
+function createOnboardingFromChecklist(checklist: EmployeeChecklist): EmployeeOnboarding {
+  const tasks: Record<OnboardingTaskKey, OnboardingTask> = {
+    doctorEk2: {
+      key: "doctorEk2",
+      label: "İşyeri hekimi EK-2 formunu tamamlamalı",
+      ownerRole: "doctor",
+      completed: !!checklist.ek2Date,
+      completedAt: checklist.ek2Date || undefined,
+    },
+    safetyTraining: {
+      key: "safetyTraining",
+      label: "İSG uzmanı eğitim planlamasını tamamlamalı",
+      ownerRole: "safety_expert",
+      completed: !!checklist.orientationDate && !!checklist.isgCertificateDate,
+      completedAt: checklist.isgCertificateDate || checklist.orientationDate || undefined,
+    },
+    safetyDocuments: {
+      key: "safetyDocuments",
+      label: "İSG uzmanı personel evraklarını tamamlamalı",
+      ownerRole: "safety_expert",
+      completed: checklist.preTest && checklist.postTest && checklist.undertaking && checklist.kkdMinutes && checklist.attendanceDoc,
+    },
+  };
+  const missingSteps = Object.values(tasks).filter(task => !task.completed).map(task => task.label);
+  return {
+    status: missingSteps.length === 0 ? "completed" : "pending",
+    tasks,
+    missingSteps,
+  };
+}
 
 const sgkCompanyRegistry: Record<string, { officialName: string; naceCode: string }> = {
   "2612345678901234567890": { officialName: "Örnek Turizm Otelcilik İnşaat Sanayi ve Ticaret A.Ş.", naceCode: "55.10.01" },
@@ -612,9 +668,10 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Page() {
   const router = useRouter();
-  const { user: userProfile, isAdmin, loading: roleLoading } = useUserRole();
+  const { user: userProfile, isAdmin, isHumanResources, loading: roleLoading } = useUserRole();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
 
@@ -638,7 +695,7 @@ export default function Page() {
   const [editingDofId, setEditingDofId] = useState<string | null>(null);
 
   const [newCompany, setNewCompany] = useState({ nickName: "", officialName: "", sgkSicil: "", naceCode: "", dangerClass: "Az Tehlikeli" as DangerClass, employeeCount: "", contractEnd: "", serviceType: "İş Güvenliği" as ServiceType, contactEmail: "" });
-  const [newEmployee, setNewEmployee] = useState({ companyId: "", firstName: "", lastName: "", tcNo: "", title: "", hireDate: "" });
+  const [newEmployee, setNewEmployee] = useState({ companyId: "", firstName: "", lastName: "", tcNo: "", department: "", diplomaInfo: "", address: "", title: "", hireDate: "" });
   const [newDocument, setNewDocument] = useState({ companyId: "", employeeId: "", type: "Risk Değerlendirme Raporu", issueDate: "", expiryDate: "" });
   const [newObserver, setNewObserver] = useState({ fullName: "", title: "", certificateNo: "", phone: "" });
   const [newDof, setNewDof] = useState({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta" as "Düşük" | "Orta" | "Yüksek", responsible: "", dueDate: "", status: "Açık" as "Açık" | "Bildirildi" | "Önlem Alındı" | "Çözüldü" | "Riske Aktarıldı", location: "", beforePhoto: "", afterPhoto: "", affectedPersons: "" });
@@ -653,27 +710,44 @@ export default function Page() {
   const [emailSettings, setEmailSettings] = useState<EmailSettings>({ enabled: true, toEmail: "", ccEmail: "", subject: "[İSG] Yeni DÖF Bildirimi: {dofTitle}", message: "" });
   const [dofAdding, setDofAdding] = useState(false);
   const [dofAddStatus, setDofAddStatus] = useState<string | null>(null);
+  const [employeeAddStatus, setEmployeeAddStatus] = useState<string | null>(null);
 
   async function loadAll() {
     if (!userProfile) return;
     setLoading(true);
+    setLoadError(null);
     try {
-      const [compSnap, empSnap, docSnap, obsSnap, dofSnap, riskSnap, signerSnap] = await Promise.all([
-        getDocs(collection(db, "companies")),
-        getDocs(collection(db, "employees")),
-        getDocs(collection(db, "documents")),
-        getDocs(collection(db, "observers")),
+      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult] = await Promise.allSettled([
+        getDocs(getRoleFilteredQuery("companies", userProfile)),
+        getDocs(getRoleFilteredQuery("employees", userProfile)),
+        getDocs(getRoleFilteredQuery("documents", userProfile)),
+        getDocs(getRoleFilteredQuery("observers", userProfile)),
         getDocs(getRoleFilteredQuery("dofs", userProfile)),
         getDocs(getRoleFilteredQuery("risks", userProfile)),
-        getDocs(collection(db, "signers")),
+        getDocs(getRoleFilteredQuery("signers", userProfile)),
       ]);
-      setCompanies(compSnap.docs.map(d => ({ id: d.id, ...d.data() } as Company)));
-      setEmployees(empSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
-      setDocuments(docSnap.docs.map(d => ({ id: d.id, ...d.data() } as DocumentRecord)));
-      setObservers(obsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Observer)));
-      setDofs(dofSnap.docs.map(d => ({ id: d.id, ...d.data() } as DofRecord)));
-      setRisks(riskSnap.docs.map(d => ({ id: d.id, ...d.data() } as RiskRecord)));
-      setSigners(signerSnap.docs.map(d => ({ id: d.id, ...d.data() } as Signer)));
+      const loadResults: Array<{ label: string; result: PromiseSettledResult<unknown> }> = [
+        { label: "Firmalar", result: compResult },
+        { label: "Personel", result: empResult },
+        { label: "Belgeler", result: docResult },
+        { label: "Gözlemciler", result: obsResult },
+        { label: "DÖF", result: dofResult },
+        { label: "Risk", result: riskResult },
+        { label: "İmzacılar", result: signerResult },
+      ];
+      const failedLoads = loadResults.filter(({ result }) => result.status === "rejected").map(({ label }) => label);
+
+      if (failedLoads.length > 0) {
+        setLoadError(`${failedLoads.join(", ")} verileri yüklenemedi. Firebase Rules içinde bu role okuma izni verilmeli.`);
+      }
+
+      if (compResult.status === "fulfilled") setCompanies(compResult.value.docs.map(d => ({ id: d.id, ...d.data() } as Company)));
+      if (empResult.status === "fulfilled") setEmployees(empResult.value.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
+      if (docResult.status === "fulfilled") setDocuments(docResult.value.docs.map(d => ({ id: d.id, ...d.data() } as DocumentRecord)));
+      if (obsResult.status === "fulfilled") setObservers(obsResult.value.docs.map(d => ({ id: d.id, ...d.data() } as Observer)));
+      if (dofResult.status === "fulfilled") setDofs(dofResult.value.docs.map(d => ({ id: d.id, ...d.data() } as DofRecord)));
+      if (riskResult.status === "fulfilled") setRisks(riskResult.value.docs.map(d => ({ id: d.id, ...d.data() } as RiskRecord)));
+      if (signerResult.status === "fulfilled") setSigners(signerResult.value.docs.map(d => ({ id: d.id, ...d.data() } as Signer)));
 
       // Email ayarlarını yükle
       const emailDoc = await getDoc(doc(db, "settings", "emailNotifications"));
@@ -741,7 +815,7 @@ export default function Page() {
   }
 
   const filteredCompanies = useMemo(() => companies.filter(c => `${c.nickName} ${c.officialName} ${c.sgkSicil} ${c.naceCode}`.toLowerCase().includes(search.toLowerCase())), [companies, search]);
-  const filteredEmployees = useMemo(() => employees.filter(e => { const company = companies.find(c => c.id === e.companyId); const matchesCompany = selectedCompanyId === "all" || e.companyId === selectedCompanyId; return matchesCompany && `${e.firstName} ${e.lastName} ${e.tcNo} ${e.title} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [employees, companies, selectedCompanyId, search]);
+  const filteredEmployees = useMemo(() => employees.filter(e => { const company = companies.find(c => c.id === e.companyId); const matchesCompany = selectedCompanyId === "all" || e.companyId === selectedCompanyId; return matchesCompany && `${e.firstName} ${e.lastName} ${e.tcNo} ${e.department || ""} ${e.diplomaInfo || ""} ${e.address || ""} ${e.title} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [employees, companies, selectedCompanyId, search]);
   const filteredDocuments = useMemo(() => documents.filter(d => { const company = companies.find(c => c.id === d.companyId); const employee = employees.find(e => e.id === d.employeeId); const matchesCompany = selectedCompanyId === "all" || d.companyId === selectedCompanyId; return matchesCompany && `${d.type} ${company?.nickName || ""} ${employee?.firstName || ""} ${employee?.lastName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [documents, companies, employees, selectedCompanyId, search]);
   const filteredDofs = useMemo(() => dofs.filter(d => { const company = companies.find(c => c.id === d.companyId); const matchesCompany = selectedCompanyId === "all" || d.companyId === selectedCompanyId; return matchesCompany && `${d.title} ${d.description} ${d.location} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [dofs, companies, selectedCompanyId, search]);
   const filteredRisks = useMemo(() => risks.filter(r => { const company = companies.find(c => c.id === r.companyId); const matchesCompany = selectedCompanyId === "all" || r.companyId === selectedCompanyId; return matchesCompany && `${r.section} ${r.hazard} ${r.risk} ${r.actionToTake} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [risks, companies, selectedCompanyId, search]);
@@ -781,11 +855,49 @@ export default function Page() {
   }
 
   async function addEmployee() {
-    if (!newEmployee.firstName || !newEmployee.companyId) return;
-    const data = { companyId: newEmployee.companyId, firstName: newEmployee.firstName, lastName: newEmployee.lastName, tcNo: newEmployee.tcNo, title: newEmployee.title, hireDate: newEmployee.hireDate, isActive: true, trainingComplete: false, checklist: { ...emptyChecklist } };
-    const ref = await addDoc(collection(db, "employees"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-    setEmployees(prev => [...prev, { id: ref.id, ...data }]);
-    setNewEmployee({ companyId: "", firstName: "", lastName: "", tcNo: "", title: "", hireDate: "" });
+    setEmployeeAddStatus(null);
+    if (!newEmployee.companyId) {
+      setEmployeeAddStatus("⚠️ Önce firma seçmelisiniz. Firma listesi boşsa Firma sekmesinden firma ekleyin veya yetkileri kontrol edin.");
+      return;
+    }
+    if (!newEmployee.firstName.trim()) {
+      setEmployeeAddStatus("⚠️ Personel adı zorunlu.");
+      return;
+    }
+
+    try {
+      const checklist = { ...emptyChecklist };
+      const onboarding = createOnboardingFromChecklist(checklist);
+      const data = {
+        companyId: newEmployee.companyId,
+        firstName: newEmployee.firstName,
+        lastName: newEmployee.lastName,
+        tcNo: newEmployee.tcNo,
+        department: newEmployee.department,
+        diplomaInfo: newEmployee.diplomaInfo,
+        address: newEmployee.address,
+        title: newEmployee.title,
+        hireDate: newEmployee.hireDate,
+        isActive: true,
+        trainingComplete: false,
+        checklist,
+        onboarding,
+      };
+      const ref = await addDoc(collection(db, "employees"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
+      setEmployees(prev => [...prev, { id: ref.id, ...data }]);
+      setNewEmployee({ companyId: "", firstName: "", lastName: "", tcNo: "", department: "", diplomaInfo: "", address: "", title: "", hireDate: "" });
+      setEmployeeAddStatus("✅ Personel kaydı oluşturuldu. Doktor ve İSG uzmanı için onboarding görevleri açıldı.");
+      if (emailSettings.enabled) {
+        await fetch("/api/send-onboarding-notification", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ employeeId: ref.id, type: "created" }),
+        }).catch((error) => console.error("Onboarding bildirimi gönderilemedi", error));
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Bilinmeyen hata";
+      setEmployeeAddStatus(`❌ Personel eklenemedi: ${message}`);
+    }
   }
 
   async function deleteEmployee(id: string) {
@@ -796,13 +908,17 @@ export default function Page() {
   }
 
   async function updateEmployeeChecklist(employeeId: string, checklist: EmployeeChecklist) {
-    await updateDoc(doc(db, "employees", employeeId), { checklist });
-    setEmployees(prev => prev.map(e => e.id === employeeId ? { ...e, checklist } : e));
+    const onboarding = createOnboardingFromChecklist(checklist);
+    const trainingComplete = onboarding.status === "completed";
+    await updateDoc(doc(db, "employees", employeeId), { checklist, onboarding, trainingComplete });
+    setEmployees(prev => prev.map(e => e.id === employeeId ? { ...e, checklist, onboarding, trainingComplete } : e));
   }
 
   async function updateEmployeeTraining(employeeId: string, trainingComplete: boolean) {
-    await updateDoc(doc(db, "employees", employeeId), { trainingComplete });
-    setEmployees(prev => prev.map(e => e.id === employeeId ? { ...e, trainingComplete } : e));
+    const employee = employees.find(e => e.id === employeeId);
+    const onboarding = employee ? { ...(employee.onboarding || createOnboardingFromChecklist(employee.checklist)), status: trainingComplete ? "completed" as const : "pending" as const, missingSteps: trainingComplete ? [] : (employee.onboarding?.missingSteps || createOnboardingFromChecklist(employee.checklist).missingSteps) } : undefined;
+    await updateDoc(doc(db, "employees", employeeId), onboarding ? { trainingComplete, onboarding } : { trainingComplete });
+    setEmployees(prev => prev.map(e => e.id === employeeId ? { ...e, trainingComplete, ...(onboarding ? { onboarding } : {}) } : e));
   }
 
   async function addDocument() {
@@ -1146,7 +1262,7 @@ export default function Page() {
   const tabs = [
     { id: "ozet", label: "📊 Özet" },
     { id: "firmalar", label: "🏢 Firmalar" },
-    { id: "personel", label: "👤 Personel" },
+    { id: "personel", label: isHumanResources ? "👥 İnsan Kaynakları" : "👤 Personel" },
     { id: "belgeler", label: "📄 Belgeler" },
     { id: "gozlemciler", label: "🔍 Gözlemciler" },
     { id: "dof", label: "⚠️ DÖF" },
@@ -1211,6 +1327,19 @@ export default function Page() {
       </nav>
 
       <main style={styles.content} className="isg-app">
+        {loadError && (
+          <div style={{
+            backgroundColor: "#dc262615",
+            border: "1px solid #dc262633",
+            borderRadius: 8,
+            color: "#fca5a5",
+            fontSize: 13,
+            marginBottom: 16,
+            padding: "10px 12px",
+          }}>
+            {loadError}
+          </div>
+        )}
 
         {activeTab === "ozet" && (
           <div>
@@ -1311,14 +1440,30 @@ export default function Page() {
               <div style={styles.card} className="isg-card">
                 <p style={styles.sectionTitle} className="isg-text-muted">Yeni Personel Ekle</p>
                 <div style={styles.formGrid}>
-                  <FormField label="Firma *"><select style={styles.select} className="isg-input" value={newEmployee.companyId} onChange={e => setNewEmployee({ ...newEmployee, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
+                  <FormField label="Firma *"><select style={styles.select} className="isg-input" value={newEmployee.companyId} onChange={e => setNewEmployee({ ...newEmployee, companyId: e.target.value })}><option value="">{companies.length === 0 ? "Firma bulunamadı" : "Seçin..."}</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
                   <FormField label="Ad *"><input style={styles.input} className="isg-input" value={newEmployee.firstName} onChange={e => setNewEmployee({ ...newEmployee, firstName: e.target.value })} /></FormField>
                   <FormField label="Soyad"><input style={styles.input} className="isg-input" value={newEmployee.lastName} onChange={e => setNewEmployee({ ...newEmployee, lastName: e.target.value })} /></FormField>
                   <FormField label="TC No"><input style={styles.input} className="isg-input" value={newEmployee.tcNo} onChange={e => setNewEmployee({ ...newEmployee, tcNo: e.target.value })} /></FormField>
+                  <FormField label="Birim"><input style={styles.input} className="isg-input" value={newEmployee.department} onChange={e => setNewEmployee({ ...newEmployee, department: e.target.value })} placeholder="Üretim, muhasebe..." /></FormField>
+                  <FormField label="Diploma Bilgileri"><input style={styles.input} className="isg-input" value={newEmployee.diplomaInfo} onChange={e => setNewEmployee({ ...newEmployee, diplomaInfo: e.target.value })} placeholder="Okul / bölüm / yıl" /></FormField>
                   <FormField label="Unvan"><input style={styles.input} className="isg-input" value={newEmployee.title} onChange={e => setNewEmployee({ ...newEmployee, title: e.target.value })} /></FormField>
+                  <FormField label="Adres"><input style={styles.input} className="isg-input" value={newEmployee.address} onChange={e => setNewEmployee({ ...newEmployee, address: e.target.value })} /></FormField>
                   <FormField label="İşe Giriş"><DatePicker value={newEmployee.hireDate} onChange={v => setNewEmployee({ ...newEmployee, hireDate: v })} /></FormField>
                 </div>
                 <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addEmployee}>Personel Ekle</button></div>
+                {employeeAddStatus && (
+                  <div style={{
+                    marginTop: 12,
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    fontSize: 13,
+                    color: employeeAddStatus.startsWith("✅") ? "#86efac" : employeeAddStatus.startsWith("⚠️") ? "#fbbf24" : "#fca5a5",
+                    backgroundColor: employeeAddStatus.startsWith("✅") ? "#16a34a15" : employeeAddStatus.startsWith("⚠️") ? "#d9770615" : "#dc262615",
+                    border: `1px solid ${employeeAddStatus.startsWith("✅") ? "#16a34a33" : employeeAddStatus.startsWith("⚠️") ? "#d9770633" : "#dc262633"}`,
+                  }}>
+                    {employeeAddStatus}
+                  </div>
+                )}
               </div>
               <div style={styles.searchBar}>
                 <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
@@ -1327,19 +1472,22 @@ export default function Page() {
               </div>
               <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
                 <table style={styles.table}>
-                  <thead><tr>{["Ad Soyad", "TC No", "Unvan", "Firma", "İşe Giriş", "Eğitim", "Kontrol Listesi", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+                  <thead><tr>{["Ad Soyad", "TC No", "Birim", "Unvan", "Firma", "İşe Giriş", "Onboarding", "Eksikler", "Kontrol Listesi", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
                   <tbody>
                     {filteredEmployees.map(emp => {
                       const company = companies.find(c => c.id === emp.companyId);
                       const cl = checklistCompletion(emp.checklist);
+                      const onboarding = emp.onboarding || createOnboardingFromChecklist(emp.checklist);
                       return (
                         <tr key={emp.id} style={{ cursor: "pointer", backgroundColor: selectedEmployeeId === emp.id ? "#1a2942" : "transparent" }} onClick={() => setSelectedEmployeeId(emp.id)}>
                           <td style={styles.td} className="isg-td"><span style={{ fontWeight: 600 }}>{emp.firstName} {emp.lastName}</span></td>
                           <td style={{ ...styles.td, fontSize: 12, color: "var(--isg-text-muted)" }}>{emp.tcNo}</td>
+                          <td style={{ ...styles.td, fontSize: 12 }}>{emp.department || "—"}</td>
                           <td style={styles.td} className="isg-td">{emp.title}</td>
                           <td style={{ ...styles.td, fontSize: 12 }}>{company?.nickName}</td>
                           <td style={{ ...styles.td, fontSize: 12 }}>{emp.hireDate}</td>
-                          <td style={styles.td} className="isg-td"><Badge text={emp.trainingComplete ? "Tamamlandı" : "Eksik"} color={emp.trainingComplete ? "#16a34a" : "#d97706"} /></td>
+                          <td style={styles.td} className="isg-td"><Badge text={onboarding.status === "completed" ? "Tamamlandı" : "Bekliyor"} color={onboarding.status === "completed" ? "#16a34a" : "#d97706"} /></td>
+                          <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)", minWidth: 220 }}>{onboarding.missingSteps.length > 0 ? onboarding.missingSteps.join(", ") : "Tüm görevler tamamlandı"}</td>
                           <td style={styles.td} className="isg-td">
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <div style={{ height: 6, width: 80, backgroundColor: "var(--isg-bg)", borderRadius: 3, overflow: "hidden" }}>
@@ -1362,7 +1510,38 @@ export default function Page() {
                   <p style={styles.sectionTitle} className="isg-text-muted">Personel Detayı</p>
                   <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 2 }}>{selectedEmployee.firstName} {selectedEmployee.lastName}</div>
                   <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>{selectedEmployee.title}</div>
+                  <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginTop: 2 }}>{selectedEmployee.department || "Birim girilmedi"}</div>
+                  {selectedEmployee.diplomaInfo && <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Diploma: {selectedEmployee.diplomaInfo}</div>}
+                  {selectedEmployee.address && <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Adres: {selectedEmployee.address}</div>}
                   <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{selectedEmployeeCompany?.nickName}</div>
+                  {(() => {
+                    const onboarding = selectedEmployee.onboarding || createOnboardingFromChecklist(selectedEmployee.checklist);
+                    return (
+                      <div style={{ backgroundColor: onboarding.status === "completed" ? "#16a34a10" : "#d9770610", border: `1px solid ${onboarding.status === "completed" ? "#16a34a33" : "#d9770633"}`, borderRadius: 8, padding: 12, marginTop: 14 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: onboarding.status === "completed" ? "#86efac" : "#fbbf24" }}>
+                            {onboarding.status === "completed" ? "Yeşil statü: tamamlandı" : "Eksik görev var"}
+                          </span>
+                          <Badge text={onboarding.status === "completed" ? "Tamamlandı" : `${onboarding.missingSteps.length} eksik`} color={onboarding.status === "completed" ? "#16a34a" : "#d97706"} />
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--isg-text-muted)", lineHeight: 1.5 }}>
+                          {onboarding.missingSteps.length > 0 ? onboarding.missingSteps.join(" · ") : "Doktor ve İSG uzmanı görevleri tamamlandı."}
+                        </div>
+                        {onboarding.missingSteps.length > 0 && (
+                          <button
+                            style={{ ...styles.btnSecondary, width: "100%", marginTop: 10 }}
+                            onClick={() => fetch("/api/send-onboarding-notification", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ employeeId: selectedEmployee.id, type: "reminder" }),
+                            }).catch((error) => console.error("Onboarding uyarısı gönderilemedi", error))}
+                          >
+                            Eksikler için uyarı gönder
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <p style={{ ...styles.sectionTitle, marginTop: 16 }}>Kontrol Listesi</p>
                   {[{ key: "isgCertificateDate", label: "İSG Sertifikası Tarihi" }, { key: "ek2Date", label: "EK-2 Tarihi" }, { key: "orientationDate", label: "Oryantasyon Tarihi" }].map(({ key, label }) => (
                     <FormField key={key} label={label}>

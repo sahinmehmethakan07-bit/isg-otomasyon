@@ -2,14 +2,14 @@
  * roleManager.ts — Kullanıcı Rol Yönetimi
  *
  * Firestore "users" collection'ında her kullanıcı için:
- * - role: "admin" | "doctor" | "nurse"
+ * - role: "admin" | "doctor" | "nurse" | "safety_expert" | "human_resources"
  * - email: string
  * - displayName: string
  * - createdAt: timestamp
  *
  * Veri filtreleme mantığı:
  * - Admin: tüm verileri görür
- * - Doktor/Hemşire: sadece kendi eklediği verileri görür
+ * - Doktor/Hemşire/İSG/İK: sadece kendi eklediği verileri görür
  *   (her document'a "createdBy" alanı eklenir)
  */
 
@@ -27,7 +27,7 @@ import {
 
 // ── Tipler ───────────────────────────────────────────────────────────────────
 
-export type UserRole = "admin" | "doctor" | "nurse" | "safety_expert";
+export type UserRole = "admin" | "doctor" | "nurse" | "safety_expert" | "human_resources";
 
 export type UserProfile = {
   uid: string;
@@ -69,6 +69,12 @@ export const ROLE_CONFIG: Record<
     color: "#f59e0b",
     description: "Sadece kendi eklediği verileri görür",
   },
+  human_resources: {
+    label: "İnsan Kaynakları",
+    icon: "👥",
+    color: "#ec4899",
+    description: "Personel girişlerini ve onboarding sürecini yönetir",
+  },
 };
 
 // ── Kullanıcı Profil İşlemleri ───────────────────────────────────────────────
@@ -96,12 +102,16 @@ export async function getUserProfile(
  */
 export async function setUserProfile(
   uid: string,
-  data: { email: string; displayName: string; role: UserRole }
+  data: { email: string; displayName: string; role: UserRole; roles?: UserRole[]; activeRole?: UserRole }
 ): Promise<void> {
+  const roles = data.roles?.length ? data.roles : [data.role];
   await setDoc(
     doc(db, "users", uid),
     {
       ...data,
+      role: roles[0],
+      roles,
+      activeRole: data.activeRole && roles.includes(data.activeRole) ? data.activeRole : roles[0],
       createdAt: serverTimestamp(),
     },
     { merge: true }
@@ -131,7 +141,8 @@ export async function getUsersByRole(role: UserRole): Promise<UserProfile[]> {
  * Kullanıcının rolüne göre Firestore query oluşturur.
  *
  * - Admin: filtre yok, tüm verileri çeker
- * - Doctor/Nurse: createdBy == uid olan kayıtları çeker
+ * - Operasyon koleksiyonları: tüm roller ortak veri havuzunu görür
+ * - Diğer koleksiyonlar: admin/İK tümünü, diğer roller kendi kayıtlarını görür
  *
  * Kullanım:
  *   const q = getRoleFilteredQuery("companies", userProfile);
@@ -142,13 +153,24 @@ export function getRoleFilteredQuery(
   userProfile: UserProfile
 ) {
   const col = collection(db, collectionName);
+  const sharedCollections = new Set([
+    "companies",
+    "employees",
+    "documents",
+    "observers",
+    "dofs",
+    "risks",
+    "signers",
+    "ek2forms",
+  ]);
 
-  if (userProfile.activeRole === "admin" || userProfile.role === "admin") {
+  const activeRole = userProfile.activeRole || userProfile.role;
+
+  if (sharedCollections.has(collectionName) || activeRole === "admin" || activeRole === "human_resources" || userProfile.role === "admin" || userProfile.role === "human_resources") {
     return col; // filtre yok
   }
 
   // Kullanici sadece kendi roluyle ekledigi verileri gorur
-  const activeRole = userProfile.activeRole || userProfile.role;
   return query(col, where("createdBy", "==", userProfile.uid), where("createdAsRole", "==", activeRole));
 }
 

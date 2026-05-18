@@ -18,6 +18,7 @@ type UseUserRoleReturn = {
   isAdmin: boolean;
   isDoctor: boolean;
   isNurse: boolean;
+  isHumanResources: boolean;
 };
 
 export function useUserRole(): UseUserRoleReturn {
@@ -33,7 +34,14 @@ export function useUserRole(): UseUserRoleReturn {
       }
 
       const profile = await getUserProfile(firebaseUser.uid);
-      setUser(profile);
+      if (profile) {
+        const storedRole = localStorage.getItem("isg_activeRole");
+        const allowedRoles = profile.roles?.length ? profile.roles : [profile.role];
+        const activeRole = allowedRoles.includes(storedRole as typeof profile.role) ? storedRole as typeof profile.role : profile.role;
+        setUser({ ...profile, activeRole });
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
 
@@ -43,8 +51,9 @@ export function useUserRole(): UseUserRoleReturn {
   return {
     user,
     loading,
-    isAdmin: user?.role === "admin",
-    isDoctor: user?.role === "doctor",
-    isNurse: user?.role === "nurse",
+    isAdmin: user?.activeRole === "admin" || user?.role === "admin",
+    isDoctor: user?.activeRole === "doctor" || user?.role === "doctor",
+    isNurse: user?.activeRole === "nurse" || user?.role === "nurse",
+    isHumanResources: user?.activeRole === "human_resources" || user?.role === "human_resources",
   };
 }

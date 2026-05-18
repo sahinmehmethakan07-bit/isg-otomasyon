@@ -29,6 +29,12 @@ type Props = {
   styles: Record<string, React.CSSProperties>;
 };
 
+const ALL_ROLES = Object.keys(ROLE_CONFIG) as UserRole[];
+
+function normalizeRoles(user: Pick<UserProfile, "role" | "roles">) {
+  return user.roles?.length ? user.roles : [user.role];
+}
+
 export function AdminUserPanel({ styles }: Props) {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,10 +43,11 @@ export function AdminUserPanel({ styles }: Props) {
     email: "",
     password: "",
     displayName: "",
-    role: "doctor" as UserRole,
+    roles: ["doctor"] as UserRole[],
   });
   const [creating, setCreating] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [roleUpdatingUid, setRoleUpdatingUid] = useState<string | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -72,7 +79,8 @@ export function AdminUserPanel({ styles }: Props) {
       await setUserProfile(cred.user.uid, {
         email: newUser.email,
         displayName: newUser.displayName,
-        role: newUser.role,
+        role: newUser.roles[0],
+        roles: newUser.roles,
       });
 
       // Oluşturulan kullanıcıdan çıkış yap, admin'e geri dön
@@ -82,8 +90,8 @@ export function AdminUserPanel({ styles }: Props) {
         // window.location.reload() en güvenli yol
       }
 
-      setStatus(`✅ ${newUser.displayName} (${ROLE_CONFIG[newUser.role].label}) başarıyla oluşturuldu`);
-      setNewUser({ email: "", password: "", displayName: "", role: "doctor" });
+      setStatus(`✅ ${newUser.displayName} (${newUser.roles.map(role => ROLE_CONFIG[role].label).join(", ")}) başarıyla oluşturuldu`);
+      setNewUser({ email: "", password: "", displayName: "", roles: ["doctor"] });
       setShowForm(false);
       await loadUsers();
     } catch (err: any) {
@@ -93,13 +101,36 @@ export function AdminUserPanel({ styles }: Props) {
     }
   }
 
-  async function updateRole(uid: string, user: UserProfile, newRole: UserRole) {
-    await setUserProfile(uid, {
-      email: user.email,
-      displayName: user.displayName,
-      role: newRole,
+  function toggleNewUserRole(role: UserRole) {
+    setNewUser(prev => {
+      const exists = prev.roles.includes(role);
+      const roles = exists ? prev.roles.filter(item => item !== role) : [...prev.roles, role];
+      return { ...prev, roles: roles.length > 0 ? roles : [role] };
     });
-    await loadUsers();
+  }
+
+  async function updateRoles(uid: string, user: UserProfile, role: UserRole, checked: boolean) {
+    setStatus(null);
+    setRoleUpdatingUid(uid);
+    try {
+      const currentRoles = normalizeRoles(user);
+      const nextRoles = checked ? Array.from(new Set([...currentRoles, role])) : currentRoles.filter(item => item !== role);
+      const roles = nextRoles.length > 0 ? nextRoles : [role];
+      await setUserProfile(uid, {
+        email: user.email,
+        displayName: user.displayName,
+        role: roles[0],
+        roles,
+        activeRole: user.activeRole && roles.includes(user.activeRole) ? user.activeRole : roles[0],
+      });
+      setStatus(`✅ ${user.displayName || user.email} rolleri güncellendi: ${roles.map(item => ROLE_CONFIG[item].label).join(", ")}`);
+      await loadUsers();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Bilinmeyen hata";
+      setStatus(`❌ Rol güncellenemedi: ${message}`);
+    } finally {
+      setRoleUpdatingUid(null);
+    }
   }
 
   if (loading) {
@@ -171,17 +202,19 @@ export function AdminUserPanel({ styles }: Props) {
                 />
               </div>
               <div>
-                <label style={styles.label}>Rol</label>
-                <select
-                  style={styles.select}
-                  value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
-                >
-                  <option value="doctor">🩺 Doktor</option>
-                  <option value="nurse">💉 Hemşire</option>
-                  <option value="admin">🛡️ Admin</option>
-                  <option value="safety_expert">🦺 İş Güvenliği Uzmanı</option>
-                </select>
+                <label style={styles.label}>Roller</label>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {ALL_ROLES.map((role) => (
+                    <label key={role} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--isg-text)", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={newUser.roles.includes(role)}
+                        onChange={() => toggleNewUserRole(role)}
+                      />
+                      <span>{ROLE_CONFIG[role].icon} {ROLE_CONFIG[role].label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
             <div style={{ marginTop: 12 }}>
@@ -200,45 +233,55 @@ export function AdminUserPanel({ styles }: Props) {
             <tr>
               <th style={styles.th}>Ad Soyad</th>
               <th style={styles.th}>E-posta</th>
-              <th style={styles.th}>Rol</th>
-              <th style={styles.th}>Rol Değiştir</th>
+              <th style={styles.th}>Roller</th>
+              <th style={styles.th}>Rol Ekle / Kaldır</th>
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
-              <tr key={user.uid}>
-                <td style={styles.td}>{user.displayName || "—"}</td>
-                <td style={styles.td}>{user.email}</td>
-                <td style={styles.td}>
-                  <span style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    padding: "2px 10px",
-                    borderRadius: 6,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    backgroundColor: ROLE_CONFIG[user.role]?.color + "22" || "#33333322",
-                    color: ROLE_CONFIG[user.role]?.color || "#999",
-                    border: `1px solid ${ROLE_CONFIG[user.role]?.color || "#333"}44`,
-                  }}>
-                    {ROLE_CONFIG[user.role]?.icon} {ROLE_CONFIG[user.role]?.label || user.role}
-                  </span>
-                </td>
-                <td style={styles.td}>
-                  <select
-                    value={user.role}
-                    onChange={(e) => updateRole(user.uid, user, e.target.value as UserRole)}
-                    style={{ ...styles.select, width: "auto", padding: "4px 8px", fontSize: 12 }}
-                  >
-                    <option value="doctor">Doktor</option>
-                    <option value="nurse">Hemşire</option>
-                    <option value="admin">Admin</option>
-                    <option value="safety_expert">İş Güvenliği Uzmanı</option>
-                  </select>
-                </td>
-              </tr>
-            ))}
+            {users.map((user) => {
+              const userRoles = normalizeRoles(user);
+              return (
+                <tr key={user.uid}>
+                  <td style={styles.td}>{user.displayName || "—"}</td>
+                  <td style={styles.td}>{user.email}</td>
+                  <td style={styles.td}>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {userRoles.map((role) => (
+                        <span key={role} style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          padding: "2px 10px",
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          backgroundColor: ROLE_CONFIG[role]?.color + "22" || "#33333322",
+                          color: ROLE_CONFIG[role]?.color || "#999",
+                          border: `1px solid ${ROLE_CONFIG[role]?.color || "#333"}44`,
+                        }}>
+                          {ROLE_CONFIG[role]?.icon} {ROLE_CONFIG[role]?.label || role}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td style={styles.td}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(150px, 1fr))", gap: 8 }}>
+                      {ALL_ROLES.map((role) => (
+                        <label key={role} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--isg-text)", cursor: "pointer" }}>
+                          <input
+                            type="checkbox"
+                            checked={userRoles.includes(role)}
+                            disabled={roleUpdatingUid === user.uid}
+                            onChange={(e) => updateRoles(user.uid, user, role, e.target.checked)}
+                          />
+                          <span>{ROLE_CONFIG[role].icon} {ROLE_CONFIG[role].label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
             {users.length === 0 && (
               <tr>
                 <td colSpan={4} style={{ ...styles.td, textAlign: "center", color: "var(--isg-text-muted)" }}>

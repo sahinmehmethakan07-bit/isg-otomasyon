@@ -136,7 +136,7 @@ export default function LoginPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#0a0e1a",
+        background: "linear-gradient(135deg, #090a0d 0%, #101218 48%, #0b1110 100%)",
         fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
         position: "relative",
         overflow: "hidden",
@@ -148,14 +148,11 @@ export default function LoginPage() {
           <LanguageSwitcher lang={lang} setLang={setLang} />
         </div>
 
-        {/* Arka plan efekti */}
+        {/* Arka plan dokusu */}
         <div style={{
           position: "absolute",
-          top: "-50%",
-          left: "-50%",
-          width: "200%",
-          height: "200%",
-          background: "radial-gradient(ellipse at 30% 20%, rgba(14, 165, 233, 0.06) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(139, 92, 246, 0.04) 0%, transparent 50%)",
+          inset: 0,
+          background: "linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0) 32%), linear-gradient(90deg, rgba(76,201,166,0.07), rgba(90,169,255,0.045), rgba(247,185,85,0.035))",
           pointerEvents: "none",
         }} />
 
@@ -175,11 +172,11 @@ export default function LoginPage() {
               fontWeight: 700,
               color: "#f1f5f9",
               marginTop: 8,
-              letterSpacing: "-0.02em",
+              letterSpacing: 0,
             }}>
-              {lang === "tr" ? "İSG" : "OHS"} <span style={{ color: "#38bdf8" }}>{lang === "tr" ? "Otomasyon" : "Automation"}</span>
+              {lang === "tr" ? "İSG" : "OHS"} <span style={{ color: "#4cc9a6" }}>{lang === "tr" ? "Otomasyon" : "Automation"}</span>
             </h1>
-            <p style={{ fontSize: isMobile ? 12 : 14, color: "#64748b", marginTop: 4 }}>
+            <p style={{ fontSize: isMobile ? 12 : 14, color: "rgba(244,246,251,0.54)", marginTop: 4 }}>
               {t("app.subtitle")}
             </p>
           </div>
@@ -187,13 +184,13 @@ export default function LoginPage() {
           {/* Bilgi mesajı */}
           {infoMessage && (
             <div style={{
-              backgroundColor: "#0ea5e911",
-              border: "1px solid #0ea5e933",
-              borderRadius: 10,
+              backgroundColor: "rgba(76,201,166,0.12)",
+              border: "1px solid rgba(76,201,166,0.24)",
+              borderRadius: 8,
               padding: "12px 16px",
               marginBottom: 20,
               fontSize: 13,
-              color: "#7dd3fc",
+              color: "#8ee7c8",
               textAlign: "center",
             }}>
               {infoMessage}
@@ -203,7 +200,7 @@ export default function LoginPage() {
           {/* ── ADIM 1: Rol Seçimi ── */}
           {step === "select_role" && (
             <div>
-              <p style={{ textAlign: "center", fontSize: isMobile ? 13 : 15, color: "#94a3b8", marginBottom: isMobile ? 16 : 24 }}>
+              <p style={{ textAlign: "center", fontSize: isMobile ? 13 : 15, color: "rgba(244,246,251,0.62)", marginBottom: isMobile ? 16 : 24 }}>
                 {t("login.selectRole")}
               </p>
               {/* Mobil: dikey layout (1 kolon), Desktop: 4 kolon */}
@@ -219,9 +216,9 @@ export default function LoginPage() {
                     key={role}
                     onClick={() => selectRole(role)}
                     style={{
-                      backgroundColor: "#111827",
-                      border: "1px solid #1e293b",
-                      borderRadius: isMobile ? 12 : 16,
+                      backgroundColor: "rgba(22,24,31,0.9)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 8,
                       /* Mobil: yatay layout, Desktop: dikey */
                       padding: isMobile ? "16px 16px" : "32px 20px",
                       cursor: "pointer",
@@ -232,6 +229,7 @@ export default function LoginPage() {
                       display: isMobile ? "flex" : "block",
                       alignItems: "center",
                       gap: isMobile ? 12 : 0,
+                      boxShadow: "0 18px 50px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04)",
                     }}
                     onMouseEnter={(e) => {
                       (e.currentTarget as HTMLElement).style.borderColor = config.color;
@@ -239,17 +237,17 @@ export default function LoginPage() {
                       (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${config.color}22`;
                     }}
                     onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = "#1e293b";
+                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.1)";
                       (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-                      (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                      (e.currentTarget as HTMLElement).style.boxShadow = "0 18px 50px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04)";
                     }}
                   >
                     <div style={{ fontSize: isMobile ? 28 : 40, marginBottom: isMobile ? 0 : 12 }}>{config.icon}</div>
                     <div>
-                      <div style={{ fontSize: isMobile ? 14 : 16, fontWeight: 700, color: "#f1f5f9", marginBottom: isMobile ? 2 : 6 }}>
+                      <div style={{ fontSize: isMobile ? 14 : 16, fontWeight: 750, color: "#f4f6fb", marginBottom: isMobile ? 2 : 6 }}>
                         {roleLabels[role].label}
                       </div>
-                      <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.4 }}>
+                      <div style={{ fontSize: 11, color: "rgba(244,246,251,0.48)", lineHeight: 1.4 }}>
                         {roleLabels[role].desc}
                       </div>
                     </div>
@@ -274,28 +272,28 @@ export default function LoginPage() {
                 gap: isMobile ? 10 : 0,
                 marginTop: isMobile ? 16 : 24,
               }}>
-                <p style={{ fontSize: 11, color: "#334155", textAlign: isMobile ? "center" : "left" }}>
+                <p style={{ fontSize: 11, color: "rgba(244,246,251,0.36)", textAlign: isMobile ? "center" : "left" }}>
                   🔒 {t("login.singleDevice")}
                 </p>
                 <button
                   onClick={() => selectRole("admin")}
                   style={{
                     background: "none",
-                    border: "1px solid #334155",
+                    border: "1px solid rgba(255,255,255,0.12)",
                     borderRadius: 8,
-                    color: "#64748b",
+                    color: "rgba(244,246,251,0.58)",
                     fontSize: 12,
                     padding: isMobile ? "10px 14px" : "5px 14px",
                     cursor: "pointer",
                     transition: "all 0.2s",
                   }}
                   onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = "#8b5cf6";
-                    (e.currentTarget as HTMLElement).style.color = "#a78bfa";
+                    (e.currentTarget as HTMLElement).style.borderColor = "#5aa9ff";
+                    (e.currentTarget as HTMLElement).style.color = "#9ccaff";
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = "#334155";
-                    (e.currentTarget as HTMLElement).style.color = "#64748b";
+                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.12)";
+                    (e.currentTarget as HTMLElement).style.color = "rgba(244,246,251,0.58)";
                   }}
                 >
                   🛡️ Admin
@@ -307,10 +305,11 @@ export default function LoginPage() {
           {/* ── ADIM 2: Giriş Formu ── */}
           {step === "enter_credentials" && roleConfig && (
             <div style={{
-              backgroundColor: "#111827",
+              backgroundColor: "rgba(22,24,31,0.9)",
               border: `1px solid ${roleConfig.color}33`,
-              borderRadius: isMobile ? 12 : 16,
+              borderRadius: 8,
               padding: isMobile ? 20 : 32,
+              boxShadow: "0 22px 60px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)",
             }}>
               <div style={{
                 display: "flex",
@@ -323,9 +322,9 @@ export default function LoginPage() {
                   onClick={goBack}
                   style={{
                     backgroundColor: "transparent",
-                    border: "1px solid #1e293b",
+                    border: "1px solid rgba(255,255,255,0.1)",
                     borderRadius: 8,
-                    color: "#94a3b8",
+                    color: "rgba(244,246,251,0.62)",
                     padding: "6px 12px",
                     fontSize: 13,
                     cursor: "pointer",
@@ -339,14 +338,14 @@ export default function LoginPage() {
                     <div style={{
                       fontSize: isMobile ? 14 : 16,
                       fontWeight: 700,
-                      color: "#f1f5f9",
+                      color: "#f4f6fb",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                     }}>
                       {roleLabels[selectedRole!].label} {t("role.login")}
                     </div>
-                    <div style={{ fontSize: 11, color: "#64748b" }}>
+                    <div style={{ fontSize: 11, color: "rgba(244,246,251,0.48)" }}>
                       {roleLabels[selectedRole!].desc}
                     </div>
                   </div>
@@ -357,7 +356,7 @@ export default function LoginPage() {
                 <div style={{
                   backgroundColor: "#dc262615",
                   border: "1px solid #dc262633",
-                  borderRadius: 10,
+                  borderRadius: 8,
                   padding: "10px 14px",
                   marginBottom: 16,
                   fontSize: 13,
@@ -370,7 +369,7 @@ export default function LoginPage() {
 
               <form onSubmit={handleLogin}>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>
+                  <label style={{ display: "block", fontSize: 12, color: "rgba(244,246,251,0.62)", marginBottom: 6 }}>
                     {t("login.email")}
                   </label>
                   <input
@@ -381,10 +380,10 @@ export default function LoginPage() {
                     autoFocus={!isMobile}
                     style={{
                       width: "100%",
-                      backgroundColor: "#0a0e1a",
-                      border: "1px solid #1e293b",
+                      backgroundColor: "rgba(255,255,255,0.055)",
+                      border: "1px solid rgba(255,255,255,0.1)",
                       borderRadius: 8,
-                      color: "#f1f5f9",
+                      color: "#f4f6fb",
                       padding: isMobile ? "14px" : "12px 14px",
                       fontSize: 16, /* 16px: iOS zoom engelleyici */
                       outline: "none",
@@ -395,7 +394,7 @@ export default function LoginPage() {
                 </div>
 
                 <div style={{ marginBottom: 24 }}>
-                  <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>
+                  <label style={{ display: "block", fontSize: 12, color: "rgba(244,246,251,0.62)", marginBottom: 6 }}>
                     {t("login.password")}
                   </label>
                   <input
@@ -405,10 +404,10 @@ export default function LoginPage() {
                     required
                     style={{
                       width: "100%",
-                      backgroundColor: "#0a0e1a",
-                      border: "1px solid #1e293b",
+                      backgroundColor: "rgba(255,255,255,0.055)",
+                      border: "1px solid rgba(255,255,255,0.1)",
                       borderRadius: 8,
-                      color: "#f1f5f9",
+                      color: "#f4f6fb",
                       padding: isMobile ? "14px" : "12px 14px",
                       fontSize: 16, /* 16px: iOS zoom engelleyici */
                       outline: "none",
@@ -426,7 +425,7 @@ export default function LoginPage() {
                     backgroundColor: loading ? `${roleConfig.color}88` : roleConfig.color,
                     color: "#fff",
                     border: "none",
-                    borderRadius: 10,
+                    borderRadius: 8,
                     padding: isMobile ? "15px 0" : "13px 0",
                     fontSize: isMobile ? 15 : 14,
                     fontWeight: 600,

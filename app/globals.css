@@ -7,45 +7,75 @@
 
 html {
   scroll-behavior: smooth;
+  min-height: 100%;
 }
 
 body {
   font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: #0c0c0e;
-  color: #e8e8ed;
+  background:
+    linear-gradient(135deg, #090a0d 0%, #101218 46%, #0b1110 100%);
+  background-attachment: fixed;
+  color: #f4f6fb;
+  min-height: 100%;
 }
 
 /* ── CSS VARIABLES ─────────────────────────────────────────── */
 body, body.dark {
-  --isg-bg: #0c0c0e;
-  --isg-card: #161618;
-  --isg-card-hover: #1c1c1f;
-  --isg-border: rgba(255,255,255,0.07);
-  --isg-text: #e8e8ed;
-  --isg-text-muted: rgba(255,255,255,0.35);
-  --isg-input-bg: #1c1c1f;
-  --isg-header: rgba(12,12,14,0.92);
-  --isg-nav: rgba(12,12,14,0.8);
-  --isg-btn-secondary: rgba(255,255,255,0.06);
-  --isg-today-bg: #1e3a5f;
-  --isg-accent: #3b82f6;
-  --isg-accent-glow: rgba(59,130,246,0.3);
+  --isg-bg: #090a0d;
+  --isg-bg-soft: #101218;
+  --isg-card: rgba(22, 24, 31, 0.88);
+  --isg-card-solid: #16181f;
+  --isg-card-hover: rgba(35, 38, 48, 0.88);
+  --isg-border: rgba(255,255,255,0.1);
+  --isg-border-strong: rgba(255,255,255,0.16);
+  --isg-text: #f4f6fb;
+  --isg-text-muted: rgba(244,246,251,0.58);
+  --isg-text-subtle: rgba(244,246,251,0.38);
+  --isg-input-bg: rgba(255,255,255,0.055);
+  --isg-header: rgba(11, 12, 16, 0.82);
+  --isg-nav: rgba(11, 12, 16, 0.74);
+  --isg-btn-secondary: rgba(255,255,255,0.075);
+  --isg-today-bg: rgba(76,201,166,0.14);
+  --isg-accent: #4cc9a6;
+  --isg-accent-2: #5aa9ff;
+  --isg-warning: #f7b955;
+  --isg-danger: #ff6b6b;
+  --isg-accent-glow: rgba(76,201,166,0.28);
+  --isg-shadow: 0 18px 50px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.035);
 }
 
 body.light {
-  --isg-bg: #fafafa;
+  --isg-bg: #f6f7f9;
+  --isg-bg-soft: #eef1f4;
   --isg-card: #ffffff;
-  --isg-card-hover: #f5f5f5;
-  --isg-border: rgba(0,0,0,0.08);
-  --isg-text: #111111;
-  --isg-text-muted: rgba(0,0,0,0.4);
-  --isg-input-bg: #f5f5f5;
-  --isg-header: rgba(250,250,250,0.92);
-  --isg-nav: rgba(250,250,250,0.8);
-  --isg-btn-secondary: rgba(0,0,0,0.05);
-  --isg-today-bg: #dbeafe;
-  --isg-accent: #2563eb;
-  --isg-accent-glow: rgba(37,99,235,0.2);
+  --isg-card-solid: #ffffff;
+  --isg-card-hover: #f1f4f7;
+  --isg-border: rgba(20,22,28,0.1);
+  --isg-border-strong: rgba(20,22,28,0.16);
+  --isg-text: #14161c;
+  --isg-text-muted: rgba(20,22,28,0.58);
+  --isg-text-subtle: rgba(20,22,28,0.4);
+  --isg-input-bg: #f4f6f8;
+  --isg-header: rgba(255,255,255,0.84);
+  --isg-nav: rgba(255,255,255,0.78);
+  --isg-btn-secondary: rgba(20,22,28,0.06);
+  --isg-today-bg: rgba(24,151,122,0.12);
+  --isg-accent: #168f75;
+  --isg-accent-2: #2875d9;
+  --isg-warning: #b67818;
+  --isg-danger: #d33f49;
+  --isg-accent-glow: rgba(22,143,117,0.16);
+  --isg-shadow: 0 14px 42px rgba(20,22,28,0.08), inset 0 1px 0 rgba(255,255,255,0.7);
+}
+
+body.light {
+  background: linear-gradient(135deg, #f6f7f9 0%, #eef2f4 48%, #f7fbf8 100%);
+  background-attachment: fixed;
+  color: var(--isg-text);
+}
+
+#__next, .isg-app {
+  min-height: 100vh;
 }
 
 /* ── HEADER STICKY ─────────────────────────────────────────── */
@@ -59,7 +89,7 @@ body.light {
 
 .isg-nav {
   position: sticky;
-  top: 52px;
+  top: 58px;
   z-index: 40;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -98,14 +128,14 @@ button[style*="backgroundColor: \"#fff\""] {
 /* ── INPUTS ────────────────────────────────────────────────── */
 input:focus, select:focus, textarea:focus {
   outline: none !important;
-  border-color: rgba(255,255,255,0.2) !important;
-  box-shadow: 0 0 0 3px rgba(255,255,255,0.04) !important;
-  background-color: #222226 !important;
+  border-color: var(--isg-accent) !important;
+  box-shadow: 0 0 0 3px var(--isg-accent-glow) !important;
+  background-color: var(--isg-card-hover) !important;
 }
 
 /* ── TABLE ROWS ────────────────────────────────────────────── */
 tbody tr:hover td {
-  background-color: rgba(255,255,255,0.03);
+  background-color: color-mix(in srgb, var(--isg-accent) 7%, transparent);
 }
 
 /* ── CARDS ─────────────────────────────────────────────────── */
@@ -126,12 +156,12 @@ main > div {
 /* ── SCROLLBAR ─────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+::-webkit-scrollbar-thumb { background: var(--isg-border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--isg-text-subtle); }
 .isg-nav::-webkit-scrollbar { display: none; }
 
 /* ── SELECTION ─────────────────────────────────────────────── */
 ::selection {
-  background: rgba(59,130,246,0.3);
+  background: var(--isg-accent-glow);
   color: #fff;
 }

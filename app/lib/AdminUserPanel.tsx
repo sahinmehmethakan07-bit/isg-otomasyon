@@ -79,6 +79,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
   const [creating, setCreating] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [roleUpdatingUid, setRoleUpdatingUid] = useState<string | null>(null);
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -422,15 +423,37 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
               </div>
               <div>
                 <label style={styles.label}>Şifre</label>
-                <input
-                  style={styles.input}
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                  required
-                  minLength={6}
-                  placeholder="En az 6 karakter"
-                />
+                <div style={{ position: "relative" }}>
+                  <input
+                    style={{ ...styles.input, paddingRight: 82 }}
+                    type={showNewUserPassword ? "text" : "password"}
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    required
+                    minLength={6}
+                    placeholder="En az 6 karakter"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewUserPassword(prev => !prev)}
+                    style={{
+                      position: "absolute",
+                      right: 8,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      border: "1px solid var(--isg-border)",
+                      backgroundColor: "var(--isg-input-bg)",
+                      color: "var(--isg-text)",
+                      borderRadius: 6,
+                      padding: "6px 9px",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {showNewUserPassword ? "Gizle" : "Göster"}
+                  </button>
+                </div>
               </div>
               <div>
                 <label style={styles.label}>Roller</label>

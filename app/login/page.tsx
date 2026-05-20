@@ -30,6 +30,7 @@ export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
@@ -399,24 +400,46 @@ export default function LoginPage() {
                   <label style={{ display: "block", fontSize: 12, color: "rgba(244,246,251,0.62)", marginBottom: 6 }}>
                     {t("login.password")}
                   </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    style={{
-                      width: "100%",
-                      backgroundColor: "rgba(255,255,255,0.055)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: 8,
-                      color: "#f4f6fb",
-                      padding: isMobile ? "14px" : "12px 14px",
-                      fontSize: 16, /* 16px: iOS zoom engelleyici */
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                    placeholder={t("login.passwordPlaceholder")}
-                  />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      style={{
+                        width: "100%",
+                        backgroundColor: "rgba(255,255,255,0.055)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: 8,
+                        color: "#f4f6fb",
+                        padding: isMobile ? "14px 82px 14px 14px" : "12px 82px 12px 14px",
+                        fontSize: 16, /* 16px: iOS zoom engelleyici */
+                        outline: "none",
+                        boxSizing: "border-box",
+                      }}
+                      placeholder={t("login.passwordPlaceholder")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(prev => !prev)}
+                      style={{
+                        position: "absolute",
+                        right: 8,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        backgroundColor: "rgba(255,255,255,0.08)",
+                        color: "#dbeafe",
+                        borderRadius: 6,
+                        padding: "6px 9px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {showPassword ? "Gizle" : "Göster"}
+                    </button>
+                  </div>
                 </div>
 
                 <button

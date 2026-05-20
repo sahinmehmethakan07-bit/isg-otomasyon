@@ -51,9 +51,9 @@ export function useUserRole(): UseUserRoleReturn {
   return {
     user,
     loading,
-    isAdmin: user?.activeRole === "admin" || user?.role === "admin",
-    isDoctor: user?.activeRole === "doctor" || user?.role === "doctor",
-    isNurse: user?.activeRole === "nurse" || user?.role === "nurse",
-    isHumanResources: user?.activeRole === "human_resources" || user?.role === "human_resources",
+    isAdmin: user?.activeRole === "admin",
+    isDoctor: user?.activeRole === "doctor",
+    isNurse: user?.activeRole === "nurse",
+    isHumanResources: user?.activeRole === "human_resources",
   };
 }

@@ -2,7 +2,7 @@
 // SessionGuard devre disi
 // destroySession devre disi
 import { useUserRole } from "./lib/useUserRole";
-import { getUserProfile, UserProfile, UserRole, ROLE_CONFIG, getRoleFilteredQuery, withCreatedBy } from "./lib/roleManager";
+import { getUserProfile, UserProfile, UserRole, ROLE_CONFIG, withCreatedBy } from "./lib/roleManager";
 import { AdminUserPanel } from "./lib/AdminUserPanel";
 import { Ek2MuayeneFormu } from "./lib/Ek2MuayeneFormu";
 import { useLanguage } from "./lib/i18n";
@@ -21,6 +21,9 @@ import {
   updateDoc,
   getDoc,
   setDoc,
+  query,
+  where,
+  documentId,
 } from "firebase/firestore";
 
 type DangerClass = "Az Tehlikeli" | "Tehlikeli" | "Çok Tehlikeli";
@@ -75,15 +78,116 @@ type Employee = {
   firstName: string;
   lastName: string;
   tcNo: string;
+  photo?: string;
+  birthPlace?: string;
+  birthDate?: string;
+  gender?: string;
+  nationality?: string;
+  serialNo?: string;
+  fatherName?: string;
+  motherName?: string;
+  phone?: string;
+  email?: string;
   department?: string;
   diplomaInfo?: string;
+  educationLevel?: string;
+  maritalStatus?: string;
+  childrenCount?: string;
   address?: string;
   title: string;
+  jobDescription?: string;
+  profession?: string;
   hireDate: string;
+  sgkNo?: string;
+  iban?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  bloodType?: string;
+  chronicDisease?: string;
+  tetanusVaccine?: string;
+  hepatitisVaccine?: string;
+  allergies?: string;
+  notes?: string;
   isActive: boolean;
   trainingComplete: boolean;
   checklist: EmployeeChecklist;
   onboarding?: EmployeeOnboarding;
+};
+
+type NewEmployeeForm = {
+  companyId: string;
+  firstName: string;
+  lastName: string;
+  tcNo: string;
+  photo: string;
+  birthPlace: string;
+  birthDate: string;
+  gender: string;
+  nationality: string;
+  nationalityOther: string;
+  serialNo: string;
+  fatherName: string;
+  motherName: string;
+  phone: string;
+  email: string;
+  department: string;
+  diplomaInfo: string;
+  educationLevel: string;
+  maritalStatus: string;
+  childrenCount: string;
+  address: string;
+  title: string;
+  jobDescription: string;
+  profession: string;
+  hireDate: string;
+  sgkNo: string;
+  iban: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  bloodType: string;
+  chronicDisease: string;
+  tetanusVaccine: string;
+  hepatitisVaccine: string;
+  allergies: string;
+  notes: string;
+};
+
+const emptyNewEmployee: NewEmployeeForm = {
+  companyId: "",
+  firstName: "",
+  lastName: "",
+  tcNo: "",
+  photo: "",
+  birthPlace: "",
+  birthDate: "",
+  gender: "",
+  nationality: "T.C.",
+  nationalityOther: "",
+  serialNo: "",
+  fatherName: "",
+  motherName: "",
+  phone: "",
+  email: "",
+  department: "",
+  diplomaInfo: "",
+  educationLevel: "",
+  maritalStatus: "",
+  childrenCount: "",
+  address: "",
+  title: "",
+  jobDescription: "",
+  profession: "",
+  hireDate: "",
+  sgkNo: "",
+  iban: "",
+  emergencyContactName: "",
+  emergencyContactPhone: "",
+  bloodType: "",
+  chronicDisease: "",
+  tetanusVaccine: "",
+  hepatitisVaccine: "",
+  allergies: "",
+  notes: "",
 };
 
 type DocumentRecord = {
@@ -697,7 +801,7 @@ export default function Page() {
   const [editingDofId, setEditingDofId] = useState<string | null>(null);
 
   const [newCompany, setNewCompany] = useState({ nickName: "", officialName: "", sgkSicil: "", naceCode: "", dangerClass: "Az Tehlikeli" as DangerClass, employeeCount: "", contractEnd: "", serviceType: "İş Güvenliği" as ServiceType, contactEmail: "" });
-  const [newEmployee, setNewEmployee] = useState({ companyId: "", firstName: "", lastName: "", tcNo: "", department: "", diplomaInfo: "", address: "", title: "", hireDate: "" });
+  const [newEmployee, setNewEmployee] = useState<NewEmployeeForm>(emptyNewEmployee);
   const [newDocument, setNewDocument] = useState({ companyId: "", employeeId: "", type: "Risk Değerlendirme Raporu", issueDate: "", expiryDate: "" });
   const [newObserver, setNewObserver] = useState({ fullName: "", title: "", certificateNo: "", phone: "" });
   const [newDof, setNewDof] = useState({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta" as "Düşük" | "Orta" | "Yüksek", responsible: "", dueDate: "", status: "Açık" as "Açık" | "Bildirildi" | "Önlem Alındı" | "Çözüldü" | "Riske Aktarıldı", location: "", beforePhoto: "", afterPhoto: "", affectedPersons: "" });
@@ -714,19 +818,43 @@ export default function Page() {
   const [dofAddStatus, setDofAddStatus] = useState<string | null>(null);
   const [employeeAddStatus, setEmployeeAddStatus] = useState<string | null>(null);
 
+  async function loadCompanyScopedRecords<T extends { id: string }>(collectionName: string): Promise<T[]> {
+    if (!userProfile) return [];
+    const activeRole = userProfile.activeRole || userProfile.role;
+    if (activeRole === "admin") {
+      const snap = await getDocs(collection(db, collectionName));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() } as T));
+    }
+
+    const allowedCompanyIds = userProfile.companyIds || [];
+    if (allowedCompanyIds.length === 0) return [];
+
+    const chunks: string[][] = [];
+    for (let i = 0; i < allowedCompanyIds.length; i += 30) {
+      chunks.push(allowedCompanyIds.slice(i, i + 30));
+    }
+
+    const snaps = await Promise.all(chunks.map(ids => {
+      const field = collectionName === "companies" ? documentId() : "companyId";
+      return getDocs(query(collection(db, collectionName), where(field, "in", ids)));
+    }));
+
+    return snaps.flatMap(snap => snap.docs.map(d => ({ id: d.id, ...d.data() } as T)));
+  }
+
   async function loadAll() {
     if (!userProfile) return;
     setLoading(true);
     setLoadError(null);
     try {
       const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult] = await Promise.allSettled([
-        getDocs(getRoleFilteredQuery("companies", userProfile)),
-        getDocs(getRoleFilteredQuery("employees", userProfile)),
-        getDocs(getRoleFilteredQuery("documents", userProfile)),
-        getDocs(getRoleFilteredQuery("observers", userProfile)),
-        getDocs(getRoleFilteredQuery("dofs", userProfile)),
-        getDocs(getRoleFilteredQuery("risks", userProfile)),
-        getDocs(getRoleFilteredQuery("signers", userProfile)),
+        loadCompanyScopedRecords<Company>("companies"),
+        loadCompanyScopedRecords<Employee>("employees"),
+        loadCompanyScopedRecords<DocumentRecord>("documents"),
+        loadCompanyScopedRecords<Observer & { companyId?: string }>("observers"),
+        loadCompanyScopedRecords<DofRecord>("dofs"),
+        loadCompanyScopedRecords<RiskRecord>("risks"),
+        loadCompanyScopedRecords<Signer>("signers"),
       ]);
       const loadResults: Array<{ label: string; result: PromiseSettledResult<unknown> }> = [
         { label: "Firmalar", result: compResult },
@@ -743,13 +871,13 @@ export default function Page() {
         setLoadError(`${failedLoads.join(", ")} verileri yüklenemedi. Firebase Rules içinde bu role okuma izni verilmeli.`);
       }
 
-      if (compResult.status === "fulfilled") setCompanies(compResult.value.docs.map(d => ({ id: d.id, ...d.data() } as Company)));
-      if (empResult.status === "fulfilled") setEmployees(empResult.value.docs.map(d => ({ id: d.id, ...d.data() } as Employee)));
-      if (docResult.status === "fulfilled") setDocuments(docResult.value.docs.map(d => ({ id: d.id, ...d.data() } as DocumentRecord)));
-      if (obsResult.status === "fulfilled") setObservers(obsResult.value.docs.map(d => ({ id: d.id, ...d.data() } as Observer)));
-      if (dofResult.status === "fulfilled") setDofs(dofResult.value.docs.map(d => ({ id: d.id, ...d.data() } as DofRecord)));
-      if (riskResult.status === "fulfilled") setRisks(riskResult.value.docs.map(d => ({ id: d.id, ...d.data() } as RiskRecord)));
-      if (signerResult.status === "fulfilled") setSigners(signerResult.value.docs.map(d => ({ id: d.id, ...d.data() } as Signer)));
+      if (compResult.status === "fulfilled") setCompanies(compResult.value);
+      if (empResult.status === "fulfilled") setEmployees(empResult.value);
+      if (docResult.status === "fulfilled") setDocuments(docResult.value);
+      if (obsResult.status === "fulfilled") setObservers(obsResult.value);
+      if (dofResult.status === "fulfilled") setDofs(dofResult.value);
+      if (riskResult.status === "fulfilled") setRisks(riskResult.value);
+      if (signerResult.status === "fulfilled") setSigners(signerResult.value);
 
       // Email ayarlarını yükle
       const emailDoc = await getDoc(doc(db, "settings", "emailNotifications"));
@@ -823,12 +951,17 @@ export default function Page() {
   }
 
   const filteredCompanies = useMemo(() => companies.filter(c => `${c.nickName} ${c.officialName} ${c.sgkSicil} ${c.naceCode}`.toLowerCase().includes(search.toLowerCase())), [companies, search]);
-  const filteredEmployees = useMemo(() => employees.filter(e => { const company = companies.find(c => c.id === e.companyId); const matchesCompany = selectedCompanyId === "all" || e.companyId === selectedCompanyId; return matchesCompany && `${e.firstName} ${e.lastName} ${e.tcNo} ${e.department || ""} ${e.diplomaInfo || ""} ${e.address || ""} ${e.title} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [employees, companies, selectedCompanyId, search]);
+  const filteredEmployees = useMemo(() => employees.filter(e => {
+    const company = companies.find(c => c.id === e.companyId);
+    const matchesCompany = selectedCompanyId === "all" || e.companyId === selectedCompanyId;
+    return matchesCompany && `${e.firstName} ${e.lastName} ${e.tcNo} ${e.phone || ""} ${e.email || ""} ${e.department || ""} ${e.diplomaInfo || ""} ${e.educationLevel || ""} ${e.address || ""} ${e.title} ${e.profession || ""} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
+  }), [employees, companies, selectedCompanyId, search]);
   const filteredDocuments = useMemo(() => documents.filter(d => { const company = companies.find(c => c.id === d.companyId); const employee = employees.find(e => e.id === d.employeeId); const matchesCompany = selectedCompanyId === "all" || d.companyId === selectedCompanyId; return matchesCompany && `${d.type} ${company?.nickName || ""} ${employee?.firstName || ""} ${employee?.lastName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [documents, companies, employees, selectedCompanyId, search]);
   const filteredDofs = useMemo(() => dofs.filter(d => { const company = companies.find(c => c.id === d.companyId); const matchesCompany = selectedCompanyId === "all" || d.companyId === selectedCompanyId; return matchesCompany && `${d.title} ${d.description} ${d.location} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [dofs, companies, selectedCompanyId, search]);
   const filteredRisks = useMemo(() => risks.filter(r => { const company = companies.find(c => c.id === r.companyId); const matchesCompany = selectedCompanyId === "all" || r.companyId === selectedCompanyId; return matchesCompany && `${r.section} ${r.hazard} ${r.risk} ${r.actionToTake} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [risks, companies, selectedCompanyId, search]);
 
   async function addCompany() {
+    if (!isAdmin) return;
     if (!newCompany.nickName || !newCompany.sgkSicil) return;
     const naceCode = newCompany.naceCode || extractNaceFromSgk(newCompany.sgkSicil);
     const officialName = newCompany.officialName || officialNameFromSgk(newCompany.sgkSicil) || newCompany.nickName;
@@ -839,6 +972,7 @@ export default function Page() {
   }
 
   async function deleteCompany(id: string) {
+    if (!isAdmin) return;
     if (!confirm("Bu firmayı silmek istediğinizden emin misiniz?")) return;
     // Firestore'dan cascade sil
     const relatedEmployees = employees.filter(e => e.companyId === id);
@@ -865,7 +999,7 @@ export default function Page() {
   async function addEmployee() {
     setEmployeeAddStatus(null);
     if (!newEmployee.companyId) {
-      setEmployeeAddStatus("⚠️ Önce firma seçmelisiniz. Firma listesi boşsa Firma sekmesinden firma ekleyin veya yetkileri kontrol edin.");
+      setEmployeeAddStatus("⚠️ Önce firma seçmelisiniz. Firma listesi boşsa Admin panelinden bu kullanıcıya firma yetkisi verilmelidir.");
       return;
     }
     if (!newEmployee.firstName.trim()) {
@@ -881,11 +1015,36 @@ export default function Page() {
         firstName: newEmployee.firstName,
         lastName: newEmployee.lastName,
         tcNo: newEmployee.tcNo,
+        photo: newEmployee.photo,
+        birthPlace: newEmployee.birthPlace,
+        birthDate: newEmployee.birthDate,
+        gender: newEmployee.gender,
+        nationality: newEmployee.nationality === "Diğer" ? newEmployee.nationalityOther : newEmployee.nationality,
+        serialNo: newEmployee.serialNo,
+        fatherName: newEmployee.fatherName,
+        motherName: newEmployee.motherName,
+        phone: newEmployee.phone,
+        email: newEmployee.email,
         department: newEmployee.department,
         diplomaInfo: newEmployee.diplomaInfo,
+        educationLevel: newEmployee.educationLevel,
+        maritalStatus: newEmployee.maritalStatus,
+        childrenCount: newEmployee.childrenCount,
         address: newEmployee.address,
         title: newEmployee.title,
+        jobDescription: newEmployee.jobDescription,
+        profession: newEmployee.profession,
         hireDate: newEmployee.hireDate,
+        sgkNo: newEmployee.sgkNo,
+        iban: newEmployee.iban,
+        emergencyContactName: newEmployee.emergencyContactName,
+        emergencyContactPhone: newEmployee.emergencyContactPhone,
+        bloodType: newEmployee.bloodType,
+        chronicDisease: newEmployee.chronicDisease,
+        tetanusVaccine: newEmployee.tetanusVaccine,
+        hepatitisVaccine: newEmployee.hepatitisVaccine,
+        allergies: newEmployee.allergies,
+        notes: newEmployee.notes,
         isActive: true,
         trainingComplete: false,
         checklist,
@@ -893,7 +1052,7 @@ export default function Page() {
       };
       const ref = await addDoc(collection(db, "employees"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
       setEmployees(prev => [...prev, { id: ref.id, ...data }]);
-      setNewEmployee({ companyId: "", firstName: "", lastName: "", tcNo: "", department: "", diplomaInfo: "", address: "", title: "", hireDate: "" });
+      setNewEmployee(emptyNewEmployee);
       setEmployeeAddStatus("✅ Personel kaydı oluşturuldu. Doktor ve İSG uzmanı için onboarding görevleri açıldı.");
       if (emailSettings.enabled) {
         await fetch("/api/send-onboarding-notification", {
@@ -1415,28 +1574,37 @@ export default function Page() {
 
         {activeTab === "firmalar" && (
           <div>
-            <div style={styles.card} className="isg-card">
-              <p style={styles.sectionTitle} className="isg-text-muted">Yeni Firma Ekle</p>
-              <div style={styles.formGrid}>
-                <FormField label="Kısa Ad *"><input style={styles.input} className="isg-input" value={newCompany.nickName} onChange={e => setNewCompany({ ...newCompany, nickName: e.target.value })} /></FormField>
-                <FormField label="SGK Sicil No *"><input style={styles.input} className="isg-input" value={newCompany.sgkSicil} onChange={e => { const sgk = e.target.value; const nace = extractNaceFromSgk(sgk); const official = officialNameFromSgk(sgk); setNewCompany({ ...newCompany, sgkSicil: sgk, naceCode: nace, officialName: official || newCompany.officialName, dangerClass: dangerFromNace(nace) }); }} /></FormField>
-                <FormField label="Resmi Unvan"><input style={styles.input} className="isg-input" value={newCompany.officialName} onChange={e => setNewCompany({ ...newCompany, officialName: e.target.value })} /></FormField>
-                <FormField label="NACE Kodu"><input style={styles.input} className="isg-input" value={newCompany.naceCode} onChange={e => setNewCompany({ ...newCompany, naceCode: e.target.value, dangerClass: dangerFromNace(e.target.value) })} /></FormField>
-                <FormField label="Tehlike Sınıfı"><select style={styles.select} className="isg-input" value={newCompany.dangerClass} onChange={e => setNewCompany({ ...newCompany, dangerClass: e.target.value as DangerClass })}><option>Az Tehlikeli</option><option>Tehlikeli</option><option>Çok Tehlikeli</option></select></FormField>
-                <FormField label="Çalışan Sayısı"><input style={styles.input} className="isg-input" type="number" value={newCompany.employeeCount} onChange={e => setNewCompany({ ...newCompany, employeeCount: e.target.value })} /></FormField>
-                <FormField label="Sözleşme Bitiş"><DatePicker value={newCompany.contractEnd} onChange={v => setNewCompany({ ...newCompany, contractEnd: v })} /></FormField>
-                <FormField label="Hizmet Türü"><select style={styles.select} className="isg-input" value={newCompany.serviceType} onChange={e => setNewCompany({ ...newCompany, serviceType: e.target.value as ServiceType })}><option>İş Güvenliği</option><option>İş Güvenliği + İşyeri Hekimliği</option></select></FormField>
-                <FormField label="İletişim E-posta"><input style={styles.input} className="isg-input" type="email" value={newCompany.contactEmail} onChange={e => setNewCompany({ ...newCompany, contactEmail: e.target.value })} placeholder="firma@ornek.com" /></FormField>
+            {isAdmin ? (
+              <div style={styles.card} className="isg-card">
+                <p style={styles.sectionTitle} className="isg-text-muted">Yeni Firma Ekle</p>
+                <div style={styles.formGrid}>
+                  <FormField label="Kısa Ad *"><input style={styles.input} className="isg-input" value={newCompany.nickName} onChange={e => setNewCompany({ ...newCompany, nickName: e.target.value })} /></FormField>
+                  <FormField label="SGK Sicil No *"><input style={styles.input} className="isg-input" value={newCompany.sgkSicil} onChange={e => { const sgk = e.target.value; const nace = extractNaceFromSgk(sgk); const official = officialNameFromSgk(sgk); setNewCompany({ ...newCompany, sgkSicil: sgk, naceCode: nace, officialName: official || newCompany.officialName, dangerClass: dangerFromNace(nace) }); }} /></FormField>
+                  <FormField label="Resmi Unvan"><input style={styles.input} className="isg-input" value={newCompany.officialName} onChange={e => setNewCompany({ ...newCompany, officialName: e.target.value })} /></FormField>
+                  <FormField label="NACE Kodu"><input style={styles.input} className="isg-input" value={newCompany.naceCode} onChange={e => setNewCompany({ ...newCompany, naceCode: e.target.value, dangerClass: dangerFromNace(e.target.value) })} /></FormField>
+                  <FormField label="Tehlike Sınıfı"><select style={styles.select} className="isg-input" value={newCompany.dangerClass} onChange={e => setNewCompany({ ...newCompany, dangerClass: e.target.value as DangerClass })}><option>Az Tehlikeli</option><option>Tehlikeli</option><option>Çok Tehlikeli</option></select></FormField>
+                  <FormField label="Çalışan Sayısı"><input style={styles.input} className="isg-input" type="number" value={newCompany.employeeCount} onChange={e => setNewCompany({ ...newCompany, employeeCount: e.target.value })} /></FormField>
+                  <FormField label="Sözleşme Bitiş"><DatePicker value={newCompany.contractEnd} onChange={v => setNewCompany({ ...newCompany, contractEnd: v })} /></FormField>
+                  <FormField label="Hizmet Türü"><select style={styles.select} className="isg-input" value={newCompany.serviceType} onChange={e => setNewCompany({ ...newCompany, serviceType: e.target.value as ServiceType })}><option>İş Güvenliği</option><option>İş Güvenliği + İşyeri Hekimliği</option></select></FormField>
+                  <FormField label="İletişim E-posta"><input style={styles.input} className="isg-input" type="email" value={newCompany.contactEmail} onChange={e => setNewCompany({ ...newCompany, contactEmail: e.target.value })} placeholder="firma@ornek.com" /></FormField>
+                </div>
+                <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addCompany}>Firma Ekle</button></div>
               </div>
-              <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addCompany}>Firma Ekle</button></div>
-            </div>
+            ) : (
+              <div style={styles.card} className="isg-card">
+                <p style={styles.sectionTitle} className="isg-text-muted">Firma Yetkileriniz</p>
+                <p style={{ margin: 0, color: "var(--isg-text-muted)", fontSize: 13 }}>
+                  Bu ekranda yalnızca size atanmış firmalar görünür. Yeni firma ekleme ve firma silme işlemleri sadece Admin panelinden yapılır.
+                </p>
+              </div>
+            )}
             <div style={styles.searchBar}>
               <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
               <span style={{ color: "#64748b", fontSize: 13 }}>{filteredCompanies.length} firma</span>
             </div>
             <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
               <table style={styles.table}>
-                <thead><tr>{["Kısa Ad", "Resmi Unvan", "SGK Sicil", "NACE", "Tehlike", "Personel", "Sözleşme", "Hizmet", "Durum", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+                <thead><tr>{["Kısa Ad", "Resmi Unvan", "SGK Sicil", "NACE", "Tehlike", "Personel", "Sözleşme", "Hizmet", "Durum", ...(isAdmin ? ["İşlem"] : [])].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
                 <tbody>
                   {filteredCompanies.map(c => {
                     const ind = getCompanyIndicator(c.id);
@@ -1452,7 +1620,7 @@ export default function Page() {
                         <td style={styles.td} className="isg-td"><span style={{ fontSize: 12 }}>{c.contractEnd}</span> <Badge text={cs} color={statusColor(cs)} /></td>
                         <td style={{ ...styles.td, fontSize: 12 }}>{c.serviceType}</td>
                         <td style={styles.td} className="isg-td"><Badge text={ind.text} color={ind.color} /></td>
-                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteCompany(c.id)}>Sil</button></td>
+                        {isAdmin && <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteCompany(c.id)}>Sil</button></td>}
                       </tr>
                     );
                   })}
@@ -1467,16 +1635,86 @@ export default function Page() {
             <div>
               <div style={styles.card} className="isg-card">
                 <p style={styles.sectionTitle} className="isg-text-muted">Yeni Personel Ekle</p>
-                <div style={styles.formGrid}>
-                  <FormField label="Firma *"><select style={styles.select} className="isg-input" value={newEmployee.companyId} onChange={e => setNewEmployee({ ...newEmployee, companyId: e.target.value })}><option value="">{companies.length === 0 ? "Firma bulunamadı" : "Seçin..."}</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
-                  <FormField label="Ad *"><input style={styles.input} className="isg-input" value={newEmployee.firstName} onChange={e => setNewEmployee({ ...newEmployee, firstName: e.target.value })} /></FormField>
-                  <FormField label="Soyad"><input style={styles.input} className="isg-input" value={newEmployee.lastName} onChange={e => setNewEmployee({ ...newEmployee, lastName: e.target.value })} /></FormField>
-                  <FormField label="TC No"><input style={styles.input} className="isg-input" value={newEmployee.tcNo} onChange={e => setNewEmployee({ ...newEmployee, tcNo: e.target.value })} /></FormField>
-                  <FormField label="Birim"><input style={styles.input} className="isg-input" value={newEmployee.department} onChange={e => setNewEmployee({ ...newEmployee, department: e.target.value })} placeholder="Üretim, muhasebe..." /></FormField>
-                  <FormField label="Diploma Bilgileri"><input style={styles.input} className="isg-input" value={newEmployee.diplomaInfo} onChange={e => setNewEmployee({ ...newEmployee, diplomaInfo: e.target.value })} placeholder="Okul / bölüm / yıl" /></FormField>
-                  <FormField label="Unvan"><input style={styles.input} className="isg-input" value={newEmployee.title} onChange={e => setNewEmployee({ ...newEmployee, title: e.target.value })} /></FormField>
-                  <FormField label="Adres"><input style={styles.input} className="isg-input" value={newEmployee.address} onChange={e => setNewEmployee({ ...newEmployee, address: e.target.value })} /></FormField>
-                  <FormField label="İşe Giriş"><DatePicker value={newEmployee.hireDate} onChange={v => setNewEmployee({ ...newEmployee, hireDate: v })} /></FormField>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(160px, 190px) 1fr", gap: 18, alignItems: "start" }}>
+                  <div style={{ border: "1px solid var(--isg-border)", borderRadius: 8, padding: 14, backgroundColor: "var(--isg-input-bg)" }}>
+                    <label style={styles.label} className="isg-label">Personel Fotoğrafı</label>
+                    {newEmployee.photo ? (
+                      <div style={{ position: "relative", width: 132 }}>
+                        <img src={newEmployee.photo} alt="personel fotoğrafı" style={{ width: 132, height: 160, objectFit: "cover", borderRadius: 8, border: "1px solid var(--isg-border)" }} />
+                        <button type="button" onClick={() => setNewEmployee({ ...newEmployee, photo: "" })} style={{ position: "absolute", top: -7, right: -7, width: 24, height: 24, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 12, cursor: "pointer" }}>✕</button>
+                      </div>
+                    ) : (
+                      <div>
+                        <div style={{ width: 132, height: 160, borderRadius: 8, border: "1px dashed var(--isg-border-strong)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--isg-text-muted)", fontSize: 12, marginBottom: 10, textAlign: "center", padding: 10 }}>
+                          Fotoğraf seçin
+                        </div>
+                        <label style={{ ...styles.btnSecondary, display: "inline-flex", alignItems: "center", justifyContent: "center", width: "100%", cursor: "pointer", boxSizing: "border-box" as const }}>
+                          Fotoğraf Seç
+                          <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleImageToBase64(e, b64 => setNewEmployee({ ...newEmployee, photo: b64 }))} />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "grid", gap: 18 }}>
+                    <div>
+                      <p style={{ ...styles.sectionTitle, marginBottom: 10 }}>Kimlik Bilgileri</p>
+                      <div style={styles.formGrid}>
+                        <FormField label="Firma *"><select style={styles.select} className="isg-input" value={newEmployee.companyId} onChange={e => setNewEmployee({ ...newEmployee, companyId: e.target.value })}><option value="">{companies.length === 0 ? "Firma bulunamadı" : "Seçin..."}</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
+                        <FormField label="Ad *"><input style={styles.input} className="isg-input" value={newEmployee.firstName} onChange={e => setNewEmployee({ ...newEmployee, firstName: e.target.value })} /></FormField>
+                        <FormField label="Soyad"><input style={styles.input} className="isg-input" value={newEmployee.lastName} onChange={e => setNewEmployee({ ...newEmployee, lastName: e.target.value })} /></FormField>
+                        <FormField label="TC No"><input style={styles.input} className="isg-input" value={newEmployee.tcNo} onChange={e => setNewEmployee({ ...newEmployee, tcNo: e.target.value })} /></FormField>
+                        <FormField label="Doğum Yeri"><input style={styles.input} className="isg-input" value={newEmployee.birthPlace} onChange={e => setNewEmployee({ ...newEmployee, birthPlace: e.target.value })} /></FormField>
+                        <FormField label="Doğum Tarihi"><DatePicker value={newEmployee.birthDate} onChange={v => setNewEmployee({ ...newEmployee, birthDate: v })} /></FormField>
+                        <FormField label="Cinsiyet"><select style={styles.select} className="isg-input" value={newEmployee.gender} onChange={e => setNewEmployee({ ...newEmployee, gender: e.target.value })}><option value="">Seçin...</option><option>Erkek</option><option>Kadın</option><option>Diğer</option></select></FormField>
+                        <FormField label="Uyruk"><select style={styles.select} className="isg-input" value={newEmployee.nationality} onChange={e => setNewEmployee({ ...newEmployee, nationality: e.target.value, nationalityOther: e.target.value === "Diğer" ? newEmployee.nationalityOther : "" })}><option value="T.C.">T.C.</option><option value="Diğer">Diğer</option></select></FormField>
+                        {newEmployee.nationality === "Diğer" && (
+                          <FormField label="Uyruk Açıklaması"><input style={styles.input} className="isg-input" value={newEmployee.nationalityOther} onChange={e => setNewEmployee({ ...newEmployee, nationalityOther: e.target.value })} placeholder="Örn. Bulgaristan, Suriye..." /></FormField>
+                        )}
+                        <FormField label="Seri / Belge No"><input style={styles.input} className="isg-input" value={newEmployee.serialNo} onChange={e => setNewEmployee({ ...newEmployee, serialNo: e.target.value })} /></FormField>
+                        <FormField label="Baba Adı"><input style={styles.input} className="isg-input" value={newEmployee.fatherName} onChange={e => setNewEmployee({ ...newEmployee, fatherName: e.target.value })} /></FormField>
+                        <FormField label="Anne Adı"><input style={styles.input} className="isg-input" value={newEmployee.motherName} onChange={e => setNewEmployee({ ...newEmployee, motherName: e.target.value })} /></FormField>
+                      </div>
+                    </div>
+                    <div>
+                      <p style={{ ...styles.sectionTitle, marginBottom: 10 }}>İletişim ve Aile</p>
+                      <div style={styles.formGrid}>
+                        <FormField label="Telefon"><input style={styles.input} className="isg-input" value={newEmployee.phone} onChange={e => setNewEmployee({ ...newEmployee, phone: e.target.value })} /></FormField>
+                        <FormField label="E-posta"><input style={styles.input} className="isg-input" type="email" value={newEmployee.email} onChange={e => setNewEmployee({ ...newEmployee, email: e.target.value })} /></FormField>
+                        <FormField label="Adres"><input style={styles.input} className="isg-input" value={newEmployee.address} onChange={e => setNewEmployee({ ...newEmployee, address: e.target.value })} /></FormField>
+                        <FormField label="Medeni Durum"><select style={styles.select} className="isg-input" value={newEmployee.maritalStatus} onChange={e => setNewEmployee({ ...newEmployee, maritalStatus: e.target.value })}><option value="">Seçin...</option><option>Bekar</option><option>Evli</option><option>Boşanmış</option><option>Dul</option></select></FormField>
+                        <FormField label="Çocuk Sayısı"><input style={styles.input} className="isg-input" value={newEmployee.childrenCount} onChange={e => setNewEmployee({ ...newEmployee, childrenCount: e.target.value })} /></FormField>
+                        <FormField label="Acil Durum Kişisi"><input style={styles.input} className="isg-input" value={newEmployee.emergencyContactName} onChange={e => setNewEmployee({ ...newEmployee, emergencyContactName: e.target.value })} /></FormField>
+                        <FormField label="Acil Durum Telefonu"><input style={styles.input} className="isg-input" value={newEmployee.emergencyContactPhone} onChange={e => setNewEmployee({ ...newEmployee, emergencyContactPhone: e.target.value })} /></FormField>
+                      </div>
+                    </div>
+                    <div>
+                      <p style={{ ...styles.sectionTitle, marginBottom: 10 }}>İş ve Eğitim Bilgileri</p>
+                      <div style={styles.formGrid}>
+                        <FormField label="Birim"><input style={styles.input} className="isg-input" value={newEmployee.department} onChange={e => setNewEmployee({ ...newEmployee, department: e.target.value })} placeholder="Üretim, muhasebe..." /></FormField>
+                        <FormField label="Unvan"><input style={styles.input} className="isg-input" value={newEmployee.title} onChange={e => setNewEmployee({ ...newEmployee, title: e.target.value })} /></FormField>
+                        <FormField label="Meslek / Meslek Dalı"><input style={styles.input} className="isg-input" value={newEmployee.profession} onChange={e => setNewEmployee({ ...newEmployee, profession: e.target.value })} /></FormField>
+                        <FormField label="Yapacağı İş"><input style={styles.input} className="isg-input" value={newEmployee.jobDescription} onChange={e => setNewEmployee({ ...newEmployee, jobDescription: e.target.value })} /></FormField>
+                        <FormField label="İşe Giriş"><DatePicker value={newEmployee.hireDate} onChange={v => setNewEmployee({ ...newEmployee, hireDate: v })} /></FormField>
+                        <FormField label="Eğitim Durumu"><input style={styles.input} className="isg-input" value={newEmployee.educationLevel} onChange={e => setNewEmployee({ ...newEmployee, educationLevel: e.target.value })} /></FormField>
+                        <FormField label="Diploma Bilgileri"><input style={styles.input} className="isg-input" value={newEmployee.diplomaInfo} onChange={e => setNewEmployee({ ...newEmployee, diplomaInfo: e.target.value })} placeholder="Okul / bölüm / yıl" /></FormField>
+                        <FormField label="SGK No"><input style={styles.input} className="isg-input" value={newEmployee.sgkNo} onChange={e => setNewEmployee({ ...newEmployee, sgkNo: e.target.value })} /></FormField>
+                        <FormField label="IBAN"><input style={styles.input} className="isg-input" value={newEmployee.iban} onChange={e => setNewEmployee({ ...newEmployee, iban: e.target.value })} /></FormField>
+                      </div>
+                    </div>
+                    <div>
+                      <p style={{ ...styles.sectionTitle, marginBottom: 10 }}>Sağlık Ön Bilgileri</p>
+                      <div style={styles.formGrid}>
+                        <FormField label="Kan Grubu"><select style={styles.select} className="isg-input" value={newEmployee.bloodType} onChange={e => setNewEmployee({ ...newEmployee, bloodType: e.target.value })}><option value="">Seçin...</option><option>A Rh+</option><option>A Rh-</option><option>B Rh+</option><option>B Rh-</option><option>AB Rh+</option><option>AB Rh-</option><option>0 Rh+</option><option>0 Rh-</option><option>Bilinmiyor</option></select></FormField>
+                        <FormField label="Kronik Hastalık"><input style={styles.input} className="isg-input" value={newEmployee.chronicDisease} onChange={e => setNewEmployee({ ...newEmployee, chronicDisease: e.target.value })} /></FormField>
+                        <FormField label="Alerji"><input style={styles.input} className="isg-input" value={newEmployee.allergies} onChange={e => setNewEmployee({ ...newEmployee, allergies: e.target.value })} /></FormField>
+                        <FormField label="Tetanoz Aşı Bilgisi"><input style={styles.input} className="isg-input" value={newEmployee.tetanusVaccine} onChange={e => setNewEmployee({ ...newEmployee, tetanusVaccine: e.target.value })} /></FormField>
+                        <FormField label="Hepatit Aşı Bilgisi"><input style={styles.input} className="isg-input" value={newEmployee.hepatitisVaccine} onChange={e => setNewEmployee({ ...newEmployee, hepatitisVaccine: e.target.value })} /></FormField>
+                      </div>
+                      <div style={{ marginTop: 12 }}>
+                        <FormField label="Notlar"><textarea style={{ ...styles.input, minHeight: 76, resize: "vertical" as const }} className="isg-input" value={newEmployee.notes} onChange={e => setNewEmployee({ ...newEmployee, notes: e.target.value })} /></FormField>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addEmployee}>Personel Ekle</button></div>
                 {employeeAddStatus && (
@@ -1500,7 +1738,7 @@ export default function Page() {
               </div>
               <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
                 <table style={styles.table}>
-                  <thead><tr>{["Ad Soyad", "TC No", "Birim", "Unvan", "Firma", "İşe Giriş", "Onboarding", "Eksikler", "Kontrol Listesi", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+                  <thead><tr>{["Ad Soyad", "TC No", "İletişim", "Birim", "Unvan", "Firma", "İşe Giriş", "Onboarding", "Eksikler", "Kontrol Listesi", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
                   <tbody>
                     {filteredEmployees.map(emp => {
                       const company = companies.find(c => c.id === emp.companyId);
@@ -1508,8 +1746,17 @@ export default function Page() {
                       const onboarding = emp.onboarding || createOnboardingFromChecklist(emp.checklist);
                       return (
                         <tr key={emp.id} style={{ cursor: "pointer", backgroundColor: selectedEmployeeId === emp.id ? "#1a2942" : "transparent" }} onClick={() => setSelectedEmployeeId(emp.id)}>
-                          <td style={styles.td} className="isg-td"><span style={{ fontWeight: 600 }}>{emp.firstName} {emp.lastName}</span></td>
+                          <td style={styles.td} className="isg-td">
+                            <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 180 }}>
+                              {emp.photo ? <img src={emp.photo} alt="" style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover", border: "1px solid var(--isg-border)" }} /> : <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: "var(--isg-input-bg)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--isg-text-muted)", fontSize: 13 }}>👤</div>}
+                              <span style={{ fontWeight: 700 }}>{emp.firstName} {emp.lastName}</span>
+                            </div>
+                          </td>
                           <td style={{ ...styles.td, fontSize: 12, color: "var(--isg-text-muted)" }}>{emp.tcNo}</td>
+                          <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)" }}>
+                            <div>{emp.phone || "—"}</div>
+                            {emp.email && <div>{emp.email}</div>}
+                          </td>
                           <td style={{ ...styles.td, fontSize: 12 }}>{emp.department || "—"}</td>
                           <td style={styles.td} className="isg-td">{emp.title}</td>
                           <td style={{ ...styles.td, fontSize: 12 }}>{company?.nickName}</td>
@@ -1536,12 +1783,25 @@ export default function Page() {
               <div>
                 <div style={styles.card} className="isg-card">
                   <p style={styles.sectionTitle} className="isg-text-muted">Personel Detayı</p>
-                  <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 2 }}>{selectedEmployee.firstName} {selectedEmployee.lastName}</div>
-                  <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>{selectedEmployee.title}</div>
-                  <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginTop: 2 }}>{selectedEmployee.department || "Birim girilmedi"}</div>
-                  {selectedEmployee.diplomaInfo && <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Diploma: {selectedEmployee.diplomaInfo}</div>}
-                  {selectedEmployee.address && <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Adres: {selectedEmployee.address}</div>}
-                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{selectedEmployeeCompany?.nickName}</div>
+                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    {selectedEmployee.photo ? <img src={selectedEmployee.photo} alt="" style={{ width: 76, height: 92, borderRadius: 8, objectFit: "cover", border: "1px solid var(--isg-border)" }} /> : <div style={{ width: 76, height: 92, borderRadius: 8, backgroundColor: "var(--isg-input-bg)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--isg-text-muted)" }}>👤</div>}
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 2 }}>{selectedEmployee.firstName} {selectedEmployee.lastName}</div>
+                      <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>{selectedEmployee.title || "Unvan girilmedi"}</div>
+                      <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginTop: 2 }}>{selectedEmployee.department || "Birim girilmedi"}</div>
+                      <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginTop: 2 }}>{selectedEmployeeCompany?.nickName}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6, marginTop: 14, fontSize: 12, color: "var(--isg-text-muted)", lineHeight: 1.45 }}>
+                    <div><strong style={{ color: "var(--isg-text)" }}>TC:</strong> {selectedEmployee.tcNo || "—"}</div>
+                    <div><strong style={{ color: "var(--isg-text)" }}>Doğum:</strong> {[selectedEmployee.birthPlace, selectedEmployee.birthDate].filter(Boolean).join(" / ") || "—"}</div>
+                    <div><strong style={{ color: "var(--isg-text)" }}>Telefon:</strong> {selectedEmployee.phone || "—"}</div>
+                    <div><strong style={{ color: "var(--isg-text)" }}>E-posta:</strong> {selectedEmployee.email || "—"}</div>
+                    {selectedEmployee.diplomaInfo && <div><strong style={{ color: "var(--isg-text)" }}>Diploma:</strong> {selectedEmployee.diplomaInfo}</div>}
+                    {selectedEmployee.address && <div><strong style={{ color: "var(--isg-text)" }}>Adres:</strong> {selectedEmployee.address}</div>}
+                    {selectedEmployee.bloodType && <div><strong style={{ color: "var(--isg-text)" }}>Kan Grubu:</strong> {selectedEmployee.bloodType}</div>}
+                    {selectedEmployee.emergencyContactName && <div><strong style={{ color: "var(--isg-text)" }}>Acil:</strong> {selectedEmployee.emergencyContactName} {selectedEmployee.emergencyContactPhone}</div>}
+                  </div>
                   {(() => {
                     const onboarding = selectedEmployee.onboarding || createOnboardingFromChecklist(selectedEmployee.checklist);
                     return (
@@ -1949,6 +2209,7 @@ export default function Page() {
               <p style={styles.sectionTitle} className="isg-text-muted">İmzacı Yönetimi</p>
               <p style={{ fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 16 }}>
                 Her firma için PDF raporlarında görünecek 3 imzacıyı belirleyin: İş Güvenliği Uzmanı, İşveren/İşveren Vekili ve Çalışan Temsilcisi.
+                {!isAdmin && " Bu ekranda yalnızca size atanmış firmaların imzacıları görünür."}
               </p>
 
               {companies.map(company => {
@@ -2015,7 +2276,11 @@ export default function Page() {
         )}
 
         {activeTab === "kullanicilar" && isAdmin && (
-          <AdminUserPanel styles={styles} />
+          <AdminUserPanel
+            styles={styles}
+            companies={companies}
+            onCompanyCreated={(company) => setCompanies(prev => [...prev, company])}
+          />
         )}
 
         {/* Vardiya ve Ayarlar sekmeleri kaldırıldı */}

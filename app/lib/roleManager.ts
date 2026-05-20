@@ -3,14 +3,14 @@
  *
  * Firestore "users" collection'ında her kullanıcı için:
  * - role: "admin" | "doctor" | "nurse" | "safety_expert" | "human_resources"
+ * - companyIds: string[] (erişebileceği firma kayıtları)
  * - email: string
  * - displayName: string
  * - createdAt: timestamp
  *
  * Veri filtreleme mantığı:
  * - Admin: tüm verileri görür
- * - Doktor/Hemşire/İSG/İK: sadece kendi eklediği verileri görür
- *   (her document'a "createdBy" alanı eklenir)
+ * - Diğer roller: sadece companyIds içinde yetkili olduğu firma verilerini görür
  */
 
 import { db } from "../../lib/firebase";
@@ -36,6 +36,8 @@ export type UserProfile = {
   role: UserRole;
   roles: UserRole[];
   activeRole?: UserRole;
+  companyIds: string[];
+  activeCompanyId?: string;
   createdAt: any;
 };
 
@@ -102,9 +104,10 @@ export async function getUserProfile(
  */
 export async function setUserProfile(
   uid: string,
-  data: { email: string; displayName: string; role: UserRole; roles?: UserRole[]; activeRole?: UserRole }
+  data: { email: string; displayName: string; role: UserRole; roles?: UserRole[]; activeRole?: UserRole; companyIds?: string[]; activeCompanyId?: string }
 ): Promise<void> {
   const roles = data.roles?.length ? data.roles : [data.role];
+  const companyIds = data.companyIds || [];
   await setDoc(
     doc(db, "users", uid),
     {
@@ -112,6 +115,8 @@ export async function setUserProfile(
       role: roles[0],
       roles,
       activeRole: data.activeRole && roles.includes(data.activeRole) ? data.activeRole : roles[0],
+      companyIds,
+      activeCompanyId: data.activeCompanyId && companyIds.includes(data.activeCompanyId) ? data.activeCompanyId : companyIds[0] || "",
       createdAt: serverTimestamp(),
     },
     { merge: true }
@@ -166,12 +171,35 @@ export function getRoleFilteredQuery(
 
   const activeRole = userProfile.activeRole || userProfile.role;
 
-  if (sharedCollections.has(collectionName) || activeRole === "admin" || activeRole === "human_resources" || userProfile.role === "admin" || userProfile.role === "human_resources") {
+  if (sharedCollections.has(collectionName) || activeRole === "admin" || activeRole === "human_resources") {
     return col; // filtre yok
   }
 
   // Kullanici sadece kendi roluyle ekledigi verileri gorur
   return query(col, where("createdBy", "==", userProfile.uid), where("createdAsRole", "==", activeRole));
+}
+
+export function isGlobalAdmin(userProfile: UserProfile) {
+  return (userProfile.activeRole || userProfile.role) === "admin";
+}
+
+export function canAccessCompany(userProfile: UserProfile, companyId?: string | null) {
+  if (isGlobalAdmin(userProfile)) return true;
+  if (!companyId) return false;
+  return (userProfile.companyIds || []).includes(companyId);
+}
+
+export function filterByCompanyAccess<T extends { id?: string; companyId?: string | null }>(
+  collectionName: string,
+  records: T[],
+  userProfile: UserProfile
+) {
+  if (isGlobalAdmin(userProfile)) return records;
+  const allowedCompanyIds = userProfile.companyIds || [];
+  if (collectionName === "companies") {
+    return records.filter(record => record.id && allowedCompanyIds.includes(record.id));
+  }
+  return records.filter(record => record.companyId && allowedCompanyIds.includes(record.companyId));
 }
 
 /**

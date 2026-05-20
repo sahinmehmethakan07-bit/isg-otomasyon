@@ -37,6 +37,7 @@ export type Ek2Form = {
   companyEmail: string;
   // Çalışan bilgileri
   employeeId: string;
+  employeePhoto?: string;
   employeeName: string;
   tcKimlikNo: string;
   dogumYeriTarihi: string;
@@ -117,7 +118,32 @@ export type Ek2Form = {
 type Props = {
   styles: Record<string, React.CSSProperties>;
   companies: { id: string; nickName: string; officialName: string; sgkSicil: string }[];
-  employees: { id: string; companyId: string; firstName: string; lastName: string; tcNo: string }[];
+  employees: {
+    id: string;
+    companyId: string;
+    firstName: string;
+    lastName: string;
+    tcNo: string;
+    photo?: string;
+    birthPlace?: string;
+    birthDate?: string;
+    gender?: string;
+    educationLevel?: string;
+    diplomaInfo?: string;
+    maritalStatus?: string;
+    childrenCount?: string;
+    address?: string;
+    phone?: string;
+    profession?: string;
+    title?: string;
+    jobDescription?: string;
+    department?: string;
+    bloodType?: string;
+    chronicDisease?: string;
+    tetanusVaccine?: string;
+    hepatitisVaccine?: string;
+    allergies?: string;
+  }[];
   userRole: string;
   userId: string;
 };
@@ -135,7 +161,7 @@ const defaultHastaliklar = [
 
 const emptyForm: Omit<Ek2Form, "id"> = {
   companyId: "", companyName: "", sgkSicilNo: "", companyAddress: "", companyTel: "", companyEmail: "",
-  employeeId: "", employeeName: "", tcKimlikNo: "", dogumYeriTarihi: "", cinsiyet: "", egitimDurumu: "",
+  employeeId: "", employeePhoto: "", employeeName: "", tcKimlikNo: "", dogumYeriTarihi: "", cinsiyet: "", egitimDurumu: "",
   medeniDurum: "", cocukSayisi: "", evAdresi: "", telNo: "", meslegi: "", yaptigiIs: "", calistigiBolum: "",
   oncekiIsler: [{ iskolu: "", yaptigiIs: "", girisCikisTarihi: "" }],
   kanGrubu: "", konjenitalKronikHastalik: "", bagisiklamaTetanoz: "", bagisiklamaHepatit: "", bagisiklamaDiger: "",
@@ -171,17 +197,31 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedCompanyFilter, setSelectedCompanyFilter] = useState("all");
+  const [quickEmployeeId, setQuickEmployeeId] = useState("");
 
   const isDoctor = userRole === "doctor";
   const canEdit = isDoctor;
 
-  useEffect(() => { loadForms(); }, []);
+  useEffect(() => { loadForms(); }, [companies]);
 
   async function loadForms() {
     setLoading(true);
     try {
-      const snap = await getDocs(collection(db, "ek2forms"));
-      setForms(snap.docs.map(d => ({ id: d.id, ...d.data() } as Ek2Form)));
+      const accessibleCompanyIds = companies.map(c => c.id);
+      if (accessibleCompanyIds.length === 0) {
+        setForms([]);
+        return;
+      }
+
+      const chunks: string[][] = [];
+      for (let i = 0; i < accessibleCompanyIds.length; i += 30) {
+        chunks.push(accessibleCompanyIds.slice(i, i + 30));
+      }
+
+      const snaps = await Promise.all(chunks.map(ids =>
+        getDocs(query(collection(db, "ek2forms"), where("companyId", "in", ids)))
+      ));
+      setForms(snaps.flatMap(snap => snap.docs.map(d => ({ id: d.id, ...d.data() } as Ek2Form))));
     } catch (e) {
       console.error("EK-2 yükleme hatası:", e);
     } finally {
@@ -209,11 +249,53 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
     }
   }
 
-  function selectEmployee(employeeId: string) {
+  function employeeToEk2Fields(employeeId: string) {
     const e = employees.find(x => x.id === employeeId);
-    if (e) {
-      setForm(prev => ({ ...prev, employeeId: e.id, employeeName: `${e.firstName} ${e.lastName}`, tcKimlikNo: e.tcNo || "" }));
-    }
+    if (!e) return {};
+    const birthText = [e.birthPlace, e.birthDate].filter(Boolean).join(" / ");
+    return {
+      employeeId: e.id,
+      employeePhoto: e.photo || "",
+      employeeName: `${e.firstName} ${e.lastName}`.trim(),
+      tcKimlikNo: e.tcNo || "",
+      dogumYeriTarihi: birthText,
+      cinsiyet: e.gender || "",
+      egitimDurumu: e.educationLevel || e.diplomaInfo || "",
+      medeniDurum: e.maritalStatus || "",
+      cocukSayisi: e.childrenCount || "",
+      evAdresi: e.address || "",
+      telNo: e.phone || "",
+      meslegi: e.profession || e.title || "",
+      yaptigiIs: e.jobDescription || e.title || "",
+      calistigiBolum: e.department || "",
+      kanGrubu: e.bloodType || "",
+      konjenitalKronikHastalik: [e.chronicDisease, e.allergies ? `Alerji: ${e.allergies}` : ""].filter(Boolean).join(" | "),
+      bagisiklamaTetanoz: e.tetanusVaccine || "",
+      bagisiklamaHepatit: e.hepatitisVaccine || "",
+    };
+  }
+
+  function selectEmployee(employeeId: string) {
+    const mapped = employeeToEk2Fields(employeeId);
+    if (Object.keys(mapped).length > 0) setForm(prev => ({ ...prev, ...mapped }));
+  }
+
+  function startFromEmployee(employeeId: string) {
+    const e = employees.find(x => x.id === employeeId);
+    if (!e) return;
+    const c = companies.find(x => x.id === e.companyId);
+    setForm({
+      ...emptyForm,
+      createdBy: userId,
+      createdAsRole: "doctor",
+      formTarihi: new Date().toISOString().split("T")[0],
+      companyId: c?.id || e.companyId,
+      companyName: c?.officialName || c?.nickName || "",
+      sgkSicilNo: c?.sgkSicil || "",
+      ...employeeToEk2Fields(employeeId),
+    });
+    setEditingId(null);
+    setShowForm(true);
   }
 
   async function saveForm() {
@@ -277,6 +359,27 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
             {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
           </select>
         </div>
+
+        {canEdit && (
+          <div style={{ ...styles.card, marginBottom: 16 }}>
+            <p style={{ ...styles.sectionTitle, marginBottom: 12 }}>İnsan Kaynakları Kaydından Form Başlat</p>
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 1fr) auto", gap: 12, alignItems: "end" }}>
+              <div>
+                <label style={styles.label}>Personel seçin</label>
+                <select style={styles.select} value={quickEmployeeId} onChange={e => setQuickEmployeeId(e.target.value)}>
+                  <option value="">HR tarafından girilen personel...</option>
+                  {employees.map(e => {
+                    const company = companies.find(c => c.id === e.companyId);
+                    return <option key={e.id} value={e.id}>{e.firstName} {e.lastName} {company ? `- ${company.nickName}` : ""}</option>;
+                  })}
+                </select>
+              </div>
+              <button style={styles.btnSuccess} disabled={!quickEmployeeId} onClick={() => startFromEmployee(quickEmployeeId)}>
+                Tek Tıkla EK-2 Oluştur
+              </button>
+            </div>
+          </div>
+        )}
 
         {filteredForms.length === 0 ? (
           <div style={{ ...styles.card, textAlign: "center", color: "var(--isg-text-muted)", padding: 40 }}>
@@ -375,6 +478,15 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
 
         {/* ── ÇALIŞAN BİLGİLERİ ── */}
         <Ek2SectionTitle title="ÇALIŞANIN / İŞE GİRENİN BİLGİLERİ" />
+        {form.employeePhoto && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, padding: 12, border: "1px solid var(--isg-border)", borderRadius: 8, backgroundColor: "var(--isg-input-bg)" }}>
+            <img src={form.employeePhoto} alt="personel fotoğrafı" style={{ width: 64, height: 78, objectFit: "cover", borderRadius: 8, border: "1px solid var(--isg-border)" }} />
+            <div>
+              <div style={{ fontWeight: 800, color: "var(--isg-text)" }}>{form.employeeName || "Seçili personel"}</div>
+              <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginTop: 2 }}>İnsan Kaynakları kaydından aktarılan fotoğraf ve bilgiler</div>
+            </div>
+          </div>
+        )}
         <div style={styles.formGrid}>
           {form.companyId && (
             <div>

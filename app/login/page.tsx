@@ -9,7 +9,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { auth, db } from "../../lib/firebase";
+import { doc, updateDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import {
   getUserProfile,
@@ -101,6 +102,7 @@ export default function LoginPage() {
       }
 
       localStorage.setItem("isg_activeRole", selectedRole);
+      await updateDoc(doc(db, "users", user.uid), { activeRole: selectedRole });
       router.push("/");
     } catch (err: any) {
       console.error("[Login] Error:", err);

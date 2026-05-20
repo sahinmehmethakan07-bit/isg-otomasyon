@@ -15,8 +15,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "../../lib/firebase";
+import { initializeApp, deleteApp } from "firebase/app";
+import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
+import { db, firebaseConfig } from "../../lib/firebase";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import {
   getAllUsers,
@@ -98,6 +99,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
     e.preventDefault();
     setCreating(true);
     setStatus(null);
+    let secondaryApp: ReturnType<typeof initializeApp> | null = null;
 
     try {
       if (!newUser.roles.includes("admin") && newUser.companyIds.length === 0) {
@@ -106,12 +108,11 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
         return;
       }
 
-      // DİKKAT: Bu, mevcut oturumu değiştirir!
-      // Production'da Cloud Function kullanın.
-      const currentUser = auth.currentUser;
-
+      const secondaryAppName = `admin-user-create-${Date.now()}`;
+      secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
+      const secondaryAuth = getAuth(secondaryApp);
       const cred = await createUserWithEmailAndPassword(
-        auth,
+        secondaryAuth,
         newUser.email,
         newUser.password
       );
@@ -124,12 +125,9 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
         companyIds: newUser.roles.includes("admin") ? [] : newUser.companyIds,
       });
 
-      // Oluşturulan kullanıcıdan çıkış yap, admin'e geri dön
-      // Bu workaround — production'da Cloud Function ile yapılmalı
-      if (currentUser) {
-        // Admin tekrar sign-in olacak (session cookie hâlâ var)
-        // window.location.reload() en güvenli yol
-      }
+      await signOut(secondaryAuth);
+      await deleteApp(secondaryApp);
+      secondaryApp = null;
 
       setStatus(`✅ ${newUser.displayName} (${newUser.roles.map(role => ROLE_CONFIG[role].label).join(", ")}) başarıyla oluşturuldu`);
       setNewUser({ email: "", password: "", displayName: "", roles: ["doctor"], companyIds: [] });
@@ -138,6 +136,9 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
     } catch (err: any) {
       setStatus(`❌ Hata: ${err.message}`);
     } finally {
+      if (secondaryApp) {
+        await deleteApp(secondaryApp).catch(() => undefined);
+      }
       setCreating(false);
     }
   }

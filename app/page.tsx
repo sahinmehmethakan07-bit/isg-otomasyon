@@ -329,6 +329,22 @@ type EmergencyPlanRecord = {
   notes: string;
 };
 
+type CommitteeMeetingStatus = "Planlandı" | "Yapıldı" | "Ertelendi" | "Kararlar Takipte";
+
+type CommitteeMeetingRecord = {
+  id: string;
+  companyId: string;
+  meetingNo: string;
+  meetingDate: string;
+  location: string;
+  chairperson: string;
+  agenda: string;
+  decisions: string;
+  participantIds: string[];
+  status: CommitteeMeetingStatus;
+  notes: string;
+};
+
 const emptyChecklist: EmployeeChecklist = {
   isgCertificateDate: "",
   ek2Date: "",
@@ -1053,6 +1069,79 @@ async function generateEmergencyPlanPDF(plan: EmergencyPlanRecord, company: Comp
   }).download(`Acil_Durum_Plani_${plan.title.replace(/\s+/g, "_")}.pdf`);
 }
 
+async function generateCommitteeMeetingPDF(meeting: CommitteeMeetingRecord, company: Company | undefined, employees: Employee[]) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
+  const maker = pdfMake.default || pdfMake;
+  maker.vfs = (pdfFonts.default || pdfFonts).vfs;
+
+  const participants = meeting.participantIds
+    .map(id => employees.find(employee => employee.id === id))
+    .filter(Boolean) as Employee[];
+
+  const content: any[] = [
+    { text: "İSG KURUL TOPLANTISI TUTANAĞI", fontSize: 16, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 12] },
+    {
+      table: {
+        widths: [90, "*", 90, "*"],
+        body: [
+          ["Firma", company?.officialName || company?.nickName || "-", "Toplantı No", meeting.meetingNo || "-"],
+          ["Tarih", meeting.meetingDate ? new Date(meeting.meetingDate).toLocaleDateString("tr-TR") : "-", "Yer", meeting.location || "-"],
+          ["Başkan", meeting.chairperson || "-", "Durum", meeting.status],
+        ].map(row => row.map((text, index) => ({ text, fontSize: 8, bold: index % 2 === 0, color: "#334155", margin: [4, 5, 4, 5] }))),
+      },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+      margin: [0, 0, 0, 12],
+    },
+    { text: "Gündem", fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+    {
+      table: { widths: ["*"], body: [[{ text: meeting.agenda || "-", fontSize: 9, color: "#334155", margin: [5, 8, 5, 8] }]] },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+      margin: [0, 0, 0, 12],
+    },
+    { text: "Alınan Kararlar", fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+    {
+      table: { widths: ["*"], body: [[{ text: meeting.decisions || "-", fontSize: 9, color: "#334155", margin: [5, 8, 5, 8] }]] },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+      margin: [0, 0, 0, 12],
+    },
+    { text: "Katılımcılar", fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+    {
+      table: {
+        headerRows: 1,
+        widths: [28, "*", "*", 110],
+        body: [
+          ["No", "Ad Soyad", "Görev / Ünvan", "İmza"].map(text => ({ text, bold: true, color: "white", fillColor: "#1e293b", fontSize: 8, margin: [4, 5, 4, 5] })),
+          ...(participants.length > 0 ? participants : [{ firstName: "", lastName: "", title: "" } as Employee]).map((employee, index) => [
+            String(index + 1),
+            `${employee.firstName} ${employee.lastName}`.trim() || " ",
+            employee.title || " ",
+            " ",
+          ].map(text => ({ text, fontSize: 8, color: "#334155", margin: [4, 7, 4, 7] }))),
+        ],
+      },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+      margin: [0, 0, 0, 18],
+    },
+    { text: meeting.notes || "", fontSize: 8, color: "#64748b", margin: [0, 0, 0, 16] },
+    {
+      columns: [
+        { width: "*", text: "Kurul Başkanı\n\n\nAd Soyad / İmza", fontSize: 9, alignment: "center" },
+        { width: "*", text: "İşveren / İşveren Vekili\n\n\nAd Soyad / İmza", fontSize: 9, alignment: "center" },
+      ],
+    },
+  ];
+
+  maker.createPdf({
+    pageSize: "A4",
+    pageMargins: [28, 28, 28, 28],
+    content,
+    defaultStyle: { font: "Roboto" },
+  }).download(`Kurul_Toplantisi_${meeting.meetingNo || meeting.meetingDate}.pdf`);
+}
+
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 // ── Mobil algılama yardımcısı (styles dışında kullanılır) ──
@@ -1223,6 +1312,7 @@ export default function Page() {
   const [trainings, setTrainings] = useState<TrainingRecord[]>([]);
   const [ppeRecords, setPpeRecords] = useState<PpeRecord[]>([]);
   const [emergencyPlans, setEmergencyPlans] = useState<EmergencyPlanRecord[]>([]);
+  const [committeeMeetings, setCommitteeMeetings] = useState<CommitteeMeetingRecord[]>([]);
 
   const [activeTab, setActiveTab] = useState("firmalar");
   const [search, setSearch] = useState("");
@@ -1286,6 +1376,18 @@ export default function Page() {
     status: "Taslak" as EmergencyPlanStatus,
     notes: "",
   });
+  const [newCommitteeMeeting, setNewCommitteeMeeting] = useState({
+    companyId: "",
+    meetingNo: "",
+    meetingDate: "",
+    location: "",
+    chairperson: "",
+    agenda: "",
+    decisions: "",
+    participantIds: [] as string[],
+    status: "Planlandı" as CommitteeMeetingStatus,
+    notes: "",
+  });
 
   const [signers, setSigners] = useState<Signer[]>([]);
   const [emailSettings, setEmailSettings] = useState<EmailSettings>({ enabled: true, toEmail: "", ccEmail: "", subject: "[İSG] Yeni DÖF Bildirimi: {dofTitle}", message: "" });
@@ -1322,7 +1424,7 @@ export default function Page() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult, annualPlanResult, trainingResult, ppeResult, emergencyPlanResult] = await Promise.allSettled([
+      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult, annualPlanResult, trainingResult, ppeResult, emergencyPlanResult, committeeMeetingResult] = await Promise.allSettled([
         loadCompanyScopedRecords<Company>("companies"),
         loadCompanyScopedRecords<Employee>("employees"),
         loadCompanyScopedRecords<DocumentRecord>("documents"),
@@ -1334,6 +1436,7 @@ export default function Page() {
         loadCompanyScopedRecords<TrainingRecord>("trainings"),
         loadCompanyScopedRecords<PpeRecord>("ppeRecords"),
         loadCompanyScopedRecords<EmergencyPlanRecord>("emergencyPlans"),
+        loadCompanyScopedRecords<CommitteeMeetingRecord>("committeeMeetings"),
       ]);
       const loadResults: Array<{ label: string; result: PromiseSettledResult<unknown> }> = [
         { label: "Firmalar", result: compResult },
@@ -1347,6 +1450,7 @@ export default function Page() {
         { label: "Eğitimler", result: trainingResult },
         { label: "KKD", result: ppeResult },
         { label: "Acil Durum Planları", result: emergencyPlanResult },
+        { label: "Kurul Toplantıları", result: committeeMeetingResult },
       ];
       const failedLoads = loadResults.filter(({ result }) => result.status === "rejected").map(({ label }) => label);
 
@@ -1365,6 +1469,7 @@ export default function Page() {
       if (trainingResult.status === "fulfilled") setTrainings(trainingResult.value);
       if (ppeResult.status === "fulfilled") setPpeRecords(ppeResult.value);
       if (emergencyPlanResult.status === "fulfilled") setEmergencyPlans(emergencyPlanResult.value);
+      if (committeeMeetingResult.status === "fulfilled") setCommitteeMeetings(committeeMeetingResult.value);
 
       // Email ayarlarını yükle
       const emailDoc = await getDoc(doc(db, "settings", "emailNotifications"));
@@ -1472,6 +1577,16 @@ export default function Page() {
     const matchesCompany = selectedCompanyId === "all" || plan.companyId === selectedCompanyId;
     return matchesCompany && `${plan.title} ${plan.scenario} ${plan.assemblyArea} ${plan.emergencyTeam} ${plan.responsible} ${plan.status} ${plan.notes} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
   }), [emergencyPlans, companies, selectedCompanyId, search]);
+  const filteredCommitteeMeetings = useMemo(() => committeeMeetings.filter(meeting => {
+    const company = companies.find(c => c.id === meeting.companyId);
+    const participantNames = meeting.participantIds
+      .map(id => employees.find(e => e.id === id))
+      .filter(Boolean)
+      .map(employee => `${employee!.firstName} ${employee!.lastName}`)
+      .join(" ");
+    const matchesCompany = selectedCompanyId === "all" || meeting.companyId === selectedCompanyId;
+    return matchesCompany && `${meeting.meetingNo} ${meeting.location} ${meeting.chairperson} ${meeting.agenda} ${meeting.decisions} ${meeting.status} ${meeting.notes} ${participantNames} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
+  }), [committeeMeetings, companies, employees, selectedCompanyId, search]);
 
   async function addCompany() {
     if (!isAdmin) return;
@@ -2061,6 +2176,44 @@ export default function Page() {
     setEmergencyPlans(prev => prev.filter(plan => plan.id !== id));
   }
 
+  function toggleCommitteeParticipant(employeeId: string) {
+    setNewCommitteeMeeting(prev => ({
+      ...prev,
+      participantIds: prev.participantIds.includes(employeeId)
+        ? prev.participantIds.filter(id => id !== employeeId)
+        : [...prev.participantIds, employeeId],
+    }));
+  }
+
+  async function addCommitteeMeeting() {
+    if (!newCommitteeMeeting.companyId || !newCommitteeMeeting.meetingDate) return;
+    const data = {
+      companyId: newCommitteeMeeting.companyId,
+      meetingNo: newCommitteeMeeting.meetingNo,
+      meetingDate: newCommitteeMeeting.meetingDate,
+      location: newCommitteeMeeting.location,
+      chairperson: newCommitteeMeeting.chairperson,
+      agenda: newCommitteeMeeting.agenda,
+      decisions: newCommitteeMeeting.decisions,
+      participantIds: newCommitteeMeeting.participantIds,
+      status: newCommitteeMeeting.status,
+      notes: newCommitteeMeeting.notes,
+    };
+    const ref = await addDoc(collection(db, "committeeMeetings"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
+    setCommitteeMeetings(prev => [...prev, { id: ref.id, ...data }]);
+    setNewCommitteeMeeting({ companyId: "", meetingNo: "", meetingDate: "", location: "", chairperson: "", agenda: "", decisions: "", participantIds: [], status: "Planlandı", notes: "" });
+  }
+
+  async function updateCommitteeMeetingStatus(id: string, status: CommitteeMeetingStatus) {
+    await updateDoc(doc(db, "committeeMeetings", id), { status });
+    setCommitteeMeetings(prev => prev.map(meeting => meeting.id === id ? { ...meeting, status } : meeting));
+  }
+
+  async function deleteCommitteeMeeting(id: string) {
+    await deleteDoc(doc(db, "committeeMeetings", id));
+    setCommitteeMeetings(prev => prev.filter(meeting => meeting.id !== id));
+  }
+
   const tabs = isHumanResources && !isAdmin
     ? [{ id: "personel", label: "👥 İnsan Kaynakları" }]
     : [
@@ -2077,6 +2230,7 @@ export default function Page() {
       { id: "egitimler", label: "🎓 Eğitimler" },
       { id: "kkd-formu", label: "🧤 KKD Formu" },
       { id: "acil-durum-plani", label: "⚠️ Acil Durum Planı" },
+      { id: "kurul-toplantisi", label: "👥 Kurul Toplantısı" },
       ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
     ];
   const menuGroups: Array<{ title: string; items: Array<{ id: string; label: string; disabled?: boolean }> }> = isHumanResources && !isAdmin
@@ -2088,7 +2242,7 @@ export default function Page() {
       {
         title: "Planlama & Arşiv",
         items: [
-          ...tabs.filter(tab => ["yillik-planlar", "egitimler", "acil-durum-plani"].includes(tab.id)),
+          ...tabs.filter(tab => ["yillik-planlar", "egitimler", "acil-durum-plani", "kurul-toplantisi"].includes(tab.id)),
           { id: "arsiv", label: "🗂 Arşiv", disabled: true },
           { id: "firma-ziyaretleri", label: "📍 Firma Ziyaretleri", disabled: true },
         ],
@@ -2096,7 +2250,6 @@ export default function Page() {
       {
         title: "Yakında",
         items: [
-          { id: "kurul-toplantisi", label: "👥 Kurul Toplantısı", disabled: true },
           { id: "is-kazasi-raporu", label: "🚑 İş Kazası Raporu", disabled: true },
         ],
       },
@@ -3316,6 +3469,125 @@ export default function Page() {
                   {filteredEmergencyPlans.length === 0 && (
                     <tr>
                       <td colSpan={11} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz acil durum planı yok.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "kurul-toplantisi" && (
+          <div>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">Kurul Toplantısı</p>
+              <div style={styles.formGrid}>
+                <FormField label="Firma *">
+                  <select
+                    style={styles.select}
+                    className="isg-input"
+                    value={newCommitteeMeeting.companyId}
+                    onChange={e => setNewCommitteeMeeting({ ...newCommitteeMeeting, companyId: e.target.value, participantIds: [] })}
+                  >
+                    <option value="">Seçin...</option>
+                    {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Toplantı No"><input style={styles.input} className="isg-input" value={newCommitteeMeeting.meetingNo} onChange={e => setNewCommitteeMeeting({ ...newCommitteeMeeting, meetingNo: e.target.value })} placeholder="Örn. 2026/01" /></FormField>
+                <FormField label="Toplantı Tarihi *"><DatePicker value={newCommitteeMeeting.meetingDate} onChange={v => setNewCommitteeMeeting({ ...newCommitteeMeeting, meetingDate: v })} /></FormField>
+                <FormField label="Toplantı Yeri"><input style={styles.input} className="isg-input" value={newCommitteeMeeting.location} onChange={e => setNewCommitteeMeeting({ ...newCommitteeMeeting, location: e.target.value })} placeholder="Toplantı salonu" /></FormField>
+                <FormField label="Kurul Başkanı"><input style={styles.input} className="isg-input" value={newCommitteeMeeting.chairperson} onChange={e => setNewCommitteeMeeting({ ...newCommitteeMeeting, chairperson: e.target.value })} placeholder="Ad Soyad" /></FormField>
+                <FormField label="Durum">
+                  <select style={styles.select} className="isg-input" value={newCommitteeMeeting.status} onChange={e => setNewCommitteeMeeting({ ...newCommitteeMeeting, status: e.target.value as CommitteeMeetingStatus })}>
+                    <option>Planlandı</option>
+                    <option>Yapıldı</option>
+                    <option>Ertelendi</option>
+                    <option>Kararlar Takipte</option>
+                  </select>
+                </FormField>
+                <FormField label="Gündem"><input style={styles.input} className="isg-input" value={newCommitteeMeeting.agenda} onChange={e => setNewCommitteeMeeting({ ...newCommitteeMeeting, agenda: e.target.value })} placeholder="Gündem maddeleri" /></FormField>
+                <FormField label="Alınan Kararlar"><input style={styles.input} className="isg-input" value={newCommitteeMeeting.decisions} onChange={e => setNewCommitteeMeeting({ ...newCommitteeMeeting, decisions: e.target.value })} placeholder="Kararlar ve aksiyonlar" /></FormField>
+                <FormField label="Not"><input style={styles.input} className="isg-input" value={newCommitteeMeeting.notes} onChange={e => setNewCommitteeMeeting({ ...newCommitteeMeeting, notes: e.target.value })} placeholder="Takip, sorumlu, termin..." /></FormField>
+              </div>
+
+              <div style={{ marginTop: 18 }}>
+                <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Katılımcılar</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {employees.filter(employee => employee.companyId === newCommitteeMeeting.companyId).map(employee => {
+                    const checked = newCommitteeMeeting.participantIds.includes(employee.id);
+                    return (
+                      <button
+                        key={employee.id}
+                        type="button"
+                        onClick={() => toggleCommitteeParticipant(employee.id)}
+                        style={{
+                          border: checked ? "1px solid color-mix(in srgb, var(--isg-accent) 72%, white)" : "1px solid var(--isg-border)",
+                          backgroundColor: checked ? "rgba(104, 211, 180, 0.16)" : "var(--isg-input-bg)",
+                          color: checked ? "var(--isg-accent)" : "var(--isg-text-muted)",
+                          borderRadius: 8,
+                          padding: "8px 11px",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {checked ? "✓ " : ""}{employee.firstName} {employee.lastName}
+                      </button>
+                    );
+                  })}
+                  {!newCommitteeMeeting.companyId && <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>Katılımcı seçmek için önce firma seçin.</span>}
+                  {newCommitteeMeeting.companyId && employees.filter(employee => employee.companyId === newCommitteeMeeting.companyId).length === 0 && (
+                    <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>Bu firmaya kayıtlı personel bulunamadı.</span>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button style={styles.btnPrimary} onClick={addCommitteeMeeting}>Toplantı Kaydı Ekle</button>
+              </div>
+            </div>
+
+            <div style={styles.searchBar}>
+              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
+              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
+              <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredCommitteeMeetings.length} toplantı</span>
+            </div>
+
+            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
+              <table style={styles.table}>
+                <thead><tr>{["Firma", "No", "Tarih", "Yer", "Başkan", "Katılımcı", "Durum", "Gündem / Kararlar", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+                <tbody>
+                  {filteredCommitteeMeetings.map(meeting => {
+                    const company = companies.find(c => c.id === meeting.companyId);
+                    const participants = meeting.participantIds
+                      .map(id => employees.find(employee => employee.id === id))
+                      .filter(Boolean)
+                      .map(employee => `${employee!.firstName} ${employee!.lastName}`);
+                    return (
+                      <tr key={meeting.id}>
+                        <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
+                        <td style={styles.td} className="isg-td">{meeting.meetingNo || "—"}</td>
+                        <td style={styles.td} className="isg-td">{meeting.meetingDate ? new Date(meeting.meetingDate).toLocaleDateString("tr-TR") : "—"}</td>
+                        <td style={styles.td} className="isg-td">{meeting.location || "—"}</td>
+                        <td style={styles.td} className="isg-td">{meeting.chairperson || "—"}</td>
+                        <td style={{ ...styles.td, minWidth: 180 }} className="isg-td">{participants.length > 0 ? participants.join(", ") : "—"}</td>
+                        <td style={styles.td} className="isg-td">
+                          <select style={{ ...styles.select, minWidth: 140 }} value={meeting.status} onChange={e => updateCommitteeMeetingStatus(meeting.id, e.target.value as CommitteeMeetingStatus)}>
+                            <option>Planlandı</option>
+                            <option>Yapıldı</option>
+                            <option>Ertelendi</option>
+                            <option>Kararlar Takipte</option>
+                          </select>
+                        </td>
+                        <td style={{ ...styles.td, minWidth: 230, color: "var(--isg-text-muted)" }} className="isg-td">{[meeting.agenda, meeting.decisions, meeting.notes].filter(Boolean).join(" / ") || "—"}</td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnSecondary} onClick={() => generateCommitteeMeetingPDF(meeting, company, employees)}>Tutanak PDF</button></td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteCommitteeMeeting(meeting.id)}>Sil</button></td>
+                      </tr>
+                    );
+                  })}
+                  {filteredCommitteeMeetings.length === 0 && (
+                    <tr>
+                      <td colSpan={10} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz kurul toplantısı kaydı yok.</td>
                     </tr>
                   )}
                 </tbody>

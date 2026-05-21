@@ -642,7 +642,13 @@ const styles: Record<string, React.CSSProperties> = {
   app: { minHeight: "100vh", background: "var(--isg-bg)", color: "var(--isg-text)", fontFamily: "'IBM Plex Sans', -apple-system, sans-serif", overflowX: "hidden" as const },
   header: { backgroundColor: "var(--isg-header)", borderBottom: "1px solid var(--isg-border)", padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 58, gap: 10, backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", position: "sticky" as const, top: 0, zIndex: 50, boxShadow: "0 12px 34px rgba(0,0,0,0.22)" },
   nav: { display: "flex", gap: 6, padding: "0 28px", borderBottom: "1px solid var(--isg-border)", backgroundColor: "var(--isg-nav)", overflowX: "auto" as const, WebkitOverflowScrolling: "touch" as const, msOverflowStyle: "none" as const, scrollbarWidth: "none" as const, backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", position: "sticky" as const, top: 58, zIndex: 40, height: 50, alignItems: "center" },
-  content: { padding: "30px 28px", maxWidth: 1480, margin: "0 auto" },
+  shell: { display: "flex", alignItems: "stretch", minHeight: "calc(100vh - 58px)" },
+  sidebar: { flexShrink: 0, borderRight: "1px solid var(--isg-border)", backgroundColor: "var(--isg-nav)", padding: "18px 14px", overflowY: "auto" as const, boxSizing: "border-box" as const, backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", zIndex: 35 },
+  sidebarSearch: { height: 34, border: "1px solid var(--isg-border)", borderRadius: 8, backgroundColor: "var(--isg-input-bg)", display: "flex", alignItems: "center", gap: 8, padding: "0 10px", marginBottom: 18 },
+  sidebarGroupTitle: { color: "var(--isg-text-subtle)", fontSize: 10, fontWeight: 800, textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 7px 4px" },
+  sidebarItem: { minHeight: 36, width: "100%", border: "1px solid transparent", borderRadius: 8, backgroundColor: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "0 10px", fontSize: 13, fontWeight: 700, textAlign: "left" as const, transition: "color 0.15s, border-color 0.15s, background-color 0.15s, opacity 0.15s" },
+  soonBadge: { fontSize: 10, fontWeight: 800, color: "#a78bfa", border: "1px solid rgba(167,139,250,0.24)", backgroundColor: "rgba(167,139,250,0.12)", borderRadius: 6, padding: "2px 6px", whiteSpace: "nowrap" as const },
+  content: { padding: "30px 28px", width: "100%", boxSizing: "border-box" as const, margin: "0 auto" },
   card: { backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 8, padding: "22px", marginBottom: 16, transition: "border-color 0.2s, background-color 0.2s, box-shadow 0.2s", boxShadow: "var(--isg-shadow)" },
   sectionTitle: { fontSize: 10, fontWeight: 700, color: "var(--isg-text-subtle)", textTransform: "uppercase" as const, letterSpacing: "0.12em", marginBottom: 16 },
   input: { width: "100%", backgroundColor: "var(--isg-input-bg)", border: "1px solid var(--isg-border)", borderRadius: 8, color: "var(--isg-text)", padding: "10px 13px", fontSize: 14, outline: "none", boxSizing: "border-box" as const, transition: "border-color 0.15s, box-shadow 0.15s, background-color 0.15s" },
@@ -1440,6 +1446,31 @@ export default function Page() {
       { id: "ek2muayene", label: "🏥 EK-2 Muayene" },
       ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
     ];
+  const menuGroups: Array<{ title: string; items: Array<{ id: string; label: string; disabled?: boolean }> }> = isHumanResources && !isAdmin
+    ? [{ title: "Yönetim", items: tabs }]
+    : [
+      { title: "Yönetim", items: tabs.filter(tab => ["ozet", "firmalar", "personel", "kullanicilar"].includes(tab.id)) },
+      { title: "Risk Yönetimi", items: tabs.filter(tab => ["gozlemciler", "dof", "risk"].includes(tab.id)) },
+      { title: "Formlar & Belgeler", items: tabs.filter(tab => ["belgeler", "imzacilar", "ek2muayene"].includes(tab.id)) },
+      {
+        title: "Planlama & Arşiv",
+        items: [
+          { id: "yillik-planlar", label: "📅 Yıllık Planlar", disabled: true },
+          { id: "arsiv", label: "🗂 Arşiv", disabled: true },
+          { id: "firma-ziyaretleri", label: "📍 Firma Ziyaretleri", disabled: true },
+        ],
+      },
+      {
+        title: "Yakında",
+        items: [
+          { id: "egitimler", label: "🎓 Eğitimler", disabled: true },
+          { id: "acil-durum-plani", label: "⚠️ Acil Durum Planı", disabled: true },
+          { id: "kurul-toplantisi", label: "👥 Kurul Toplantısı", disabled: true },
+          { id: "kkd-formu", label: "🧤 KKD Formu", disabled: true },
+          { id: "is-kazasi-raporu", label: "🚑 İş Kazası Raporu", disabled: true },
+        ],
+      },
+    ];
 
   if (!mounted || loading) {
     return (
@@ -1457,6 +1488,7 @@ export default function Page() {
   const incompleteEmployees = employees.filter(e => !e.trainingComplete).length;
   const activeRole = userProfile?.activeRole || userProfile?.role;
   const activeRoleLabel = activeRole ? t(`role.${activeRole}`) : "";
+  const compactLayout = isMobileScreen();
 
   return (
     
@@ -1494,26 +1526,51 @@ export default function Page() {
         </div>
       </header>
 
-      <nav style={styles.nav} className="isg-nav">
-        {tabs.map(tab => (
-          <button key={tab.id}
-            style={{ padding: "0 14px", height: 36, border: "1px solid transparent", cursor: "pointer", fontSize: 13, fontWeight: 650, whiteSpace: "nowrap" as const,
-              backgroundColor: activeTab === tab.id ? "rgba(76,201,166,0.14)" : "transparent",
-              color: activeTab === tab.id ? "var(--isg-text)" : "var(--isg-text-muted)",
-              borderColor: activeTab === tab.id ? "rgba(76,201,166,0.28)" : "transparent",
-              borderRadius: 8,
-              transition: "color 0.15s, border-color 0.15s, background-color 0.15s",
-              letterSpacing: 0,
-            }}
-            onMouseEnter={e => { if (activeTab !== tab.id) (e.currentTarget as HTMLElement).style.color = "var(--isg-text)"; }}
-            onMouseLeave={e => { if (activeTab !== tab.id) (e.currentTarget as HTMLElement).style.color = "var(--isg-text-muted)"; }}
-            onClick={() => { setActiveTab(tab.id); setSearch(""); }}>
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      <div style={{ ...styles.shell, flexDirection: compactLayout ? "column" : "row" }} className="isg-shell">
+        <aside style={{ ...styles.sidebar, width: compactLayout ? "100%" : 252, position: compactLayout ? "relative" : "sticky", top: compactLayout ? 0 : 58, height: compactLayout ? "auto" : "calc(100vh - 58px)" }} className="isg-sidebar">
+          <div style={styles.sidebarSearch}>
+            <span style={{ color: "var(--isg-text-subtle)", fontSize: 14 }}>⌕</span>
+            <span style={{ color: "var(--isg-text-muted)", fontSize: 12 }}>Modül ara...</span>
+          </div>
+          <div style={{ display: "grid", gap: 18 }}>
+            {menuGroups.map(group => (
+              <div key={group.title}>
+                <div style={styles.sidebarGroupTitle}>{group.title}</div>
+                <div style={{ display: "grid", gap: 4 }}>
+                  {group.items.map(tab => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        disabled={tab.disabled}
+                        title={tab.disabled ? "Bu modül sonraki adımlarda eklenecek" : undefined}
+                        style={{
+                          ...styles.sidebarItem,
+                          backgroundColor: isActive ? "rgba(76,201,166,0.16)" : "transparent",
+                          color: tab.disabled ? "var(--isg-text-subtle)" : isActive ? "var(--isg-text)" : "var(--isg-text-muted)",
+                          borderColor: isActive ? "rgba(76,201,166,0.3)" : "transparent",
+                          opacity: tab.disabled ? 0.58 : 1,
+                          cursor: tab.disabled ? "not-allowed" : "pointer",
+                        }}
+                        onClick={() => {
+                          if (tab.disabled) return;
+                          setActiveTab(tab.id);
+                          setSearch("");
+                        }}
+                      >
+                        <span>{tab.label}</span>
+                        {tab.disabled && <span style={styles.soonBadge}>Yakında</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
 
-      <main style={styles.content} className="isg-app">
+      <main style={{ ...styles.content, maxWidth: compactLayout ? "100%" : 1480 }} className="isg-app">
         {loadError && (
           <div style={{
             backgroundColor: "#dc262615",
@@ -2286,6 +2343,7 @@ export default function Page() {
         {/* Vardiya ve Ayarlar sekmeleri kaldırıldı */}
 
       </main>
+      </div>
     </div>
     
   );

@@ -17,7 +17,7 @@
 import React, { useState, useEffect } from "react";
 import { initializeApp, deleteApp } from "firebase/app";
 import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
-import { db, firebaseConfig } from "../../lib/firebase";
+import { auth, db, firebaseConfig } from "../../lib/firebase";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import {
   getAllUsers,
@@ -290,6 +290,12 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
     setStatus(null);
     setRoleUpdatingUid(uid);
     try {
+      const currentUid = auth.currentUser?.uid;
+      if (uid === currentUid && role === "admin" && !checked) {
+        setStatus("❌ Kendi admin yetkinizi kaldıramazsınız. Başka bir admin bu işlemi yapmalı.");
+        return;
+      }
+
       const currentRoles = normalizeRoles(user);
       const nextRoles = checked ? Array.from(new Set([...currentRoles, role])) : currentRoles.filter(item => item !== role);
       const roles = nextRoles.length > 0 ? nextRoles : [role];
@@ -617,6 +623,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
           <tbody>
             {users.map((user) => {
               const userRoles = normalizeRoles(user);
+              const isCurrentUser = user.uid === auth.currentUser?.uid;
               return (
                 <tr key={user.uid}>
                   <td style={styles.td}>{user.displayName || "—"}</td>
@@ -666,7 +673,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
                           <input
                             type="checkbox"
                             checked={userRoles.includes(role)}
-                            disabled={roleUpdatingUid === user.uid}
+                            disabled={roleUpdatingUid === user.uid || (isCurrentUser && role === "admin")}
                             onChange={(e) => updateRoles(user.uid, user, role, e.target.checked)}
                           />
                           <span>{ROLE_CONFIG[role].icon} {ROLE_CONFIG[role].label}</span>

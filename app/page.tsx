@@ -298,6 +298,21 @@ type TrainingRecord = {
   notes: string;
 };
 
+type PpeStatus = "Teslim Edildi" | "İade Edildi" | "Hasarlı / Kayıp";
+
+type PpeRecord = {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  equipment: string;
+  quantity: number;
+  issueDate: string;
+  returnDate?: string;
+  status: PpeStatus;
+  serialNo?: string;
+  notes: string;
+};
+
 const emptyChecklist: EmployeeChecklist = {
   isgCertificateDate: "",
   ek2Date: "",
@@ -882,6 +897,69 @@ async function generateTrainingCertificatesPDF(training: TrainingRecord, company
   }).download(`Egitim_Sertifikalari_${training.title.replace(/\s+/g, "_")}.pdf`);
 }
 
+async function generatePpeAssignmentPDF(record: PpeRecord, company: Company | undefined, employee: Employee | undefined) {
+  if (!employee) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
+  const maker = pdfMake.default || pdfMake;
+  maker.vfs = (pdfFonts.default || pdfFonts).vfs;
+
+  const content: any[] = [
+    { text: "KİŞİSEL KORUYUCU DONANIM ZİMMET FORMU", fontSize: 15, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 14] },
+    {
+      table: {
+        widths: [100, "*", 100, "*"],
+        body: [
+          ["Firma", company?.officialName || company?.nickName || "-", "Tarih", record.issueDate ? new Date(record.issueDate).toLocaleDateString("tr-TR") : "-"],
+          ["Personel", `${employee.firstName} ${employee.lastName}`, "T.C. Kimlik No", employee.tcNo || "-"],
+          ["Bölüm", employee.department || "-", "Görev / Ünvan", employee.title || "-"],
+        ].map(row => row.map((text, index) => ({ text, fontSize: 8, bold: index % 2 === 0, color: "#334155", margin: [4, 5, 4, 5] }))),
+      },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+      margin: [0, 0, 0, 12],
+    },
+    {
+      table: {
+        headerRows: 1,
+        widths: ["*", 50, 86, 86, "*"],
+        body: [
+          ["KKD / Malzeme", "Adet", "Seri No", "Durum", "Not"].map(text => ({ text, bold: true, color: "white", fillColor: "#1e293b", fontSize: 8, margin: [4, 5, 4, 5] })),
+          [
+            record.equipment,
+            String(record.quantity || 1),
+            record.serialNo || "-",
+            record.status,
+            record.notes || "-",
+          ].map(text => ({ text, fontSize: 8, color: "#334155", margin: [4, 7, 4, 7] })),
+        ],
+      },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+      margin: [0, 0, 0, 14],
+    },
+    {
+      text: "Yukarıda belirtilen kişisel koruyucu donanımı eksiksiz ve çalışır durumda teslim aldım. Kullanım talimatlarına uygun kullanacağımı, kayıp veya hasar durumunda işverenimi bilgilendireceğimi kabul ederim.",
+      fontSize: 9,
+      color: "#334155",
+      margin: [0, 0, 0, 28],
+    },
+    {
+      columns: [
+        { width: "*", text: "Teslim Eden\n\n\nAd Soyad / İmza", fontSize: 9, alignment: "center" },
+        { width: "*", text: "Teslim Alan Personel\n\n\nAd Soyad / İmza", fontSize: 9, alignment: "center" },
+      ],
+    },
+  ];
+
+  maker.createPdf({
+    pageSize: "A4",
+    pageMargins: [28, 28, 28, 28],
+    content,
+    defaultStyle: { font: "Roboto" },
+  }).download(`KKD_Zimmet_${employee.firstName}_${employee.lastName}.pdf`);
+}
+
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 // ── Mobil algılama yardımcısı (styles dışında kullanılır) ──
@@ -1050,6 +1128,7 @@ export default function Page() {
   const [risks, setRisks] = useState<RiskRecord[]>([]);
   const [annualPlans, setAnnualPlans] = useState<AnnualPlanRecord[]>([]);
   const [trainings, setTrainings] = useState<TrainingRecord[]>([]);
+  const [ppeRecords, setPpeRecords] = useState<PpeRecord[]>([]);
 
   const [activeTab, setActiveTab] = useState("firmalar");
   const [search, setSearch] = useState("");
@@ -1090,6 +1169,17 @@ export default function Page() {
     status: "Planlandı" as TrainingStatus,
     notes: "",
   });
+  const [newPpe, setNewPpe] = useState({
+    companyId: "",
+    employeeId: "",
+    equipment: "Baret",
+    quantity: "1",
+    issueDate: "",
+    returnDate: "",
+    status: "Teslim Edildi" as PpeStatus,
+    serialNo: "",
+    notes: "",
+  });
 
   const [signers, setSigners] = useState<Signer[]>([]);
   const [emailSettings, setEmailSettings] = useState<EmailSettings>({ enabled: true, toEmail: "", ccEmail: "", subject: "[İSG] Yeni DÖF Bildirimi: {dofTitle}", message: "" });
@@ -1126,7 +1216,7 @@ export default function Page() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult, annualPlanResult, trainingResult] = await Promise.allSettled([
+      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult, annualPlanResult, trainingResult, ppeResult] = await Promise.allSettled([
         loadCompanyScopedRecords<Company>("companies"),
         loadCompanyScopedRecords<Employee>("employees"),
         loadCompanyScopedRecords<DocumentRecord>("documents"),
@@ -1136,6 +1226,7 @@ export default function Page() {
         loadCompanyScopedRecords<Signer>("signers"),
         loadCompanyScopedRecords<AnnualPlanRecord>("annualPlans"),
         loadCompanyScopedRecords<TrainingRecord>("trainings"),
+        loadCompanyScopedRecords<PpeRecord>("ppeRecords"),
       ]);
       const loadResults: Array<{ label: string; result: PromiseSettledResult<unknown> }> = [
         { label: "Firmalar", result: compResult },
@@ -1147,6 +1238,7 @@ export default function Page() {
         { label: "İmzacılar", result: signerResult },
         { label: "Yıllık Planlar", result: annualPlanResult },
         { label: "Eğitimler", result: trainingResult },
+        { label: "KKD", result: ppeResult },
       ];
       const failedLoads = loadResults.filter(({ result }) => result.status === "rejected").map(({ label }) => label);
 
@@ -1163,6 +1255,7 @@ export default function Page() {
       if (signerResult.status === "fulfilled") setSigners(signerResult.value);
       if (annualPlanResult.status === "fulfilled") setAnnualPlans(annualPlanResult.value);
       if (trainingResult.status === "fulfilled") setTrainings(trainingResult.value);
+      if (ppeResult.status === "fulfilled") setPpeRecords(ppeResult.value);
 
       // Email ayarlarını yükle
       const emailDoc = await getDoc(doc(db, "settings", "emailNotifications"));
@@ -1259,6 +1352,12 @@ export default function Page() {
     const matchesCompany = selectedCompanyId === "all" || training.companyId === selectedCompanyId;
     return matchesCompany && `${training.title} ${training.type} ${training.trainer} ${training.status} ${training.notes} ${participantNames} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
   }), [trainings, companies, employees, selectedCompanyId, search]);
+  const filteredPpeRecords = useMemo(() => ppeRecords.filter(record => {
+    const company = companies.find(c => c.id === record.companyId);
+    const employee = employees.find(e => e.id === record.employeeId);
+    const matchesCompany = selectedCompanyId === "all" || record.companyId === selectedCompanyId;
+    return matchesCompany && `${record.equipment} ${record.status} ${record.serialNo || ""} ${record.notes} ${company?.nickName || ""} ${employee?.firstName || ""} ${employee?.lastName || ""} ${employee?.tcNo || ""}`.toLowerCase().includes(search.toLowerCase());
+  }), [ppeRecords, companies, employees, selectedCompanyId, search]);
 
   async function addCompany() {
     if (!isAdmin) return;
@@ -1791,6 +1890,34 @@ export default function Page() {
     setTrainings(prev => prev.filter(training => training.id !== id));
   }
 
+  async function addPpeRecord() {
+    if (!newPpe.companyId || !newPpe.employeeId || !newPpe.equipment || !newPpe.issueDate) return;
+    const data = {
+      companyId: newPpe.companyId,
+      employeeId: newPpe.employeeId,
+      equipment: newPpe.equipment,
+      quantity: parseInt(newPpe.quantity) || 1,
+      issueDate: newPpe.issueDate,
+      returnDate: newPpe.returnDate,
+      status: newPpe.status,
+      serialNo: newPpe.serialNo,
+      notes: newPpe.notes,
+    };
+    const ref = await addDoc(collection(db, "ppeRecords"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
+    setPpeRecords(prev => [...prev, { id: ref.id, ...data }]);
+    setNewPpe({ companyId: "", employeeId: "", equipment: "Baret", quantity: "1", issueDate: "", returnDate: "", status: "Teslim Edildi", serialNo: "", notes: "" });
+  }
+
+  async function updatePpeStatus(id: string, status: PpeStatus) {
+    await updateDoc(doc(db, "ppeRecords", id), { status });
+    setPpeRecords(prev => prev.map(record => record.id === id ? { ...record, status } : record));
+  }
+
+  async function deletePpeRecord(id: string) {
+    await deleteDoc(doc(db, "ppeRecords", id));
+    setPpeRecords(prev => prev.filter(record => record.id !== id));
+  }
+
   const tabs = isHumanResources && !isAdmin
     ? [{ id: "personel", label: "👥 İnsan Kaynakları" }]
     : [
@@ -1805,6 +1932,7 @@ export default function Page() {
       { id: "ek2muayene", label: "🏥 EK-2 Muayene" },
       { id: "yillik-planlar", label: "📅 Yıllık Planlar" },
       { id: "egitimler", label: "🎓 Eğitimler" },
+      { id: "kkd-formu", label: "🧤 KKD Formu" },
       ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
     ];
   const menuGroups: Array<{ title: string; items: Array<{ id: string; label: string; disabled?: boolean }> }> = isHumanResources && !isAdmin
@@ -1812,7 +1940,7 @@ export default function Page() {
     : [
       { title: "Yönetim", items: tabs.filter(tab => ["ozet", "firmalar", "personel", "kullanicilar"].includes(tab.id)) },
       { title: "Risk Yönetimi", items: tabs.filter(tab => ["gozlemciler", "dof", "risk"].includes(tab.id)) },
-      { title: "Formlar & Belgeler", items: tabs.filter(tab => ["belgeler", "imzacilar", "ek2muayene"].includes(tab.id)) },
+      { title: "Formlar & Belgeler", items: tabs.filter(tab => ["belgeler", "imzacilar", "ek2muayene", "kkd-formu"].includes(tab.id)) },
       {
         title: "Planlama & Arşiv",
         items: [
@@ -1826,7 +1954,6 @@ export default function Page() {
         items: [
           { id: "acil-durum-plani", label: "⚠️ Acil Durum Planı", disabled: true },
           { id: "kurul-toplantisi", label: "👥 Kurul Toplantısı", disabled: true },
-          { id: "kkd-formu", label: "🧤 KKD Formu", disabled: true },
           { id: "is-kazasi-raporu", label: "🚑 İş Kazası Raporu", disabled: true },
         ],
       },
@@ -2864,6 +2991,99 @@ export default function Page() {
                   {filteredTrainings.length === 0 && (
                     <tr>
                       <td colSpan={11} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz eğitim kaydı yok.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "kkd-formu" && (
+          <div>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">KKD Zimmet Formu</p>
+              <div style={styles.formGrid}>
+                <FormField label="Firma *">
+                  <select style={styles.select} className="isg-input" value={newPpe.companyId} onChange={e => setNewPpe({ ...newPpe, companyId: e.target.value, employeeId: "" })}>
+                    <option value="">Seçin...</option>
+                    {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Personel *">
+                  <select style={styles.select} className="isg-input" value={newPpe.employeeId} onChange={e => setNewPpe({ ...newPpe, employeeId: e.target.value })}>
+                    <option value="">Seçin...</option>
+                    {employees.filter(employee => employee.companyId === newPpe.companyId).map(employee => <option key={employee.id} value={employee.id}>{employee.firstName} {employee.lastName}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="KKD / Malzeme *">
+                  <select style={styles.select} className="isg-input" value={newPpe.equipment} onChange={e => setNewPpe({ ...newPpe, equipment: e.target.value })}>
+                    <option>Baret</option>
+                    <option>İş Ayakkabısı</option>
+                    <option>Koruyucu Gözlük</option>
+                    <option>Kulak Koruyucu</option>
+                    <option>İş Eldiveni</option>
+                    <option>Reflektörlü Yelek</option>
+                    <option>Emniyet Kemeri</option>
+                    <option>Toz Maskesi</option>
+                    <option>Diğer</option>
+                  </select>
+                </FormField>
+                <FormField label="Adet"><input style={styles.input} className="isg-input" type="number" min="1" value={newPpe.quantity} onChange={e => setNewPpe({ ...newPpe, quantity: e.target.value })} /></FormField>
+                <FormField label="Teslim Tarihi *"><DatePicker value={newPpe.issueDate} onChange={v => setNewPpe({ ...newPpe, issueDate: v })} /></FormField>
+                <FormField label="İade Tarihi"><DatePicker value={newPpe.returnDate} onChange={v => setNewPpe({ ...newPpe, returnDate: v })} /></FormField>
+                <FormField label="Durum">
+                  <select style={styles.select} className="isg-input" value={newPpe.status} onChange={e => setNewPpe({ ...newPpe, status: e.target.value as PpeStatus })}>
+                    <option>Teslim Edildi</option>
+                    <option>İade Edildi</option>
+                    <option>Hasarlı / Kayıp</option>
+                  </select>
+                </FormField>
+                <FormField label="Seri No"><input style={styles.input} className="isg-input" value={newPpe.serialNo} onChange={e => setNewPpe({ ...newPpe, serialNo: e.target.value })} placeholder="Varsa seri / beden / özellik" /></FormField>
+                <FormField label="Not"><input style={styles.input} className="isg-input" value={newPpe.notes} onChange={e => setNewPpe({ ...newPpe, notes: e.target.value })} placeholder="Kullanım talimatı, beden, marka..." /></FormField>
+              </div>
+              <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button style={styles.btnPrimary} onClick={addPpeRecord}>KKD Kaydı Ekle</button>
+              </div>
+            </div>
+
+            <div style={styles.searchBar}>
+              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
+              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
+              <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredPpeRecords.length} KKD kaydı</span>
+            </div>
+
+            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
+              <table style={styles.table}>
+                <thead><tr>{["Firma", "Personel", "KKD", "Adet", "Teslim", "İade", "Durum", "Seri / Not", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+                <tbody>
+                  {filteredPpeRecords.map(record => {
+                    const company = companies.find(c => c.id === record.companyId);
+                    const employee = employees.find(e => e.id === record.employeeId);
+                    return (
+                      <tr key={record.id}>
+                        <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
+                        <td style={styles.td} className="isg-td"><strong>{employee ? `${employee.firstName} ${employee.lastName}` : "—"}</strong></td>
+                        <td style={styles.td} className="isg-td"><Badge text={record.equipment} color="#f59e0b" /></td>
+                        <td style={styles.td} className="isg-td">{record.quantity}</td>
+                        <td style={styles.td} className="isg-td">{record.issueDate ? new Date(record.issueDate).toLocaleDateString("tr-TR") : "—"}</td>
+                        <td style={styles.td} className="isg-td">{record.returnDate ? new Date(record.returnDate).toLocaleDateString("tr-TR") : "—"}</td>
+                        <td style={styles.td} className="isg-td">
+                          <select style={{ ...styles.select, minWidth: 142 }} value={record.status} onChange={e => updatePpeStatus(record.id, e.target.value as PpeStatus)}>
+                            <option>Teslim Edildi</option>
+                            <option>İade Edildi</option>
+                            <option>Hasarlı / Kayıp</option>
+                          </select>
+                        </td>
+                        <td style={{ ...styles.td, minWidth: 170, color: "var(--isg-text-muted)" }} className="isg-td">{[record.serialNo, record.notes].filter(Boolean).join(" / ") || "—"}</td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnSecondary} onClick={() => generatePpeAssignmentPDF(record, company, employee)}>Zimmet PDF</button></td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deletePpeRecord(record.id)}>Sil</button></td>
+                      </tr>
+                    );
+                  })}
+                  {filteredPpeRecords.length === 0 && (
+                    <tr>
+                      <td colSpan={10} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz KKD kaydı yok.</td>
                     </tr>
                   )}
                 </tbody>

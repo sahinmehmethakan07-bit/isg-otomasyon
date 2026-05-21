@@ -266,6 +266,21 @@ type RiskRecord = {
   controlDate?: string;
 };
 
+type AnnualPlanType = "Eğitim" | "Muayene" | "Risk Değerlendirme" | "Acil Durum Tatbikatı" | "Kurul Toplantısı" | "Saha Ziyareti" | "Belge Yenileme";
+type AnnualPlanStatus = "Planlandı" | "Devam Ediyor" | "Tamamlandı" | "Gecikti";
+
+type AnnualPlanRecord = {
+  id: string;
+  companyId: string;
+  year: number;
+  type: AnnualPlanType;
+  title: string;
+  plannedDate: string;
+  responsible: string;
+  status: AnnualPlanStatus;
+  notes: string;
+};
+
 const emptyChecklist: EmployeeChecklist = {
   isgCertificateDate: "",
   ek2Date: "",
@@ -370,6 +385,13 @@ function riskScoreColor(value: number) {
   if (value >= 15) return "#dc2626";
   if (value >= 8) return "#d97706";
   return "#16a34a";
+}
+
+function annualPlanStatusColor(status: AnnualPlanStatus) {
+  if (status === "Tamamlandı") return "#16a34a";
+  if (status === "Devam Ediyor") return "#0ea5e9";
+  if (status === "Gecikti") return "#dc2626";
+  return "#d97706";
 }
 
 function checklistCompletion(checklist: EmployeeChecklist) {
@@ -633,6 +655,51 @@ async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signer
   maker.createPdf(docDef).download(`Risk_Degerlendirme_Raporu_${today.replace(/\./g, "_")}.pdf`);
 }
 
+async function generateAnnualPlanPDF(plans: AnnualPlanRecord[], companies: Company[]) {
+  if (plans.length === 0) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
+  const maker = pdfMake.default || pdfMake;
+  maker.vfs = (pdfFonts.default || pdfFonts).vfs;
+
+  const companyName = (companyId: string) => companies.find(c => c.id === companyId)?.officialName || companies.find(c => c.id === companyId)?.nickName || "-";
+  const sortedPlans = [...plans].sort((a, b) => `${a.companyId}-${a.plannedDate}`.localeCompare(`${b.companyId}-${b.plannedDate}`));
+  const content: any[] = [
+    { text: "YILLIK İSG PLANI", fontSize: 16, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 4] },
+    { text: new Date().toLocaleDateString("tr-TR"), fontSize: 9, color: "#64748b", alignment: "center", margin: [0, 0, 0, 14] },
+    {
+      table: {
+        headerRows: 1,
+        widths: [78, 46, 72, "*", 58, 70, 62, "*"],
+        body: [
+          ["Firma", "Yıl", "Tür", "Başlık", "Tarih", "Sorumlu", "Durum", "Not"].map(text => ({ text, bold: true, color: "white", fillColor: "#1e293b", fontSize: 8, margin: [3, 4, 3, 4] })),
+          ...sortedPlans.map(plan => [
+            companyName(plan.companyId),
+            String(plan.year),
+            plan.type,
+            plan.title,
+            plan.plannedDate ? new Date(plan.plannedDate).toLocaleDateString("tr-TR") : "-",
+            plan.responsible || "-",
+            plan.status,
+            plan.notes || "-",
+          ].map(text => ({ text, fontSize: 7, color: "#334155", margin: [3, 4, 3, 4] }))),
+        ],
+      },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+    },
+  ];
+
+  maker.createPdf({
+    pageOrientation: "landscape",
+    pageSize: "A4",
+    pageMargins: [18, 18, 18, 18],
+    content,
+    defaultStyle: { font: "Roboto" },
+  }).download(`Yillik_ISG_Plani_${new Date().getFullYear()}.pdf`);
+}
+
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 // ── Mobil algılama yardımcısı (styles dışında kullanılır) ──
@@ -799,6 +866,7 @@ export default function Page() {
   const [observers, setObservers] = useState<Observer[]>([]);
   const [dofs, setDofs] = useState<DofRecord[]>([]);
   const [risks, setRisks] = useState<RiskRecord[]>([]);
+  const [annualPlans, setAnnualPlans] = useState<AnnualPlanRecord[]>([]);
 
   const [activeTab, setActiveTab] = useState("firmalar");
   const [search, setSearch] = useState("");
@@ -816,6 +884,16 @@ export default function Page() {
     probability: "1", severity: "1", residualProbability: "1", residualSeverity: "1",
     responsible: "", dueDate: "", status: "Açık" as "Açık" | "Kontrol Altında" | "Kapandı",
     affectedPersons: "", lawReference: "", controlDate: "",
+  });
+  const [newAnnualPlan, setNewAnnualPlan] = useState({
+    companyId: "",
+    year: String(new Date().getFullYear()),
+    type: "Eğitim" as AnnualPlanType,
+    title: "",
+    plannedDate: "",
+    responsible: "",
+    status: "Planlandı" as AnnualPlanStatus,
+    notes: "",
   });
 
   const [signers, setSigners] = useState<Signer[]>([]);
@@ -853,7 +931,7 @@ export default function Page() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult] = await Promise.allSettled([
+      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult, annualPlanResult] = await Promise.allSettled([
         loadCompanyScopedRecords<Company>("companies"),
         loadCompanyScopedRecords<Employee>("employees"),
         loadCompanyScopedRecords<DocumentRecord>("documents"),
@@ -861,6 +939,7 @@ export default function Page() {
         loadCompanyScopedRecords<DofRecord>("dofs"),
         loadCompanyScopedRecords<RiskRecord>("risks"),
         loadCompanyScopedRecords<Signer>("signers"),
+        loadCompanyScopedRecords<AnnualPlanRecord>("annualPlans"),
       ]);
       const loadResults: Array<{ label: string; result: PromiseSettledResult<unknown> }> = [
         { label: "Firmalar", result: compResult },
@@ -870,6 +949,7 @@ export default function Page() {
         { label: "DÖF", result: dofResult },
         { label: "Risk", result: riskResult },
         { label: "İmzacılar", result: signerResult },
+        { label: "Yıllık Planlar", result: annualPlanResult },
       ];
       const failedLoads = loadResults.filter(({ result }) => result.status === "rejected").map(({ label }) => label);
 
@@ -884,6 +964,7 @@ export default function Page() {
       if (dofResult.status === "fulfilled") setDofs(dofResult.value);
       if (riskResult.status === "fulfilled") setRisks(riskResult.value);
       if (signerResult.status === "fulfilled") setSigners(signerResult.value);
+      if (annualPlanResult.status === "fulfilled") setAnnualPlans(annualPlanResult.value);
 
       // Email ayarlarını yükle
       const emailDoc = await getDoc(doc(db, "settings", "emailNotifications"));
@@ -965,6 +1046,11 @@ export default function Page() {
   const filteredDocuments = useMemo(() => documents.filter(d => { const company = companies.find(c => c.id === d.companyId); const employee = employees.find(e => e.id === d.employeeId); const matchesCompany = selectedCompanyId === "all" || d.companyId === selectedCompanyId; return matchesCompany && `${d.type} ${company?.nickName || ""} ${employee?.firstName || ""} ${employee?.lastName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [documents, companies, employees, selectedCompanyId, search]);
   const filteredDofs = useMemo(() => dofs.filter(d => { const company = companies.find(c => c.id === d.companyId); const matchesCompany = selectedCompanyId === "all" || d.companyId === selectedCompanyId; return matchesCompany && `${d.title} ${d.description} ${d.location} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [dofs, companies, selectedCompanyId, search]);
   const filteredRisks = useMemo(() => risks.filter(r => { const company = companies.find(c => c.id === r.companyId); const matchesCompany = selectedCompanyId === "all" || r.companyId === selectedCompanyId; return matchesCompany && `${r.section} ${r.hazard} ${r.risk} ${r.actionToTake} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [risks, companies, selectedCompanyId, search]);
+  const filteredAnnualPlans = useMemo(() => annualPlans.filter(plan => {
+    const company = companies.find(c => c.id === plan.companyId);
+    const matchesCompany = selectedCompanyId === "all" || plan.companyId === selectedCompanyId;
+    return matchesCompany && `${plan.year} ${plan.type} ${plan.title} ${plan.responsible} ${plan.status} ${plan.notes} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
+  }), [annualPlans, companies, selectedCompanyId, search]);
 
   async function addCompany() {
     if (!isAdmin) return;
@@ -1432,6 +1518,33 @@ export default function Page() {
     setRisks(prev => prev.filter(r => r.id !== id));
   }
 
+  async function addAnnualPlan() {
+    if (!newAnnualPlan.companyId || !newAnnualPlan.title || !newAnnualPlan.plannedDate) return;
+    const data = {
+      companyId: newAnnualPlan.companyId,
+      year: parseInt(newAnnualPlan.year) || new Date().getFullYear(),
+      type: newAnnualPlan.type,
+      title: newAnnualPlan.title,
+      plannedDate: newAnnualPlan.plannedDate,
+      responsible: newAnnualPlan.responsible,
+      status: newAnnualPlan.status,
+      notes: newAnnualPlan.notes,
+    };
+    const ref = await addDoc(collection(db, "annualPlans"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
+    setAnnualPlans(prev => [...prev, { id: ref.id, ...data }]);
+    setNewAnnualPlan({ companyId: "", year: String(new Date().getFullYear()), type: "Eğitim", title: "", plannedDate: "", responsible: "", status: "Planlandı", notes: "" });
+  }
+
+  async function updateAnnualPlanStatus(id: string, status: AnnualPlanStatus) {
+    await updateDoc(doc(db, "annualPlans", id), { status });
+    setAnnualPlans(prev => prev.map(plan => plan.id === id ? { ...plan, status } : plan));
+  }
+
+  async function deleteAnnualPlan(id: string) {
+    await deleteDoc(doc(db, "annualPlans", id));
+    setAnnualPlans(prev => prev.filter(plan => plan.id !== id));
+  }
+
   const tabs = isHumanResources && !isAdmin
     ? [{ id: "personel", label: "👥 İnsan Kaynakları" }]
     : [
@@ -1444,6 +1557,7 @@ export default function Page() {
       { id: "risk", label: "🛡 Risk" },
       { id: "imzacilar", label: "✍️ İmzacılar" },
       { id: "ek2muayene", label: "🏥 EK-2 Muayene" },
+      { id: "yillik-planlar", label: "📅 Yıllık Planlar" },
       ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
     ];
   const menuGroups: Array<{ title: string; items: Array<{ id: string; label: string; disabled?: boolean }> }> = isHumanResources && !isAdmin
@@ -1455,7 +1569,7 @@ export default function Page() {
       {
         title: "Planlama & Arşiv",
         items: [
-          { id: "yillik-planlar", label: "📅 Yıllık Planlar", disabled: true },
+          ...tabs.filter(tab => ["yillik-planlar"].includes(tab.id)),
           { id: "arsiv", label: "🗂 Arşiv", disabled: true },
           { id: "firma-ziyaretleri", label: "📍 Firma Ziyaretleri", disabled: true },
         ],
@@ -2318,6 +2432,63 @@ export default function Page() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "yillik-planlar" && (
+          <div>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">Yıllık İSG Planı</p>
+              <div style={styles.formGrid}>
+                <FormField label="Firma *"><select style={styles.select} className="isg-input" value={newAnnualPlan.companyId} onChange={e => setNewAnnualPlan({ ...newAnnualPlan, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
+                <FormField label="Plan Yılı"><input style={styles.input} className="isg-input" type="number" value={newAnnualPlan.year} onChange={e => setNewAnnualPlan({ ...newAnnualPlan, year: e.target.value })} /></FormField>
+                <FormField label="Plan Türü"><select style={styles.select} className="isg-input" value={newAnnualPlan.type} onChange={e => setNewAnnualPlan({ ...newAnnualPlan, type: e.target.value as AnnualPlanType })}><option>Eğitim</option><option>Muayene</option><option>Risk Değerlendirme</option><option>Acil Durum Tatbikatı</option><option>Kurul Toplantısı</option><option>Saha Ziyareti</option><option>Belge Yenileme</option></select></FormField>
+                <FormField label="Başlık *"><input style={styles.input} className="isg-input" value={newAnnualPlan.title} onChange={e => setNewAnnualPlan({ ...newAnnualPlan, title: e.target.value })} placeholder="Örn. Temel İSG eğitimi" /></FormField>
+                <FormField label="Planlanan Tarih *"><DatePicker value={newAnnualPlan.plannedDate} onChange={v => setNewAnnualPlan({ ...newAnnualPlan, plannedDate: v })} /></FormField>
+                <FormField label="Sorumlu"><input style={styles.input} className="isg-input" value={newAnnualPlan.responsible} onChange={e => setNewAnnualPlan({ ...newAnnualPlan, responsible: e.target.value })} placeholder="Doktor, İSG uzmanı..." /></FormField>
+                <FormField label="Durum"><select style={styles.select} className="isg-input" value={newAnnualPlan.status} onChange={e => setNewAnnualPlan({ ...newAnnualPlan, status: e.target.value as AnnualPlanStatus })}><option>Planlandı</option><option>Devam Ediyor</option><option>Tamamlandı</option><option>Gecikti</option></select></FormField>
+                <FormField label="Not"><input style={styles.input} className="isg-input" value={newAnnualPlan.notes} onChange={e => setNewAnnualPlan({ ...newAnnualPlan, notes: e.target.value })} placeholder="Kısa açıklama" /></FormField>
+              </div>
+              <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button style={styles.btnPrimary} onClick={addAnnualPlan}>Plan Kalemi Ekle</button>
+                <button style={styles.btnSecondary} onClick={() => generateAnnualPlanPDF(filteredAnnualPlans, companies)}>PDF İndir</button>
+              </div>
+            </div>
+
+            <div style={styles.searchBar}>
+              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
+              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
+              <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredAnnualPlans.length} plan kalemi</span>
+            </div>
+
+            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
+              <table style={styles.table}>
+                <thead><tr>{["Firma", "Yıl", "Tür", "Başlık", "Tarih", "Sorumlu", "Durum", "Not", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+                <tbody>
+                  {filteredAnnualPlans.map(plan => {
+                    const company = companies.find(c => c.id === plan.companyId);
+                    return (
+                      <tr key={plan.id}>
+                        <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
+                        <td style={styles.td} className="isg-td">{plan.year}</td>
+                        <td style={styles.td} className="isg-td"><Badge text={plan.type} color="#0ea5e9" /></td>
+                        <td style={{ ...styles.td, minWidth: 180 }} className="isg-td"><strong>{plan.title}</strong></td>
+                        <td style={styles.td} className="isg-td">{plan.plannedDate ? new Date(plan.plannedDate).toLocaleDateString("tr-TR") : "—"}</td>
+                        <td style={styles.td} className="isg-td">{plan.responsible || "—"}</td>
+                        <td style={styles.td} className="isg-td"><select style={{ ...styles.select, minWidth: 132 }} value={plan.status} onChange={e => updateAnnualPlanStatus(plan.id, e.target.value as AnnualPlanStatus)}><option>Planlandı</option><option>Devam Ediyor</option><option>Tamamlandı</option><option>Gecikti</option></select></td>
+                        <td style={{ ...styles.td, color: "var(--isg-text-muted)", minWidth: 160 }}>{plan.notes || "—"}</td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteAnnualPlan(plan.id)}>Sil</button></td>
+                      </tr>
+                    );
+                  })}
+                  {filteredAnnualPlans.length === 0 && (
+                    <tr>
+                      <td colSpan={9} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz yıllık plan kalemi yok.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

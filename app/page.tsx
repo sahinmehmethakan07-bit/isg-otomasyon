@@ -313,6 +313,22 @@ type PpeRecord = {
   notes: string;
 };
 
+type EmergencyPlanStatus = "Taslak" | "Yürürlükte" | "Tatbikat Planlandı" | "Güncelleme Gerekli";
+
+type EmergencyPlanRecord = {
+  id: string;
+  companyId: string;
+  title: string;
+  scenario: string;
+  assemblyArea: string;
+  emergencyTeam: string;
+  responsible: string;
+  planDate: string;
+  drillDate?: string;
+  status: EmergencyPlanStatus;
+  notes: string;
+};
+
 const emptyChecklist: EmployeeChecklist = {
   isgCertificateDate: "",
   ek2Date: "",
@@ -960,6 +976,83 @@ async function generatePpeAssignmentPDF(record: PpeRecord, company: Company | un
   }).download(`KKD_Zimmet_${employee.firstName}_${employee.lastName}.pdf`);
 }
 
+async function generateEmergencyPlanPDF(plan: EmergencyPlanRecord, company: Company | undefined, employees: Employee[]) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
+  const maker = pdfMake.default || pdfMake;
+  maker.vfs = (pdfFonts.default || pdfFonts).vfs;
+
+  const companyEmployees = employees.filter(employee => employee.companyId === plan.companyId);
+  const infoRows = [
+    ["Firma", company?.officialName || company?.nickName || "-", "Tehlike Sınıfı", company?.dangerClass || "-"],
+    ["Plan Başlığı", plan.title, "Plan Tarihi", plan.planDate ? new Date(plan.planDate).toLocaleDateString("tr-TR") : "-"],
+    ["Senaryo", plan.scenario, "Tatbikat Tarihi", plan.drillDate ? new Date(plan.drillDate).toLocaleDateString("tr-TR") : "-"],
+    ["Toplanma Alanı", plan.assemblyArea || "-", "Sorumlu", plan.responsible || "-"],
+  ];
+
+  const content: any[] = [
+    { text: "ACİL DURUM PLANI", fontSize: 17, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 12] },
+    {
+      table: {
+        widths: [92, "*", 92, "*"],
+        body: infoRows.map(row => row.map((text, index) => ({ text, fontSize: 8, bold: index % 2 === 0, color: "#334155", margin: [4, 5, 4, 5] }))),
+      },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+      margin: [0, 0, 0, 12],
+    },
+    { text: "Acil Durum Ekibi", fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+    {
+      table: {
+        widths: ["*"],
+        body: [[{ text: plan.emergencyTeam || "-", fontSize: 9, color: "#334155", margin: [5, 8, 5, 8] }]],
+      },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+      margin: [0, 0, 0, 12],
+    },
+    { text: "Uygulama Notları", fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+    {
+      table: {
+        widths: ["*"],
+        body: [[{ text: plan.notes || "Acil durumda ilgili ekipler bilgilendirilir, personel toplanma alanına yönlendirilir ve yoklama alınır.", fontSize: 9, color: "#334155", margin: [5, 8, 5, 8] }]],
+      },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+      margin: [0, 0, 0, 12],
+    },
+    { text: "Personel Bilgisi", fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+    {
+      table: {
+        headerRows: 1,
+        widths: ["*", "*", 74],
+        body: [
+          ["Ad Soyad", "Bölüm / Ünvan", "Telefon"].map(text => ({ text, bold: true, color: "white", fillColor: "#1e293b", fontSize: 8, margin: [4, 5, 4, 5] })),
+          ...(companyEmployees.length > 0 ? companyEmployees : [{ firstName: "", lastName: "", department: "", title: "", phone: "" } as Employee]).slice(0, 18).map(employee => [
+            `${employee.firstName} ${employee.lastName}`.trim() || " ",
+            [employee.department, employee.title].filter(Boolean).join(" / ") || " ",
+            employee.phone || " ",
+          ].map(text => ({ text, fontSize: 7, color: "#334155", margin: [4, 4, 4, 4] }))),
+        ],
+      },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+      margin: [0, 0, 0, 18],
+    },
+    {
+      columns: [
+        { width: "*", text: "Hazırlayan\n\n\nAd Soyad / İmza", fontSize: 9, alignment: "center" },
+        { width: "*", text: "İşveren / İşveren Vekili\n\n\nAd Soyad / İmza", fontSize: 9, alignment: "center" },
+      ],
+    },
+  ];
+
+  maker.createPdf({
+    pageSize: "A4",
+    pageMargins: [28, 28, 28, 28],
+    content,
+    defaultStyle: { font: "Roboto" },
+  }).download(`Acil_Durum_Plani_${plan.title.replace(/\s+/g, "_")}.pdf`);
+}
+
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 // ── Mobil algılama yardımcısı (styles dışında kullanılır) ──
@@ -1129,6 +1222,7 @@ export default function Page() {
   const [annualPlans, setAnnualPlans] = useState<AnnualPlanRecord[]>([]);
   const [trainings, setTrainings] = useState<TrainingRecord[]>([]);
   const [ppeRecords, setPpeRecords] = useState<PpeRecord[]>([]);
+  const [emergencyPlans, setEmergencyPlans] = useState<EmergencyPlanRecord[]>([]);
 
   const [activeTab, setActiveTab] = useState("firmalar");
   const [search, setSearch] = useState("");
@@ -1180,6 +1274,18 @@ export default function Page() {
     serialNo: "",
     notes: "",
   });
+  const [newEmergencyPlan, setNewEmergencyPlan] = useState({
+    companyId: "",
+    title: "Acil Durum Planı",
+    scenario: "Yangın",
+    assemblyArea: "",
+    emergencyTeam: "",
+    responsible: "",
+    planDate: "",
+    drillDate: "",
+    status: "Taslak" as EmergencyPlanStatus,
+    notes: "",
+  });
 
   const [signers, setSigners] = useState<Signer[]>([]);
   const [emailSettings, setEmailSettings] = useState<EmailSettings>({ enabled: true, toEmail: "", ccEmail: "", subject: "[İSG] Yeni DÖF Bildirimi: {dofTitle}", message: "" });
@@ -1216,7 +1322,7 @@ export default function Page() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult, annualPlanResult, trainingResult, ppeResult] = await Promise.allSettled([
+      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult, annualPlanResult, trainingResult, ppeResult, emergencyPlanResult] = await Promise.allSettled([
         loadCompanyScopedRecords<Company>("companies"),
         loadCompanyScopedRecords<Employee>("employees"),
         loadCompanyScopedRecords<DocumentRecord>("documents"),
@@ -1227,6 +1333,7 @@ export default function Page() {
         loadCompanyScopedRecords<AnnualPlanRecord>("annualPlans"),
         loadCompanyScopedRecords<TrainingRecord>("trainings"),
         loadCompanyScopedRecords<PpeRecord>("ppeRecords"),
+        loadCompanyScopedRecords<EmergencyPlanRecord>("emergencyPlans"),
       ]);
       const loadResults: Array<{ label: string; result: PromiseSettledResult<unknown> }> = [
         { label: "Firmalar", result: compResult },
@@ -1239,6 +1346,7 @@ export default function Page() {
         { label: "Yıllık Planlar", result: annualPlanResult },
         { label: "Eğitimler", result: trainingResult },
         { label: "KKD", result: ppeResult },
+        { label: "Acil Durum Planları", result: emergencyPlanResult },
       ];
       const failedLoads = loadResults.filter(({ result }) => result.status === "rejected").map(({ label }) => label);
 
@@ -1256,6 +1364,7 @@ export default function Page() {
       if (annualPlanResult.status === "fulfilled") setAnnualPlans(annualPlanResult.value);
       if (trainingResult.status === "fulfilled") setTrainings(trainingResult.value);
       if (ppeResult.status === "fulfilled") setPpeRecords(ppeResult.value);
+      if (emergencyPlanResult.status === "fulfilled") setEmergencyPlans(emergencyPlanResult.value);
 
       // Email ayarlarını yükle
       const emailDoc = await getDoc(doc(db, "settings", "emailNotifications"));
@@ -1358,6 +1467,11 @@ export default function Page() {
     const matchesCompany = selectedCompanyId === "all" || record.companyId === selectedCompanyId;
     return matchesCompany && `${record.equipment} ${record.status} ${record.serialNo || ""} ${record.notes} ${company?.nickName || ""} ${employee?.firstName || ""} ${employee?.lastName || ""} ${employee?.tcNo || ""}`.toLowerCase().includes(search.toLowerCase());
   }), [ppeRecords, companies, employees, selectedCompanyId, search]);
+  const filteredEmergencyPlans = useMemo(() => emergencyPlans.filter(plan => {
+    const company = companies.find(c => c.id === plan.companyId);
+    const matchesCompany = selectedCompanyId === "all" || plan.companyId === selectedCompanyId;
+    return matchesCompany && `${plan.title} ${plan.scenario} ${plan.assemblyArea} ${plan.emergencyTeam} ${plan.responsible} ${plan.status} ${plan.notes} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
+  }), [emergencyPlans, companies, selectedCompanyId, search]);
 
   async function addCompany() {
     if (!isAdmin) return;
@@ -1918,6 +2032,35 @@ export default function Page() {
     setPpeRecords(prev => prev.filter(record => record.id !== id));
   }
 
+  async function addEmergencyPlan() {
+    if (!newEmergencyPlan.companyId || !newEmergencyPlan.title || !newEmergencyPlan.planDate) return;
+    const data = {
+      companyId: newEmergencyPlan.companyId,
+      title: newEmergencyPlan.title,
+      scenario: newEmergencyPlan.scenario,
+      assemblyArea: newEmergencyPlan.assemblyArea,
+      emergencyTeam: newEmergencyPlan.emergencyTeam,
+      responsible: newEmergencyPlan.responsible,
+      planDate: newEmergencyPlan.planDate,
+      drillDate: newEmergencyPlan.drillDate,
+      status: newEmergencyPlan.status,
+      notes: newEmergencyPlan.notes,
+    };
+    const ref = await addDoc(collection(db, "emergencyPlans"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
+    setEmergencyPlans(prev => [...prev, { id: ref.id, ...data }]);
+    setNewEmergencyPlan({ companyId: "", title: "Acil Durum Planı", scenario: "Yangın", assemblyArea: "", emergencyTeam: "", responsible: "", planDate: "", drillDate: "", status: "Taslak", notes: "" });
+  }
+
+  async function updateEmergencyPlanStatus(id: string, status: EmergencyPlanStatus) {
+    await updateDoc(doc(db, "emergencyPlans", id), { status });
+    setEmergencyPlans(prev => prev.map(plan => plan.id === id ? { ...plan, status } : plan));
+  }
+
+  async function deleteEmergencyPlan(id: string) {
+    await deleteDoc(doc(db, "emergencyPlans", id));
+    setEmergencyPlans(prev => prev.filter(plan => plan.id !== id));
+  }
+
   const tabs = isHumanResources && !isAdmin
     ? [{ id: "personel", label: "👥 İnsan Kaynakları" }]
     : [
@@ -1933,6 +2076,7 @@ export default function Page() {
       { id: "yillik-planlar", label: "📅 Yıllık Planlar" },
       { id: "egitimler", label: "🎓 Eğitimler" },
       { id: "kkd-formu", label: "🧤 KKD Formu" },
+      { id: "acil-durum-plani", label: "⚠️ Acil Durum Planı" },
       ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
     ];
   const menuGroups: Array<{ title: string; items: Array<{ id: string; label: string; disabled?: boolean }> }> = isHumanResources && !isAdmin
@@ -1944,7 +2088,7 @@ export default function Page() {
       {
         title: "Planlama & Arşiv",
         items: [
-          ...tabs.filter(tab => ["yillik-planlar", "egitimler"].includes(tab.id)),
+          ...tabs.filter(tab => ["yillik-planlar", "egitimler", "acil-durum-plani"].includes(tab.id)),
           { id: "arsiv", label: "🗂 Arşiv", disabled: true },
           { id: "firma-ziyaretleri", label: "📍 Firma Ziyaretleri", disabled: true },
         ],
@@ -1952,7 +2096,6 @@ export default function Page() {
       {
         title: "Yakında",
         items: [
-          { id: "acil-durum-plani", label: "⚠️ Acil Durum Planı", disabled: true },
           { id: "kurul-toplantisi", label: "👥 Kurul Toplantısı", disabled: true },
           { id: "is-kazasi-raporu", label: "🚑 İş Kazası Raporu", disabled: true },
         ],
@@ -3084,6 +3227,95 @@ export default function Page() {
                   {filteredPpeRecords.length === 0 && (
                     <tr>
                       <td colSpan={10} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz KKD kaydı yok.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "acil-durum-plani" && (
+          <div>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">Acil Durum Planı</p>
+              <div style={styles.formGrid}>
+                <FormField label="Firma *">
+                  <select style={styles.select} className="isg-input" value={newEmergencyPlan.companyId} onChange={e => setNewEmergencyPlan({ ...newEmergencyPlan, companyId: e.target.value })}>
+                    <option value="">Seçin...</option>
+                    {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Plan Başlığı *"><input style={styles.input} className="isg-input" value={newEmergencyPlan.title} onChange={e => setNewEmergencyPlan({ ...newEmergencyPlan, title: e.target.value })} placeholder="Örn. Otel yangın acil durum planı" /></FormField>
+                <FormField label="Senaryo">
+                  <select style={styles.select} className="isg-input" value={newEmergencyPlan.scenario} onChange={e => setNewEmergencyPlan({ ...newEmergencyPlan, scenario: e.target.value })}>
+                    <option>Yangın</option>
+                    <option>Deprem</option>
+                    <option>Kimyasal Sızıntı</option>
+                    <option>Elektrik Kesintisi</option>
+                    <option>İlk Yardım / Yaralanma</option>
+                    <option>Tahliye</option>
+                    <option>Diğer</option>
+                  </select>
+                </FormField>
+                <FormField label="Toplanma Alanı"><input style={styles.input} className="isg-input" value={newEmergencyPlan.assemblyArea} onChange={e => setNewEmergencyPlan({ ...newEmergencyPlan, assemblyArea: e.target.value })} placeholder="Örn. Ana otopark A noktası" /></FormField>
+                <FormField label="Plan Tarihi *"><DatePicker value={newEmergencyPlan.planDate} onChange={v => setNewEmergencyPlan({ ...newEmergencyPlan, planDate: v })} /></FormField>
+                <FormField label="Tatbikat Tarihi"><DatePicker value={newEmergencyPlan.drillDate} onChange={v => setNewEmergencyPlan({ ...newEmergencyPlan, drillDate: v })} /></FormField>
+                <FormField label="Sorumlu"><input style={styles.input} className="isg-input" value={newEmergencyPlan.responsible} onChange={e => setNewEmergencyPlan({ ...newEmergencyPlan, responsible: e.target.value })} placeholder="Acil durum koordinatörü" /></FormField>
+                <FormField label="Durum">
+                  <select style={styles.select} className="isg-input" value={newEmergencyPlan.status} onChange={e => setNewEmergencyPlan({ ...newEmergencyPlan, status: e.target.value as EmergencyPlanStatus })}>
+                    <option>Taslak</option>
+                    <option>Yürürlükte</option>
+                    <option>Tatbikat Planlandı</option>
+                    <option>Güncelleme Gerekli</option>
+                  </select>
+                </FormField>
+                <FormField label="Acil Durum Ekibi"><input style={styles.input} className="isg-input" value={newEmergencyPlan.emergencyTeam} onChange={e => setNewEmergencyPlan({ ...newEmergencyPlan, emergencyTeam: e.target.value })} placeholder="Söndürme, kurtarma, ilk yardım ekibi..." /></FormField>
+                <FormField label="Not"><input style={styles.input} className="isg-input" value={newEmergencyPlan.notes} onChange={e => setNewEmergencyPlan({ ...newEmergencyPlan, notes: e.target.value })} placeholder="Tahliye, iletişim, özel riskler..." /></FormField>
+              </div>
+              <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button style={styles.btnPrimary} onClick={addEmergencyPlan}>Acil Durum Planı Ekle</button>
+              </div>
+            </div>
+
+            <div style={styles.searchBar}>
+              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
+              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
+              <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredEmergencyPlans.length} plan</span>
+            </div>
+
+            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
+              <table style={styles.table}>
+                <thead><tr>{["Firma", "Başlık", "Senaryo", "Toplanma Alanı", "Plan", "Tatbikat", "Sorumlu", "Durum", "Ekip / Not", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+                <tbody>
+                  {filteredEmergencyPlans.map(plan => {
+                    const company = companies.find(c => c.id === plan.companyId);
+                    return (
+                      <tr key={plan.id}>
+                        <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
+                        <td style={{ ...styles.td, minWidth: 170 }} className="isg-td"><strong>{plan.title}</strong></td>
+                        <td style={styles.td} className="isg-td"><Badge text={plan.scenario} color="#f97316" /></td>
+                        <td style={styles.td} className="isg-td">{plan.assemblyArea || "—"}</td>
+                        <td style={styles.td} className="isg-td">{plan.planDate ? new Date(plan.planDate).toLocaleDateString("tr-TR") : "—"}</td>
+                        <td style={styles.td} className="isg-td">{plan.drillDate ? new Date(plan.drillDate).toLocaleDateString("tr-TR") : "—"}</td>
+                        <td style={styles.td} className="isg-td">{plan.responsible || "—"}</td>
+                        <td style={styles.td} className="isg-td">
+                          <select style={{ ...styles.select, minWidth: 150 }} value={plan.status} onChange={e => updateEmergencyPlanStatus(plan.id, e.target.value as EmergencyPlanStatus)}>
+                            <option>Taslak</option>
+                            <option>Yürürlükte</option>
+                            <option>Tatbikat Planlandı</option>
+                            <option>Güncelleme Gerekli</option>
+                          </select>
+                        </td>
+                        <td style={{ ...styles.td, minWidth: 210, color: "var(--isg-text-muted)" }} className="isg-td">{[plan.emergencyTeam, plan.notes].filter(Boolean).join(" / ") || "—"}</td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnSecondary} onClick={() => generateEmergencyPlanPDF(plan, company, employees)}>Plan PDF</button></td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteEmergencyPlan(plan.id)}>Sil</button></td>
+                      </tr>
+                    );
+                  })}
+                  {filteredEmergencyPlans.length === 0 && (
+                    <tr>
+                      <td colSpan={11} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz acil durum planı yok.</td>
                     </tr>
                   )}
                 </tbody>

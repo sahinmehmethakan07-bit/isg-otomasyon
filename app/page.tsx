@@ -281,6 +281,21 @@ type AnnualPlanRecord = {
   notes: string;
 };
 
+type TrainingType = "Temel İSG Eğitimi" | "İşe Giriş Eğitimi" | "Yenileme Eğitimi" | "Acil Durum Eğitimi" | "KKD Eğitimi" | "Hijyen Eğitimi";
+type TrainingStatus = "Planlandı" | "Tamamlandı" | "İptal";
+
+type TrainingRecord = {
+  id: string;
+  companyId: string;
+  title: string;
+  type: TrainingType;
+  trainingDate: string;
+  trainer: string;
+  participantIds: string[];
+  status: TrainingStatus;
+  notes: string;
+};
+
 const emptyChecklist: EmployeeChecklist = {
   isgCertificateDate: "",
   ek2Date: "",
@@ -700,6 +715,56 @@ async function generateAnnualPlanPDF(plans: AnnualPlanRecord[], companies: Compa
   }).download(`Yillik_ISG_Plani_${new Date().getFullYear()}.pdf`);
 }
 
+async function generateTrainingPDF(trainings: TrainingRecord[], companies: Company[], employees: Employee[]) {
+  if (trainings.length === 0) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
+  const maker = pdfMake.default || pdfMake;
+  maker.vfs = (pdfFonts.default || pdfFonts).vfs;
+
+  const companyName = (companyId: string) => companies.find(c => c.id === companyId)?.officialName || companies.find(c => c.id === companyId)?.nickName || "-";
+  const employeeName = (employeeId: string) => {
+    const employee = employees.find(e => e.id === employeeId);
+    return employee ? `${employee.firstName} ${employee.lastName}` : "";
+  };
+  const sortedTrainings = [...trainings].sort((a, b) => `${a.companyId}-${a.trainingDate}`.localeCompare(`${b.companyId}-${b.trainingDate}`));
+
+  const content: any[] = [
+    { text: "İSG EĞİTİM TAKİP LİSTESİ", fontSize: 16, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 4] },
+    { text: new Date().toLocaleDateString("tr-TR"), fontSize: 9, color: "#64748b", alignment: "center", margin: [0, 0, 0, 14] },
+    {
+      table: {
+        headerRows: 1,
+        widths: [82, 86, 82, 58, 70, 96, 58, "*"],
+        body: [
+          ["Firma", "Eğitim", "Tür", "Tarih", "Eğitmen", "Katılımcılar", "Durum", "Not"].map(text => ({ text, bold: true, color: "white", fillColor: "#1e293b", fontSize: 8, margin: [3, 4, 3, 4] })),
+          ...sortedTrainings.map(training => [
+            companyName(training.companyId),
+            training.title,
+            training.type,
+            training.trainingDate ? new Date(training.trainingDate).toLocaleDateString("tr-TR") : "-",
+            training.trainer || "-",
+            training.participantIds.map(employeeName).filter(Boolean).join(", ") || "-",
+            training.status,
+            training.notes || "-",
+          ].map(text => ({ text, fontSize: 7, color: "#334155", margin: [3, 4, 3, 4] }))),
+        ],
+      },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+    },
+  ];
+
+  maker.createPdf({
+    pageOrientation: "landscape",
+    pageSize: "A4",
+    pageMargins: [18, 18, 18, 18],
+    content,
+    defaultStyle: { font: "Roboto" },
+  }).download(`ISG_Egitim_Takip_${new Date().getFullYear()}.pdf`);
+}
+
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 // ── Mobil algılama yardımcısı (styles dışında kullanılır) ──
@@ -867,6 +932,7 @@ export default function Page() {
   const [dofs, setDofs] = useState<DofRecord[]>([]);
   const [risks, setRisks] = useState<RiskRecord[]>([]);
   const [annualPlans, setAnnualPlans] = useState<AnnualPlanRecord[]>([]);
+  const [trainings, setTrainings] = useState<TrainingRecord[]>([]);
 
   const [activeTab, setActiveTab] = useState("firmalar");
   const [search, setSearch] = useState("");
@@ -893,6 +959,16 @@ export default function Page() {
     plannedDate: "",
     responsible: "",
     status: "Planlandı" as AnnualPlanStatus,
+    notes: "",
+  });
+  const [newTraining, setNewTraining] = useState({
+    companyId: "",
+    title: "",
+    type: "Temel İSG Eğitimi" as TrainingType,
+    trainingDate: "",
+    trainer: "",
+    participantIds: [] as string[],
+    status: "Planlandı" as TrainingStatus,
     notes: "",
   });
 
@@ -931,7 +1007,7 @@ export default function Page() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult, annualPlanResult] = await Promise.allSettled([
+      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult, annualPlanResult, trainingResult] = await Promise.allSettled([
         loadCompanyScopedRecords<Company>("companies"),
         loadCompanyScopedRecords<Employee>("employees"),
         loadCompanyScopedRecords<DocumentRecord>("documents"),
@@ -940,6 +1016,7 @@ export default function Page() {
         loadCompanyScopedRecords<RiskRecord>("risks"),
         loadCompanyScopedRecords<Signer>("signers"),
         loadCompanyScopedRecords<AnnualPlanRecord>("annualPlans"),
+        loadCompanyScopedRecords<TrainingRecord>("trainings"),
       ]);
       const loadResults: Array<{ label: string; result: PromiseSettledResult<unknown> }> = [
         { label: "Firmalar", result: compResult },
@@ -950,6 +1027,7 @@ export default function Page() {
         { label: "Risk", result: riskResult },
         { label: "İmzacılar", result: signerResult },
         { label: "Yıllık Planlar", result: annualPlanResult },
+        { label: "Eğitimler", result: trainingResult },
       ];
       const failedLoads = loadResults.filter(({ result }) => result.status === "rejected").map(({ label }) => label);
 
@@ -965,6 +1043,7 @@ export default function Page() {
       if (riskResult.status === "fulfilled") setRisks(riskResult.value);
       if (signerResult.status === "fulfilled") setSigners(signerResult.value);
       if (annualPlanResult.status === "fulfilled") setAnnualPlans(annualPlanResult.value);
+      if (trainingResult.status === "fulfilled") setTrainings(trainingResult.value);
 
       // Email ayarlarını yükle
       const emailDoc = await getDoc(doc(db, "settings", "emailNotifications"));
@@ -1051,6 +1130,16 @@ export default function Page() {
     const matchesCompany = selectedCompanyId === "all" || plan.companyId === selectedCompanyId;
     return matchesCompany && `${plan.year} ${plan.type} ${plan.title} ${plan.responsible} ${plan.status} ${plan.notes} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
   }), [annualPlans, companies, selectedCompanyId, search]);
+  const filteredTrainings = useMemo(() => trainings.filter(training => {
+    const company = companies.find(c => c.id === training.companyId);
+    const participantNames = training.participantIds
+      .map(id => employees.find(e => e.id === id))
+      .filter(Boolean)
+      .map(employee => `${employee!.firstName} ${employee!.lastName}`)
+      .join(" ");
+    const matchesCompany = selectedCompanyId === "all" || training.companyId === selectedCompanyId;
+    return matchesCompany && `${training.title} ${training.type} ${training.trainer} ${training.status} ${training.notes} ${participantNames} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
+  }), [trainings, companies, employees, selectedCompanyId, search]);
 
   async function addCompany() {
     if (!isAdmin) return;
@@ -1545,6 +1634,42 @@ export default function Page() {
     setAnnualPlans(prev => prev.filter(plan => plan.id !== id));
   }
 
+  function toggleTrainingParticipant(employeeId: string) {
+    setNewTraining(prev => ({
+      ...prev,
+      participantIds: prev.participantIds.includes(employeeId)
+        ? prev.participantIds.filter(id => id !== employeeId)
+        : [...prev.participantIds, employeeId],
+    }));
+  }
+
+  async function addTraining() {
+    if (!newTraining.companyId || !newTraining.title || !newTraining.trainingDate) return;
+    const data = {
+      companyId: newTraining.companyId,
+      title: newTraining.title,
+      type: newTraining.type,
+      trainingDate: newTraining.trainingDate,
+      trainer: newTraining.trainer,
+      participantIds: newTraining.participantIds,
+      status: newTraining.status,
+      notes: newTraining.notes,
+    };
+    const ref = await addDoc(collection(db, "trainings"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
+    setTrainings(prev => [...prev, { id: ref.id, ...data }]);
+    setNewTraining({ companyId: "", title: "", type: "Temel İSG Eğitimi", trainingDate: "", trainer: "", participantIds: [], status: "Planlandı", notes: "" });
+  }
+
+  async function updateTrainingStatus(id: string, status: TrainingStatus) {
+    await updateDoc(doc(db, "trainings", id), { status });
+    setTrainings(prev => prev.map(training => training.id === id ? { ...training, status } : training));
+  }
+
+  async function deleteTraining(id: string) {
+    await deleteDoc(doc(db, "trainings", id));
+    setTrainings(prev => prev.filter(training => training.id !== id));
+  }
+
   const tabs = isHumanResources && !isAdmin
     ? [{ id: "personel", label: "👥 İnsan Kaynakları" }]
     : [
@@ -1558,6 +1683,7 @@ export default function Page() {
       { id: "imzacilar", label: "✍️ İmzacılar" },
       { id: "ek2muayene", label: "🏥 EK-2 Muayene" },
       { id: "yillik-planlar", label: "📅 Yıllık Planlar" },
+      { id: "egitimler", label: "🎓 Eğitimler" },
       ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
     ];
   const menuGroups: Array<{ title: string; items: Array<{ id: string; label: string; disabled?: boolean }> }> = isHumanResources && !isAdmin
@@ -1569,7 +1695,7 @@ export default function Page() {
       {
         title: "Planlama & Arşiv",
         items: [
-          ...tabs.filter(tab => ["yillik-planlar"].includes(tab.id)),
+          ...tabs.filter(tab => ["yillik-planlar", "egitimler"].includes(tab.id)),
           { id: "arsiv", label: "🗂 Arşiv", disabled: true },
           { id: "firma-ziyaretleri", label: "📍 Firma Ziyaretleri", disabled: true },
         ],
@@ -1577,7 +1703,6 @@ export default function Page() {
       {
         title: "Yakında",
         items: [
-          { id: "egitimler", label: "🎓 Eğitimler", disabled: true },
           { id: "acil-durum-plani", label: "⚠️ Acil Durum Planı", disabled: true },
           { id: "kurul-toplantisi", label: "👥 Kurul Toplantısı", disabled: true },
           { id: "kkd-formu", label: "🧤 KKD Formu", disabled: true },
@@ -2485,6 +2610,130 @@ export default function Page() {
                   {filteredAnnualPlans.length === 0 && (
                     <tr>
                       <td colSpan={9} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz yıllık plan kalemi yok.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "egitimler" && (
+          <div>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">Eğitim Yönetimi</p>
+              <div style={styles.formGrid}>
+                <FormField label="Firma *">
+                  <select
+                    style={styles.select}
+                    className="isg-input"
+                    value={newTraining.companyId}
+                    onChange={e => setNewTraining({ ...newTraining, companyId: e.target.value, participantIds: [] })}
+                  >
+                    <option value="">Seçin...</option>
+                    {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Eğitim Türü">
+                  <select style={styles.select} className="isg-input" value={newTraining.type} onChange={e => setNewTraining({ ...newTraining, type: e.target.value as TrainingType })}>
+                    <option>Temel İSG Eğitimi</option>
+                    <option>İşe Giriş Eğitimi</option>
+                    <option>Yenileme Eğitimi</option>
+                    <option>Acil Durum Eğitimi</option>
+                    <option>KKD Eğitimi</option>
+                    <option>Hijyen Eğitimi</option>
+                  </select>
+                </FormField>
+                <FormField label="Eğitim Başlığı *"><input style={styles.input} className="isg-input" value={newTraining.title} onChange={e => setNewTraining({ ...newTraining, title: e.target.value })} placeholder="Örn. Yeni başlayan personel eğitimi" /></FormField>
+                <FormField label="Eğitim Tarihi *"><DatePicker value={newTraining.trainingDate} onChange={v => setNewTraining({ ...newTraining, trainingDate: v })} /></FormField>
+                <FormField label="Eğitmen / Sorumlu"><input style={styles.input} className="isg-input" value={newTraining.trainer} onChange={e => setNewTraining({ ...newTraining, trainer: e.target.value })} placeholder="Eğitimi veren kişi" /></FormField>
+                <FormField label="Durum">
+                  <select style={styles.select} className="isg-input" value={newTraining.status} onChange={e => setNewTraining({ ...newTraining, status: e.target.value as TrainingStatus })}>
+                    <option>Planlandı</option>
+                    <option>Tamamlandı</option>
+                    <option>İptal</option>
+                  </select>
+                </FormField>
+                <FormField label="Not"><input style={styles.input} className="isg-input" value={newTraining.notes} onChange={e => setNewTraining({ ...newTraining, notes: e.target.value })} placeholder="Kısa açıklama" /></FormField>
+              </div>
+
+              <div style={{ marginTop: 18 }}>
+                <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Katılımcılar</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {employees.filter(employee => employee.companyId === newTraining.companyId).map(employee => {
+                    const checked = newTraining.participantIds.includes(employee.id);
+                    return (
+                      <button
+                        key={employee.id}
+                        type="button"
+                        onClick={() => toggleTrainingParticipant(employee.id)}
+                        style={{
+                          border: checked ? "1px solid color-mix(in srgb, var(--isg-accent) 72%, white)" : "1px solid var(--isg-border)",
+                          backgroundColor: checked ? "rgba(104, 211, 180, 0.16)" : "var(--isg-input-bg)",
+                          color: checked ? "var(--isg-accent)" : "var(--isg-text-muted)",
+                          borderRadius: 8,
+                          padding: "8px 11px",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {checked ? "✓ " : ""}{employee.firstName} {employee.lastName}
+                      </button>
+                    );
+                  })}
+                  {!newTraining.companyId && <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>Katılımcı seçmek için önce firma seçin.</span>}
+                  {newTraining.companyId && employees.filter(employee => employee.companyId === newTraining.companyId).length === 0 && (
+                    <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>Bu firmaya kayıtlı personel bulunamadı.</span>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button style={styles.btnPrimary} onClick={addTraining}>Eğitim Kaydı Ekle</button>
+                <button style={styles.btnSecondary} onClick={() => generateTrainingPDF(filteredTrainings, companies, employees)}>PDF İndir</button>
+              </div>
+            </div>
+
+            <div style={styles.searchBar}>
+              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
+              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
+              <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredTrainings.length} eğitim</span>
+            </div>
+
+            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
+              <table style={styles.table}>
+                <thead><tr>{["Firma", "Eğitim", "Tür", "Tarih", "Eğitmen", "Katılımcı", "Durum", "Not", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+                <tbody>
+                  {filteredTrainings.map(training => {
+                    const company = companies.find(c => c.id === training.companyId);
+                    const participants = training.participantIds
+                      .map(id => employees.find(employee => employee.id === id))
+                      .filter(Boolean)
+                      .map(employee => `${employee!.firstName} ${employee!.lastName}`);
+                    return (
+                      <tr key={training.id}>
+                        <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
+                        <td style={{ ...styles.td, minWidth: 180 }} className="isg-td"><strong>{training.title}</strong></td>
+                        <td style={styles.td} className="isg-td"><Badge text={training.type} color="#8b5cf6" /></td>
+                        <td style={styles.td} className="isg-td">{training.trainingDate ? new Date(training.trainingDate).toLocaleDateString("tr-TR") : "—"}</td>
+                        <td style={styles.td} className="isg-td">{training.trainer || "—"}</td>
+                        <td style={{ ...styles.td, minWidth: 180 }} className="isg-td">{participants.length > 0 ? participants.join(", ") : "—"}</td>
+                        <td style={styles.td} className="isg-td">
+                          <select style={{ ...styles.select, minWidth: 126 }} value={training.status} onChange={e => updateTrainingStatus(training.id, e.target.value as TrainingStatus)}>
+                            <option>Planlandı</option>
+                            <option>Tamamlandı</option>
+                            <option>İptal</option>
+                          </select>
+                        </td>
+                        <td style={{ ...styles.td, color: "var(--isg-text-muted)", minWidth: 150 }}>{training.notes || "—"}</td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteTraining(training.id)}>Sil</button></td>
+                      </tr>
+                    );
+                  })}
+                  {filteredTrainings.length === 0 && (
+                    <tr>
+                      <td colSpan={9} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz eğitim kaydı yok.</td>
                     </tr>
                   )}
                 </tbody>

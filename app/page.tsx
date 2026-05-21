@@ -290,6 +290,8 @@ type TrainingRecord = {
   title: string;
   type: TrainingType;
   trainingDate: string;
+  durationHours?: string;
+  location?: string;
   trainer: string;
   participantIds: string[];
   status: TrainingStatus;
@@ -765,6 +767,121 @@ async function generateTrainingPDF(trainings: TrainingRecord[], companies: Compa
   }).download(`ISG_Egitim_Takip_${new Date().getFullYear()}.pdf`);
 }
 
+async function generateTrainingAttendancePDF(training: TrainingRecord, company: Company | undefined, employees: Employee[]) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
+  const maker = pdfMake.default || pdfMake;
+  maker.vfs = (pdfFonts.default || pdfFonts).vfs;
+
+  const participants = training.participantIds
+    .map(id => employees.find(employee => employee.id === id))
+    .filter(Boolean) as Employee[];
+
+  const body = [
+    ["No", "Ad Soyad", "T.C. Kimlik No", "Görev / Ünvan", "İmza"].map(text => ({ text, bold: true, color: "white", fillColor: "#1e293b", fontSize: 8, margin: [4, 5, 4, 5] })),
+    ...(participants.length > 0 ? participants : [{ firstName: "", lastName: "", tcNo: "", title: "" } as Employee]).map((employee, index) => [
+      String(index + 1),
+      `${employee.firstName} ${employee.lastName}`.trim() || " ",
+      employee.tcNo || " ",
+      employee.title || " ",
+      " ",
+    ].map(text => ({ text, fontSize: 8, color: "#334155", margin: [4, 7, 4, 7] }))),
+  ];
+
+  const content: any[] = [
+    { text: "EĞİTİM KATILIM FORMU", fontSize: 16, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 12] },
+    {
+      table: {
+        widths: [90, "*", 90, "*"],
+        body: [
+          ["Firma", company?.officialName || company?.nickName || "-", "Eğitim Türü", training.type],
+          ["Eğitim Başlığı", training.title, "Eğitim Tarihi", training.trainingDate ? new Date(training.trainingDate).toLocaleDateString("tr-TR") : "-"],
+          ["Eğitmen", training.trainer || "-", "Süre / Yer", `${training.durationHours || "-"} saat / ${training.location || "-"}`],
+        ].map(row => row.map((text, index) => ({ text, fontSize: 8, bold: index % 2 === 0, color: "#334155", margin: [4, 5, 4, 5] }))),
+      },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+      margin: [0, 0, 0, 12],
+    },
+    {
+      table: {
+        headerRows: 1,
+        widths: [28, "*", 82, "*", 110],
+        body,
+      },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+      margin: [0, 0, 0, 18],
+    },
+    {
+      columns: [
+        { width: "*", text: "Eğitmen\n\n\nİmza", fontSize: 9, alignment: "center" },
+        { width: "*", text: "İşveren / İşveren Vekili\n\n\nİmza", fontSize: 9, alignment: "center" },
+      ],
+    },
+  ];
+
+  maker.createPdf({
+    pageSize: "A4",
+    pageMargins: [28, 28, 28, 28],
+    content,
+    defaultStyle: { font: "Roboto" },
+  }).download(`Egitim_Katilim_Formu_${training.title.replace(/\s+/g, "_")}.pdf`);
+}
+
+async function generateTrainingCertificatesPDF(training: TrainingRecord, company: Company | undefined, employees: Employee[]) {
+  const participants = training.participantIds
+    .map(id => employees.find(employee => employee.id === id))
+    .filter(Boolean) as Employee[];
+  if (participants.length === 0) return;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
+  const maker = pdfMake.default || pdfMake;
+  maker.vfs = (pdfFonts.default || pdfFonts).vfs;
+
+  const certificatePages = participants.flatMap((employee, index) => {
+    const page: any = {
+      stack: [
+        { text: "İŞ SAĞLIĞI VE GÜVENLİĞİ", fontSize: 13, bold: true, color: "#0f766e", alignment: "center", margin: [0, 10, 0, 4] },
+        { text: "EĞİTİM KATILIM SERTİFİKASI", fontSize: 24, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 24] },
+        { text: `${employee.firstName} ${employee.lastName}`, fontSize: 22, bold: true, color: "#111827", alignment: "center", margin: [0, 0, 0, 12] },
+        { text: `${training.title} (${training.type}) eğitimine katılmıştır.`, fontSize: 12, color: "#334155", alignment: "center", margin: [40, 0, 40, 18] },
+        {
+          table: {
+            widths: ["*", "*"],
+            body: [
+              ["Firma", company?.officialName || company?.nickName || "-"],
+              ["Tarih", training.trainingDate ? new Date(training.trainingDate).toLocaleDateString("tr-TR") : "-"],
+              ["Süre", training.durationHours ? `${training.durationHours} saat` : "-"],
+              ["Eğitmen", training.trainer || "-"],
+            ].map(row => row.map((text, cellIndex) => ({ text, bold: cellIndex === 0, fontSize: 9, color: "#334155", margin: [5, 5, 5, 5] }))),
+          },
+          layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+          margin: [70, 0, 70, 34],
+        },
+        {
+          columns: [
+            { width: "*", text: "Eğitmen\n\n\nİmza", fontSize: 9, alignment: "center" },
+            { width: "*", text: "İşveren / İşveren Vekili\n\n\nİmza", fontSize: 9, alignment: "center" },
+          ],
+        },
+      ],
+      margin: [0, 0, 0, 0],
+    };
+    return index < participants.length - 1 ? [page, { text: "", pageBreak: "after" as const }] : [page];
+  });
+
+  maker.createPdf({
+    pageSize: "A4",
+    pageMargins: [34, 34, 34, 34],
+    content: certificatePages,
+    defaultStyle: { font: "Roboto" },
+  }).download(`Egitim_Sertifikalari_${training.title.replace(/\s+/g, "_")}.pdf`);
+}
+
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 // ── Mobil algılama yardımcısı (styles dışında kullanılır) ──
@@ -966,6 +1083,8 @@ export default function Page() {
     title: "",
     type: "Temel İSG Eğitimi" as TrainingType,
     trainingDate: "",
+    durationHours: "",
+    location: "",
     trainer: "",
     participantIds: [] as string[],
     status: "Planlandı" as TrainingStatus,
@@ -1650,6 +1769,8 @@ export default function Page() {
       title: newTraining.title,
       type: newTraining.type,
       trainingDate: newTraining.trainingDate,
+      durationHours: newTraining.durationHours,
+      location: newTraining.location,
       trainer: newTraining.trainer,
       participantIds: newTraining.participantIds,
       status: newTraining.status,
@@ -1657,7 +1778,7 @@ export default function Page() {
     };
     const ref = await addDoc(collection(db, "trainings"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
     setTrainings(prev => [...prev, { id: ref.id, ...data }]);
-    setNewTraining({ companyId: "", title: "", type: "Temel İSG Eğitimi", trainingDate: "", trainer: "", participantIds: [], status: "Planlandı", notes: "" });
+    setNewTraining({ companyId: "", title: "", type: "Temel İSG Eğitimi", trainingDate: "", durationHours: "", location: "", trainer: "", participantIds: [], status: "Planlandı", notes: "" });
   }
 
   async function updateTrainingStatus(id: string, status: TrainingStatus) {
@@ -2646,6 +2767,8 @@ export default function Page() {
                 </FormField>
                 <FormField label="Eğitim Başlığı *"><input style={styles.input} className="isg-input" value={newTraining.title} onChange={e => setNewTraining({ ...newTraining, title: e.target.value })} placeholder="Örn. Yeni başlayan personel eğitimi" /></FormField>
                 <FormField label="Eğitim Tarihi *"><DatePicker value={newTraining.trainingDate} onChange={v => setNewTraining({ ...newTraining, trainingDate: v })} /></FormField>
+                <FormField label="Süre (Saat)"><input style={styles.input} className="isg-input" value={newTraining.durationHours} onChange={e => setNewTraining({ ...newTraining, durationHours: e.target.value })} placeholder="Örn. 4" /></FormField>
+                <FormField label="Eğitim Yeri"><input style={styles.input} className="isg-input" value={newTraining.location} onChange={e => setNewTraining({ ...newTraining, location: e.target.value })} placeholder="Toplantı salonu, saha..." /></FormField>
                 <FormField label="Eğitmen / Sorumlu"><input style={styles.input} className="isg-input" value={newTraining.trainer} onChange={e => setNewTraining({ ...newTraining, trainer: e.target.value })} placeholder="Eğitimi veren kişi" /></FormField>
                 <FormField label="Durum">
                   <select style={styles.select} className="isg-input" value={newTraining.status} onChange={e => setNewTraining({ ...newTraining, status: e.target.value as TrainingStatus })}>
@@ -2703,7 +2826,7 @@ export default function Page() {
 
             <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
               <table style={styles.table}>
-                <thead><tr>{["Firma", "Eğitim", "Tür", "Tarih", "Eğitmen", "Katılımcı", "Durum", "Not", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+                <thead><tr>{["Firma", "Eğitim", "Tür", "Tarih", "Süre / Yer", "Eğitmen", "Katılımcı", "Durum", "Not", "Çıktılar", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
                 <tbody>
                   {filteredTrainings.map(training => {
                     const company = companies.find(c => c.id === training.companyId);
@@ -2717,6 +2840,7 @@ export default function Page() {
                         <td style={{ ...styles.td, minWidth: 180 }} className="isg-td"><strong>{training.title}</strong></td>
                         <td style={styles.td} className="isg-td"><Badge text={training.type} color="#8b5cf6" /></td>
                         <td style={styles.td} className="isg-td">{training.trainingDate ? new Date(training.trainingDate).toLocaleDateString("tr-TR") : "—"}</td>
+                        <td style={styles.td} className="isg-td">{training.durationHours || training.location ? `${training.durationHours || "—"} saat / ${training.location || "—"}` : "—"}</td>
                         <td style={styles.td} className="isg-td">{training.trainer || "—"}</td>
                         <td style={{ ...styles.td, minWidth: 180 }} className="isg-td">{participants.length > 0 ? participants.join(", ") : "—"}</td>
                         <td style={styles.td} className="isg-td">
@@ -2727,13 +2851,19 @@ export default function Page() {
                           </select>
                         </td>
                         <td style={{ ...styles.td, color: "var(--isg-text-muted)", minWidth: 150 }}>{training.notes || "—"}</td>
+                        <td style={{ ...styles.td, minWidth: 190 }} className="isg-td">
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <button style={styles.btnSecondary} onClick={() => generateTrainingAttendancePDF(training, company, employees)}>Katılım Formu</button>
+                            <button style={styles.btnSecondary} onClick={() => generateTrainingCertificatesPDF(training, company, employees)}>Sertifika</button>
+                          </div>
+                        </td>
                         <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteTraining(training.id)}>Sil</button></td>
                       </tr>
                     );
                   })}
                   {filteredTrainings.length === 0 && (
                     <tr>
-                      <td colSpan={9} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz eğitim kaydı yok.</td>
+                      <td colSpan={11} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz eğitim kaydı yok.</td>
                     </tr>
                   )}
                 </tbody>

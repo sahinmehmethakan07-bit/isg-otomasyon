@@ -52,6 +52,105 @@ function normalizeRoles(user: Pick<UserProfile, "role" | "roles">) {
   return user.roles?.length ? user.roles : [user.role];
 }
 
+function ModernDatePicker({
+  value,
+  onChange,
+  styles,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  styles: Record<string, React.CSSProperties>;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+  const current = value ? new Date(value) : new Date();
+  const [viewYear, setViewYear] = useState(current.getFullYear());
+  const [viewMonth, setViewMonth] = useState(current.getMonth());
+  const selectedDate = value ? new Date(value) : null;
+  const months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+  const firstDay = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const selectDay = (day: number) => {
+    const date = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    onChange(date);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen(prev => !prev)}
+        style={{ ...styles.input, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", textAlign: "left" }}
+      >
+        <span style={{ color: value ? "var(--isg-text)" : "var(--isg-text-muted)" }}>
+          {value ? new Date(value).toLocaleDateString("tr-TR") : "Tarih seçin..."}
+        </span>
+        <span style={{ fontSize: 14 }}>📅</span>
+      </button>
+      {open && (
+        <div style={{ position: "absolute", zIndex: 1000, top: "calc(100% + 4px)", left: 0, backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 8, padding: 12, width: 240, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <button type="button" onClick={() => { if (viewMonth === 0) { setViewMonth(11); setViewYear(year => year - 1); } else setViewMonth(month => month - 1); }} style={{ ...styles.btnSecondary, padding: "2px 8px" }}>‹</button>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <select value={viewMonth} onChange={event => setViewMonth(Number(event.target.value))} style={{ ...styles.select, width: "auto", padding: "2px 6px", fontSize: 12 }}>
+                {months.map((month, index) => <option key={month} value={index}>{month}</option>)}
+              </select>
+              <select value={viewYear} onChange={event => setViewYear(Number(event.target.value))} style={{ ...styles.select, width: "auto", padding: "2px 6px", fontSize: 12 }}>
+                {Array.from({ length: 20 }, (_, index) => 2020 + index).map(year => <option key={year} value={year}>{year}</option>)}
+              </select>
+            </div>
+            <button type="button" onClick={() => { if (viewMonth === 11) { setViewMonth(0); setViewYear(year => year + 1); } else setViewMonth(month => month + 1); }} style={{ ...styles.btnSecondary, padding: "2px 8px" }}>›</button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+            {["Pt", "Sa", "Ça", "Pe", "Cu", "Ct", "Pz"].map(day => (
+              <div key={day} style={{ textAlign: "center", fontSize: 10, color: "var(--isg-text-muted)", padding: "2px 0" }}>{day}</div>
+            ))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+            {Array.from({ length: firstDay }).map((_, index) => <div key={`empty-${index}`} />)}
+            {Array.from({ length: daysInMonth }, (_, index) => index + 1).map(day => {
+              const isSelected = selectedDate &&
+                selectedDate.getFullYear() === viewYear &&
+                selectedDate.getMonth() === viewMonth &&
+                selectedDate.getDate() === day;
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => selectDay(day)}
+                  style={{
+                    backgroundColor: isSelected ? "#0ea5e9" : "transparent",
+                    color: isSelected ? "#fff" : "var(--isg-text)",
+                    border: "none",
+                    borderRadius: 4,
+                    padding: "4px 0",
+                    fontSize: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+          <button type="button" onClick={() => { onChange(""); setOpen(false); }} style={{ ...styles.btnSecondary, width: "100%", marginTop: 8, fontSize: 11 }}>Temizle</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [localCompanies, setLocalCompanies] = useState(companies);
@@ -359,11 +458,10 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
               </div>
               <div>
                 <label style={styles.label}>Sözleşme Bitiş</label>
-                <input
-                  style={styles.input}
-                  type="date"
+                <ModernDatePicker
                   value={newCompany.contractEnd}
-                  onChange={(e) => setNewCompany({ ...newCompany, contractEnd: e.target.value })}
+                  onChange={(value) => setNewCompany({ ...newCompany, contractEnd: value })}
+                  styles={styles}
                 />
               </div>
               <div>

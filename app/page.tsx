@@ -365,6 +365,23 @@ type AccidentReportRecord = {
   notes: string;
 };
 
+type CompanyVisitStatus = "Planlandı" | "Tamamlandı" | "Ertelendi" | "Takip Gerekli";
+type CompanyVisitPurpose = "Rutin Ziyaret" | "Risk Kontrolü" | "Eğitim / Bilgilendirme" | "DÖF Takibi" | "Acil Ziyaret";
+
+type CompanyVisitRecord = {
+  id: string;
+  companyId: string;
+  visitDate: string;
+  purpose: CompanyVisitPurpose;
+  visitor: string;
+  contactedPerson: string;
+  findings: string;
+  actions: string;
+  nextVisitDate?: string;
+  status: CompanyVisitStatus;
+  notes: string;
+};
+
 const emptyChecklist: EmployeeChecklist = {
   isgCertificateDate: "",
   ek2Date: "",
@@ -1215,6 +1232,57 @@ async function generateAccidentReportPDF(report: AccidentReportRecord, company: 
   }).download(`Is_Kazasi_Raporu_${report.accidentDate || report.id}.pdf`);
 }
 
+async function generateCompanyVisitPDF(visit: CompanyVisitRecord, company: Company | undefined) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
+  const maker = pdfMake.default || pdfMake;
+  maker.vfs = (pdfFonts.default || pdfFonts).vfs;
+
+  const content: any[] = [
+    { text: "FİRMA ZİYARET RAPORU", fontSize: 16, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 12] },
+    {
+      table: {
+        widths: [90, "*", 90, "*"],
+        body: [
+          ["Firma", company?.officialName || company?.nickName || "-", "Ziyaret Tarihi", visit.visitDate ? new Date(visit.visitDate).toLocaleDateString("tr-TR") : "-"],
+          ["Ziyaret Amacı", visit.purpose, "Durum", visit.status],
+          ["Ziyaret Eden", visit.visitor || "-", "Görüşülen Kişi", visit.contactedPerson || "-"],
+          ["Sonraki Ziyaret", visit.nextVisitDate ? new Date(visit.nextVisitDate).toLocaleDateString("tr-TR") : "-", "SGK Sicil", company?.sgkSicil || "-"],
+        ].map(row => row.map((text, index) => ({ text, fontSize: 8, bold: index % 2 === 0, color: "#334155", margin: [4, 5, 4, 5] }))),
+      },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+      margin: [0, 0, 0, 12],
+    },
+    ...[
+      ["Tespitler", visit.findings],
+      ["Aksiyonlar", visit.actions],
+      ["Notlar", visit.notes],
+    ].flatMap(([title, text]) => [
+      { text: title, fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+      {
+        table: { widths: ["*"], body: [[{ text: text || "-", fontSize: 9, color: "#334155", margin: [5, 8, 5, 8] }]] },
+        layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+        margin: [0, 0, 0, 12],
+      },
+    ]),
+    {
+      columns: [
+        { width: "*", text: "Ziyareti Yapan\n\n\nAd Soyad / İmza", fontSize: 9, alignment: "center" },
+        { width: "*", text: "Firma Yetkilisi\n\n\nAd Soyad / İmza", fontSize: 9, alignment: "center" },
+      ],
+    },
+  ];
+
+  maker.createPdf({
+    pageSize: "A4",
+    pageMargins: [28, 28, 28, 28],
+    content,
+    defaultStyle: { font: "Roboto" },
+  }).download(`Firma_Ziyaret_Raporu_${visit.visitDate || visit.id}.pdf`);
+}
+
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 // ── Mobil algılama yardımcısı (styles dışında kullanılır) ──
@@ -1387,6 +1455,7 @@ export default function Page() {
   const [emergencyPlans, setEmergencyPlans] = useState<EmergencyPlanRecord[]>([]);
   const [committeeMeetings, setCommitteeMeetings] = useState<CommitteeMeetingRecord[]>([]);
   const [accidentReports, setAccidentReports] = useState<AccidentReportRecord[]>([]);
+  const [companyVisits, setCompanyVisits] = useState<CompanyVisitRecord[]>([]);
 
   const [activeTab, setActiveTab] = useState("firmalar");
   const [search, setSearch] = useState("");
@@ -1477,6 +1546,18 @@ export default function Page() {
     status: "Açık" as AccidentReportStatus,
     notes: "",
   });
+  const [newCompanyVisit, setNewCompanyVisit] = useState({
+    companyId: "",
+    visitDate: "",
+    purpose: "Rutin Ziyaret" as CompanyVisitPurpose,
+    visitor: "",
+    contactedPerson: "",
+    findings: "",
+    actions: "",
+    nextVisitDate: "",
+    status: "Planlandı" as CompanyVisitStatus,
+    notes: "",
+  });
 
   const [signers, setSigners] = useState<Signer[]>([]);
   const [emailSettings, setEmailSettings] = useState<EmailSettings>({ enabled: true, toEmail: "", ccEmail: "", subject: "[İSG] Yeni DÖF Bildirimi: {dofTitle}", message: "" });
@@ -1513,7 +1594,7 @@ export default function Page() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult, annualPlanResult, trainingResult, ppeResult, emergencyPlanResult, committeeMeetingResult, accidentReportResult] = await Promise.allSettled([
+      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult, annualPlanResult, trainingResult, ppeResult, emergencyPlanResult, committeeMeetingResult, accidentReportResult, companyVisitResult] = await Promise.allSettled([
         loadCompanyScopedRecords<Company>("companies"),
         loadCompanyScopedRecords<Employee>("employees"),
         loadCompanyScopedRecords<DocumentRecord>("documents"),
@@ -1527,6 +1608,7 @@ export default function Page() {
         loadCompanyScopedRecords<EmergencyPlanRecord>("emergencyPlans"),
         loadCompanyScopedRecords<CommitteeMeetingRecord>("committeeMeetings"),
         loadCompanyScopedRecords<AccidentReportRecord>("accidentReports"),
+        loadCompanyScopedRecords<CompanyVisitRecord>("companyVisits"),
       ]);
       const loadResults: Array<{ label: string; result: PromiseSettledResult<unknown> }> = [
         { label: "Firmalar", result: compResult },
@@ -1542,6 +1624,7 @@ export default function Page() {
         { label: "Acil Durum Planları", result: emergencyPlanResult },
         { label: "Kurul Toplantıları", result: committeeMeetingResult },
         { label: "İş Kazası Raporları", result: accidentReportResult },
+        { label: "Firma Ziyaretleri", result: companyVisitResult },
       ];
       const failedLoads = loadResults.filter(({ result }) => result.status === "rejected").map(({ label }) => label);
 
@@ -1562,6 +1645,7 @@ export default function Page() {
       if (emergencyPlanResult.status === "fulfilled") setEmergencyPlans(emergencyPlanResult.value);
       if (committeeMeetingResult.status === "fulfilled") setCommitteeMeetings(committeeMeetingResult.value);
       if (accidentReportResult.status === "fulfilled") setAccidentReports(accidentReportResult.value);
+      if (companyVisitResult.status === "fulfilled") setCompanyVisits(companyVisitResult.value);
 
       // Email ayarlarını yükle
       const emailDoc = await getDoc(doc(db, "settings", "emailNotifications"));
@@ -1685,6 +1769,11 @@ export default function Page() {
     const matchesCompany = selectedCompanyId === "all" || report.companyId === selectedCompanyId;
     return matchesCompany && `${report.incidentType} ${report.location} ${report.severity} ${report.description} ${report.rootCause} ${report.actionPlan} ${report.responsible} ${report.status} ${report.notes} ${company?.nickName || ""} ${employee?.firstName || ""} ${employee?.lastName || ""}`.toLowerCase().includes(search.toLowerCase());
   }), [accidentReports, companies, employees, selectedCompanyId, search]);
+  const filteredCompanyVisits = useMemo(() => companyVisits.filter(visit => {
+    const company = companies.find(c => c.id === visit.companyId);
+    const matchesCompany = selectedCompanyId === "all" || visit.companyId === selectedCompanyId;
+    return matchesCompany && `${visit.purpose} ${visit.visitor} ${visit.contactedPerson} ${visit.findings} ${visit.actions} ${visit.status} ${visit.notes} ${company?.nickName || ""} ${company?.officialName || ""}`.toLowerCase().includes(search.toLowerCase());
+  }), [companyVisits, companies, selectedCompanyId, search]);
 
   async function addCompany() {
     if (!isAdmin) return;
@@ -1706,6 +1795,7 @@ export default function Page() {
     const relatedDofs = dofs.filter(d => d.companyId === id);
     const relatedRisks = risks.filter(r => r.companyId === id);
     const relatedSigners = signers.filter(s => s.companyId === id);
+    const relatedCompanyVisits = companyVisits.filter(v => v.companyId === id);
     await Promise.all([
       deleteDoc(doc(db, "companies", id)),
       ...relatedEmployees.map(e => deleteDoc(doc(db, "employees", e.id))),
@@ -1713,6 +1803,7 @@ export default function Page() {
       ...relatedDofs.map(d => deleteDoc(doc(db, "dofs", d.id))),
       ...relatedRisks.map(r => deleteDoc(doc(db, "risks", r.id))),
       ...relatedSigners.map(s => deleteDoc(doc(db, "signers", s.id))),
+      ...relatedCompanyVisits.map(v => deleteDoc(doc(db, "companyVisits", v.id))),
     ]);
     setCompanies(prev => prev.filter(c => c.id !== id));
     setEmployees(prev => prev.filter(e => e.companyId !== id));
@@ -1720,6 +1811,7 @@ export default function Page() {
     setDofs(prev => prev.filter(d => d.companyId !== id));
     setRisks(prev => prev.filter(r => r.companyId !== id));
     setSigners(prev => prev.filter(s => s.companyId !== id));
+    setCompanyVisits(prev => prev.filter(v => v.companyId !== id));
   }
 
   async function addEmployee() {
@@ -2344,6 +2436,35 @@ export default function Page() {
     setAccidentReports(prev => prev.filter(report => report.id !== id));
   }
 
+  async function addCompanyVisit() {
+    if (!newCompanyVisit.companyId || !newCompanyVisit.visitDate || !newCompanyVisit.visitor) return;
+    const data = {
+      companyId: newCompanyVisit.companyId,
+      visitDate: newCompanyVisit.visitDate,
+      purpose: newCompanyVisit.purpose,
+      visitor: newCompanyVisit.visitor,
+      contactedPerson: newCompanyVisit.contactedPerson,
+      findings: newCompanyVisit.findings,
+      actions: newCompanyVisit.actions,
+      nextVisitDate: newCompanyVisit.nextVisitDate,
+      status: newCompanyVisit.status,
+      notes: newCompanyVisit.notes,
+    };
+    const ref = await addDoc(collection(db, "companyVisits"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
+    setCompanyVisits(prev => [...prev, { id: ref.id, ...data }]);
+    setNewCompanyVisit({ companyId: "", visitDate: "", purpose: "Rutin Ziyaret", visitor: "", contactedPerson: "", findings: "", actions: "", nextVisitDate: "", status: "Planlandı", notes: "" });
+  }
+
+  async function updateCompanyVisitStatus(id: string, status: CompanyVisitStatus) {
+    await updateDoc(doc(db, "companyVisits", id), { status });
+    setCompanyVisits(prev => prev.map(visit => visit.id === id ? { ...visit, status } : visit));
+  }
+
+  async function deleteCompanyVisit(id: string) {
+    await deleteDoc(doc(db, "companyVisits", id));
+    setCompanyVisits(prev => prev.filter(visit => visit.id !== id));
+  }
+
   const tabs = isHumanResources && !isAdmin
     ? [{ id: "personel", label: "👥 İnsan Kaynakları" }]
     : [
@@ -2361,6 +2482,7 @@ export default function Page() {
       { id: "kkd-formu", label: "🧤 KKD Formu" },
       { id: "acil-durum-plani", label: "⚠️ Acil Durum Planı" },
       { id: "kurul-toplantisi", label: "👥 Kurul Toplantısı" },
+      { id: "firma-ziyaretleri", label: "📍 Firma Ziyaretleri" },
       { id: "is-kazasi-raporu", label: "🚑 İş Kazası Raporu" },
       ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
     ];
@@ -2373,9 +2495,8 @@ export default function Page() {
       {
         title: "Planlama & Arşiv",
         items: [
-          ...tabs.filter(tab => ["yillik-planlar", "egitimler", "acil-durum-plani", "kurul-toplantisi"].includes(tab.id)),
+          ...tabs.filter(tab => ["yillik-planlar", "egitimler", "acil-durum-plani", "kurul-toplantisi", "firma-ziyaretleri"].includes(tab.id)),
           { id: "arsiv", label: "🗂 Arşiv", disabled: true },
-          { id: "firma-ziyaretleri", label: "📍 Firma Ziyaretleri", disabled: true },
         ],
       },
     ];
@@ -3815,6 +3936,92 @@ export default function Page() {
                   {filteredAccidentReports.length === 0 && (
                     <tr>
                       <td colSpan={10} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz iş kazası / ramak kala raporu yok.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "firma-ziyaretleri" && (
+          <div>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">Firma Ziyareti Planla</p>
+              <div style={styles.formGrid}>
+                <FormField label="Firma *">
+                  <select style={styles.select} className="isg-input" value={newCompanyVisit.companyId} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, companyId: e.target.value })}>
+                    <option value="">Seçin...</option>
+                    {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Ziyaret Tarihi *"><DatePicker value={newCompanyVisit.visitDate} onChange={v => setNewCompanyVisit({ ...newCompanyVisit, visitDate: v })} /></FormField>
+                <FormField label="Ziyaret Amacı">
+                  <select style={styles.select} className="isg-input" value={newCompanyVisit.purpose} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, purpose: e.target.value as CompanyVisitPurpose })}>
+                    <option>Rutin Ziyaret</option>
+                    <option>Risk Kontrolü</option>
+                    <option>Eğitim / Bilgilendirme</option>
+                    <option>DÖF Takibi</option>
+                    <option>Acil Ziyaret</option>
+                  </select>
+                </FormField>
+                <FormField label="Ziyaret Eden *"><input style={styles.input} className="isg-input" value={newCompanyVisit.visitor} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, visitor: e.target.value })} placeholder="Ad Soyad" /></FormField>
+                <FormField label="Görüşülen Kişi"><input style={styles.input} className="isg-input" value={newCompanyVisit.contactedPerson} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, contactedPerson: e.target.value })} placeholder="Firma yetkilisi" /></FormField>
+                <FormField label="Durum">
+                  <select style={styles.select} className="isg-input" value={newCompanyVisit.status} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, status: e.target.value as CompanyVisitStatus })}>
+                    <option>Planlandı</option>
+                    <option>Tamamlandı</option>
+                    <option>Ertelendi</option>
+                    <option>Takip Gerekli</option>
+                  </select>
+                </FormField>
+                <FormField label="Sonraki Ziyaret"><DatePicker value={newCompanyVisit.nextVisitDate} onChange={v => setNewCompanyVisit({ ...newCompanyVisit, nextVisitDate: v })} /></FormField>
+                <FormField label="Tespitler"><input style={styles.input} className="isg-input" value={newCompanyVisit.findings} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, findings: e.target.value })} placeholder="Sahada görülen durumlar" /></FormField>
+                <FormField label="Aksiyonlar"><input style={styles.input} className="isg-input" value={newCompanyVisit.actions} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, actions: e.target.value })} placeholder="Alınacak aksiyonlar" /></FormField>
+                <FormField label="Not"><input style={styles.input} className="isg-input" value={newCompanyVisit.notes} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, notes: e.target.value })} placeholder="Ek açıklama" /></FormField>
+              </div>
+              <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button style={styles.btnPrimary} onClick={addCompanyVisit}>Ziyaret Kaydı Ekle</button>
+              </div>
+            </div>
+
+            <div style={styles.searchBar}>
+              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
+              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
+              <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredCompanyVisits.length} ziyaret</span>
+            </div>
+
+            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
+              <table style={styles.table}>
+                <thead><tr>{["Firma", "Tarih", "Amaç", "Ziyaret Eden", "Görüşülen", "Durum", "Tespit / Aksiyon", "Sonraki", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+                <tbody>
+                  {filteredCompanyVisits.map(visit => {
+                    const company = companies.find(c => c.id === visit.companyId);
+                    return (
+                      <tr key={visit.id}>
+                        <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
+                        <td style={styles.td} className="isg-td">{visit.visitDate ? new Date(visit.visitDate).toLocaleDateString("tr-TR") : "—"}</td>
+                        <td style={styles.td} className="isg-td"><Badge text={visit.purpose} color="#0ea5e9" /></td>
+                        <td style={styles.td} className="isg-td">{visit.visitor || "—"}</td>
+                        <td style={styles.td} className="isg-td">{visit.contactedPerson || "—"}</td>
+                        <td style={styles.td} className="isg-td">
+                          <select style={{ ...styles.select, minWidth: 150 }} value={visit.status} onChange={e => updateCompanyVisitStatus(visit.id, e.target.value as CompanyVisitStatus)}>
+                            <option>Planlandı</option>
+                            <option>Tamamlandı</option>
+                            <option>Ertelendi</option>
+                            <option>Takip Gerekli</option>
+                          </select>
+                        </td>
+                        <td style={{ ...styles.td, minWidth: 260, color: "var(--isg-text-muted)" }} className="isg-td">{[visit.findings, visit.actions, visit.notes].filter(Boolean).join(" / ") || "—"}</td>
+                        <td style={styles.td} className="isg-td">{visit.nextVisitDate ? new Date(visit.nextVisitDate).toLocaleDateString("tr-TR") : "—"}</td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnSecondary} onClick={() => generateCompanyVisitPDF(visit, company)}>Ziyaret PDF</button></td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteCompanyVisit(visit.id)}>Sil</button></td>
+                      </tr>
+                    );
+                  })}
+                  {filteredCompanyVisits.length === 0 && (
+                    <tr>
+                      <td colSpan={10} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz firma ziyareti kaydı yok.</td>
                     </tr>
                   )}
                 </tbody>

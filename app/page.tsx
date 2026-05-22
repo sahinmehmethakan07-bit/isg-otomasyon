@@ -2832,7 +2832,110 @@ export default function Page() {
   const upcomingTrainings = trainings.filter(training => training.status === "Planlandı").length;
   const openAccidentReports = accidentReports.filter(report => report.status !== "Kapandı").length;
   const followUpVisits = companyVisits.filter(visit => visit.status === "Takip Gerekli" || visit.status === "Planlandı").length;
-  const topDashboardTasks = taskItems.slice(0, 5);
+  const ek2PendingEmployees = employees.filter(employee => !(employee.onboarding || createOnboardingFromChecklist(employee.checklist)).tasks.doctorEk2.completed).length;
+  const safetyPendingEmployees = employees.filter(employee => {
+    const onboarding = employee.onboarding || createOnboardingFromChecklist(employee.checklist);
+    return !onboarding.tasks.safetyTraining.completed || !onboarding.tasks.safetyDocuments.completed;
+  }).length;
+  const plannedCompanyVisits = companyVisits.filter(visit => visit.status === "Planlandı" || visit.status === "Takip Gerekli").length;
+  const roleDashboardTitle = activeRole === "doctor"
+    ? "Doktor Çalışma Alanı"
+    : activeRole === "nurse"
+      ? "Hemşire Çalışma Alanı"
+      : activeRole === "safety_expert"
+        ? "İş Güvenliği Uzmanı Çalışma Alanı"
+        : activeRole === "human_resources"
+          ? "İnsan Kaynakları Çalışma Alanı"
+          : "Genel Yönetim Paneli";
+  const roleDashboardSubtitle = activeRole === "doctor"
+    ? "EK-2 bekleyen personeller, açık olay takipleri ve sağlıkla ilgili kayıtlar öncelikli gösterilir."
+    : activeRole === "nurse"
+      ? "Personel sağlık hazırlıkları, eğitim/KKD kayıtları ve yaklaşan belgeler öne çıkarılır."
+      : activeRole === "safety_expert"
+        ? "Açık DÖF, yüksek risk, eğitim, plan ve saha ziyareti takipleri öncelikli gösterilir."
+        : activeRole === "human_resources"
+          ? "Personel girişleri ve onboarding eksikleri öne çıkarılır."
+          : "Tüm firmalar, kritik görevler, riskler, belgeler ve operasyon kayıtları tek bakışta izlenir.";
+  const roleDashboardCards = activeRole === "doctor"
+    ? [
+      { value: ek2PendingEmployees, label: "EK-2 Bekleyen", color: ek2PendingEmployees > 0 ? "#d97706" : "#16a34a" },
+      { value: openAccidentReports, label: "Açık Olay", color: openAccidentReports > 0 ? "#dc2626" : "#16a34a" },
+      { value: employees.length, label: "Personel", color: "#a78bfa" },
+      { value: totalSoonDocs, label: "Yaklaşan Belge", color: totalSoonDocs > 0 ? "#d97706" : "#16a34a" },
+    ]
+    : activeRole === "nurse"
+      ? [
+        { value: employees.length, label: "Personel", color: "#a78bfa" },
+        { value: ppeRecords.length, label: "KKD Kaydı", color: "#16a34a" },
+        { value: upcomingTrainings, label: "Planlı Eğitim", color: upcomingTrainings > 0 ? "#0ea5e9" : "#16a34a" },
+        { value: totalSoonDocs, label: "Yaklaşan Belge", color: totalSoonDocs > 0 ? "#d97706" : "#16a34a" },
+      ]
+      : activeRole === "safety_expert"
+        ? [
+          { value: openDofs, label: "Açık DÖF", color: openDofs > 0 ? "#d97706" : "#16a34a" },
+          { value: highRisks, label: "Yüksek Risk", color: highRisks > 0 ? "#dc2626" : "#16a34a" },
+          { value: upcomingTrainings, label: "Planlı Eğitim", color: upcomingTrainings > 0 ? "#0ea5e9" : "#16a34a" },
+          { value: plannedCompanyVisits, label: "Ziyaret Takibi", color: plannedCompanyVisits > 0 ? "#d97706" : "#16a34a" },
+        ]
+        : activeRole === "human_resources"
+          ? [
+            { value: employees.length, label: "Personel", color: "#a78bfa" },
+            { value: incompleteEmployees, label: "Onboarding Eksik", color: incompleteEmployees > 0 ? "#d97706" : "#16a34a" },
+            { value: ek2PendingEmployees, label: "EK-2 Bekleyen", color: ek2PendingEmployees > 0 ? "#d97706" : "#16a34a" },
+            { value: safetyPendingEmployees, label: "İSG Evrak/Eğitim", color: safetyPendingEmployees > 0 ? "#d97706" : "#16a34a" },
+          ]
+          : [
+            { value: companies.length, label: "Firma", color: "#38bdf8" },
+            { value: employees.length, label: "Personel", color: "#a78bfa" },
+            { value: criticalTasks.length, label: "Kritik Görev", color: criticalTasks.length > 0 ? "#dc2626" : "#16a34a" },
+            { value: highPriorityTasks.length, label: "Yüksek Öncelik", color: highPriorityTasks.length > 0 ? "#d97706" : "#16a34a" },
+            { value: totalExpiredDocs, label: "Süresi Dolmuş Belge", color: totalExpiredDocs > 0 ? "#dc2626" : "#16a34a" },
+            { value: totalSoonDocs, label: "Yaklaşan Belge", color: totalSoonDocs > 0 ? "#d97706" : "#16a34a" },
+            { value: openDofs, label: "Açık DÖF", color: openDofs > 0 ? "#d97706" : "#16a34a" },
+            { value: highRisks, label: "Yüksek Risk (≥15)", color: highRisks > 0 ? "#dc2626" : "#16a34a" },
+            { value: incompleteEmployees, label: "Eğitim Eksik", color: incompleteEmployees > 0 ? "#d97706" : "#16a34a" },
+            { value: upcomingTrainings, label: "Planlı Eğitim", color: upcomingTrainings > 0 ? "#0ea5e9" : "#16a34a" },
+            { value: openAccidentReports, label: "Açık Olay", color: openAccidentReports > 0 ? "#dc2626" : "#16a34a" },
+            { value: followUpVisits, label: "Ziyaret Takibi", color: followUpVisits > 0 ? "#d97706" : "#16a34a" },
+          ];
+  const roleQuickActions = activeRole === "doctor"
+    ? [
+      { label: "EK-2 Muayene", tab: "ek2muayene" },
+      { label: "Personel Listesi", tab: "personel" },
+      { label: "İş Kazası Takibi", tab: "is-kazasi-raporu" },
+      { label: "Görevler", tab: "gorevler" },
+    ]
+    : activeRole === "nurse"
+      ? [
+        { label: "Personel Listesi", tab: "personel" },
+        { label: "KKD Formu", tab: "kkd-formu" },
+        { label: "Eğitimler", tab: "egitimler" },
+        { label: "Belgeler", tab: "belgeler" },
+      ]
+      : activeRole === "safety_expert"
+        ? [
+          { label: "DÖF Oluştur", tab: "dof" },
+          { label: "Risk Ekle", tab: "risk" },
+          { label: "Eğitim Planla", tab: "egitimler" },
+          { label: "Firma Ziyareti", tab: "firma-ziyaretleri" },
+          { label: "Görevler", tab: "gorevler" },
+        ]
+        : [
+          { label: "Yeni Personel", tab: "personel" },
+          { label: "DÖF Oluştur", tab: "dof" },
+          { label: "Risk Ekle", tab: "risk" },
+          { label: "Eğitim Planla", tab: "egitimler" },
+          { label: "Firma Ziyareti", tab: "firma-ziyaretleri" },
+          { label: "Arşivi Aç", tab: "arsiv" },
+        ];
+  const roleTaskCategories = activeRole === "doctor"
+    ? ["Personel", "Olay", "Belge"]
+    : activeRole === "nurse"
+      ? ["Personel", "Eğitim", "KKD", "Belge"]
+      : activeRole === "safety_expert"
+        ? ["DÖF", "Risk", "Eğitim", "Plan", "Ziyaret", "Olay"]
+        : [];
+  const topDashboardTasks = (roleTaskCategories.length > 0 ? taskItems.filter(task => roleTaskCategories.includes(task.category)) : taskItems).slice(0, 5);
   const compactLayout = isMobileScreen();
 
   return (
@@ -2932,22 +3035,12 @@ export default function Page() {
 
         {activeTab === "ozet" && (
           <div>
-            <p style={{ ...styles.sectionTitle, marginBottom: 20 }}>Genel Durum</p>
+            <div style={styles.card} className="isg-card">
+              <p style={{ ...styles.sectionTitle, marginBottom: 10 }} className="isg-text-muted">{roleDashboardTitle}</p>
+              <div style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.55 }}>{roleDashboardSubtitle}</div>
+            </div>
             <div style={styles.statGrid}>
-              {[
-                { value: companies.length, label: "Firma", color: "#38bdf8" },
-                { value: employees.length, label: "Personel", color: "#a78bfa" },
-                { value: criticalTasks.length, label: "Kritik Görev", color: criticalTasks.length > 0 ? "#dc2626" : "#16a34a" },
-                { value: highPriorityTasks.length, label: "Yüksek Öncelik", color: highPriorityTasks.length > 0 ? "#d97706" : "#16a34a" },
-                { value: totalExpiredDocs, label: "Süresi Dolmuş Belge", color: totalExpiredDocs > 0 ? "#dc2626" : "#16a34a" },
-                { value: totalSoonDocs, label: "Yaklaşan Belge", color: totalSoonDocs > 0 ? "#d97706" : "#16a34a" },
-                { value: openDofs, label: "Açık DÖF", color: openDofs > 0 ? "#d97706" : "#16a34a" },
-                { value: highRisks, label: "Yüksek Risk (≥15)", color: highRisks > 0 ? "#dc2626" : "#16a34a" },
-                { value: incompleteEmployees, label: "Eğitim Eksik", color: incompleteEmployees > 0 ? "#d97706" : "#16a34a" },
-                { value: upcomingTrainings, label: "Planlı Eğitim", color: upcomingTrainings > 0 ? "#0ea5e9" : "#16a34a" },
-                { value: openAccidentReports, label: "Açık Olay", color: openAccidentReports > 0 ? "#dc2626" : "#16a34a" },
-                { value: followUpVisits, label: "Ziyaret Takibi", color: followUpVisits > 0 ? "#d97706" : "#16a34a" },
-              ].map(({ value, label, color }) => (
+              {roleDashboardCards.map(({ value, label, color }) => (
                 <div key={label} style={styles.statCard} className="isg-stat-card"
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.15)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.07)"; (e.currentTarget as HTMLElement).style.transform = ""; }}>
@@ -2989,14 +3082,7 @@ export default function Page() {
               <div style={styles.card} className="isg-card">
                 <p style={styles.sectionTitle} className="isg-text-muted">Hızlı Aksiyonlar</p>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
-                  {[
-                    { label: "Yeni Personel", tab: "personel" },
-                    { label: "DÖF Oluştur", tab: "dof" },
-                    { label: "Risk Ekle", tab: "risk" },
-                    { label: "Eğitim Planla", tab: "egitimler" },
-                    { label: "Firma Ziyareti", tab: "firma-ziyaretleri" },
-                    { label: "Arşivi Aç", tab: "arsiv" },
-                  ].map(action => (
+                  {roleQuickActions.map(action => (
                     <button key={action.tab} style={{ ...styles.btnSecondary, width: "100%", justifyContent: "center" as any }} onClick={() => setActiveTab(action.tab)}>
                       {action.label}
                     </button>

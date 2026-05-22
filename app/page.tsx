@@ -1317,13 +1317,13 @@ const styles: Record<string, React.CSSProperties> = {
   app: { minHeight: "100vh", background: "var(--isg-bg)", color: "var(--isg-text)", fontFamily: "'IBM Plex Sans', -apple-system, sans-serif", overflowX: "hidden" as const },
   header: { backgroundColor: "var(--isg-header)", borderBottom: "1px solid var(--isg-border)", padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 58, gap: 10, backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", position: "sticky" as const, top: 0, zIndex: 50, boxShadow: "0 12px 34px rgba(0,0,0,0.22)" },
   nav: { display: "flex", gap: 6, padding: "0 28px", borderBottom: "1px solid var(--isg-border)", backgroundColor: "var(--isg-nav)", overflowX: "auto" as const, WebkitOverflowScrolling: "touch" as const, msOverflowStyle: "none" as const, scrollbarWidth: "none" as const, backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", position: "sticky" as const, top: 58, zIndex: 40, height: 50, alignItems: "center" },
-  shell: { display: "flex", alignItems: "stretch", minHeight: "calc(100vh - 58px)" },
+  shell: { display: "flex", alignItems: "stretch", minHeight: "calc(100vh - 58px)", width: "100%", overflow: "hidden" as const },
   sidebar: { flexShrink: 0, borderRight: "1px solid var(--isg-border)", backgroundColor: "var(--isg-nav)", padding: "18px 14px", overflowY: "auto" as const, boxSizing: "border-box" as const, backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", zIndex: 35 },
   sidebarSearch: { height: 34, border: "1px solid var(--isg-border)", borderRadius: 8, backgroundColor: "var(--isg-input-bg)", display: "flex", alignItems: "center", gap: 8, padding: "0 10px", marginBottom: 18 },
   sidebarGroupTitle: { color: "var(--isg-text-subtle)", fontSize: 10, fontWeight: 800, textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 7px 4px" },
   sidebarItem: { minHeight: 36, width: "100%", border: "1px solid transparent", borderRadius: 8, backgroundColor: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "0 10px", fontSize: 13, fontWeight: 700, textAlign: "left" as const, transition: "color 0.15s, border-color 0.15s, background-color 0.15s, opacity 0.15s" },
   soonBadge: { fontSize: 10, fontWeight: 800, color: "#a78bfa", border: "1px solid rgba(167,139,250,0.24)", backgroundColor: "rgba(167,139,250,0.12)", borderRadius: 6, padding: "2px 6px", whiteSpace: "nowrap" as const },
-  content: { padding: "30px 28px", width: "100%", boxSizing: "border-box" as const, margin: "0 auto" },
+  content: { padding: "30px 28px", width: "100%", minWidth: 0, flex: "1 1 auto", boxSizing: "border-box" as const, margin: "0 auto" },
   card: { backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 8, padding: "22px", marginBottom: 16, transition: "border-color 0.2s, background-color 0.2s, box-shadow 0.2s", boxShadow: "var(--isg-shadow)" },
   sectionTitle: { fontSize: 10, fontWeight: 700, color: "var(--isg-text-subtle)", textTransform: "uppercase" as const, letterSpacing: "0.12em", marginBottom: 16 },
   input: { width: "100%", backgroundColor: "var(--isg-input-bg)", border: "1px solid var(--isg-border)", borderRadius: 8, color: "var(--isg-text)", padding: "10px 13px", fontSize: 14, outline: "none", boxSizing: "border-box" as const, transition: "border-color 0.15s, box-shadow 0.15s, background-color 0.15s" },
@@ -3018,7 +3018,7 @@ export default function Page() {
           </div>
         </aside>
 
-      <main style={{ ...styles.content, maxWidth: compactLayout ? "100%" : 1480 }} className="isg-app">
+      <main style={{ ...styles.content, maxWidth: "100%" }} className="isg-app">
         {loadError && (
           <div style={{
             backgroundColor: "#dc262615",
@@ -3249,11 +3249,11 @@ export default function Page() {
         )}
 
         {activeTab === "personel" && (
-          <div style={{ display: "grid", gridTemplateColumns: selectedEmployee ? "1fr 340px" : "1fr", gap: 20 }}>
-            <div>
+          <div style={{ display: "grid", gridTemplateColumns: selectedEmployee && !compactLayout ? "minmax(0, 1fr) minmax(300px, 340px)" : "minmax(0, 1fr)", gap: 20, minWidth: 0 }}>
+            <div style={{ minWidth: 0 }}>
               <div style={styles.card} className="isg-card">
                 <p style={styles.sectionTitle} className="isg-text-muted">Yeni Personel Ekle</p>
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(160px, 190px) 1fr", gap: 18, alignItems: "start" }}>
+                <div style={{ display: "grid", gridTemplateColumns: compactLayout ? "minmax(0, 1fr)" : "minmax(160px, 190px) minmax(0, 1fr)", gap: 18, alignItems: "start", minWidth: 0 }}>
                   <div style={{ border: "1px solid var(--isg-border)", borderRadius: 8, padding: 14, backgroundColor: "var(--isg-input-bg)" }}>
                     <label style={styles.label} className="isg-label">Personel Fotoğrafı</label>
                     {newEmployee.photo ? (
@@ -3273,7 +3273,7 @@ export default function Page() {
                       </div>
                     )}
                   </div>
-                  <div style={{ display: "grid", gap: 18 }}>
+                  <div style={{ display: "grid", gap: 18, minWidth: 0 }}>
                     <div>
                       <p style={{ ...styles.sectionTitle, marginBottom: 10 }}>Kimlik Bilgileri</p>
                       <div style={styles.formGrid}>
@@ -3398,8 +3398,8 @@ export default function Page() {
               </div>
             </div>
             {selectedEmployee && (
-              <div>
-                <div style={styles.card} className="isg-card">
+              <div style={{ minWidth: 0, maxWidth: "100%" }}>
+                <div style={{ ...styles.card, position: compactLayout ? "relative" : "sticky", top: compactLayout ? undefined : 82, maxHeight: compactLayout ? undefined : "calc(100vh - 112px)", overflowY: "auto", overflowX: "hidden" }} className="isg-card">
                   <p style={styles.sectionTitle} className="isg-text-muted">Personel Detayı</p>
                   <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                     {selectedEmployee.photo ? <img src={selectedEmployee.photo} alt="" style={{ width: 76, height: 92, borderRadius: 8, objectFit: "cover", border: "1px solid var(--isg-border)" }} /> : <div style={{ width: 76, height: 92, borderRadius: 8, backgroundColor: "var(--isg-input-bg)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--isg-text-muted)" }}>👤</div>}
@@ -3594,7 +3594,7 @@ export default function Page() {
                 </div>
                 <input style={{ ...styles.input, fontSize: 12 }} className="isg-input" value={newDof.affectedPersons} onChange={e => setNewDof({ ...newDof, affectedPersons: e.target.value })} placeholder="Tüm çalışanlar veya isimleri seçin/yazın" />
               </div>
-              <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))", gap: 16 }}>
                 <div>
                   <label style={styles.label} className="isg-label">Öncesi Fotoğraf (Uygunsuzluk)</label>
                   {newDof.beforePhoto ? (
@@ -3664,7 +3664,7 @@ export default function Page() {
                         <select style={{ ...styles.select, marginBottom: 10 }} className="isg-input" value={dof.status} onChange={e => updateDofStatus(dof.id, e.target.value as any)}>
                           <option>Açık</option><option>Bildirildi</option><option>Önlem Alındı</option><option>Çözüldü</option>
                         </select>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))", gap: 16 }}>
                           <div>
                             <label style={{ fontSize: 11, color: "var(--isg-text-muted)", display: "block", marginBottom: 4 }}>Öncesi Fotoğraf (Uygunsuzluk)</label>
                             {dof.beforePhoto ? (
@@ -3837,7 +3837,7 @@ export default function Page() {
                 return (
                   <div key={company.id} style={{ ...styles.card, marginBottom: 12 }} className="isg-card">
                     <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: "var(--isg-text)" }}>{company.nickName}</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(240px, 100%), 1fr))", gap: 12 }}>
                       {roles.map(role => {
                         const existing = compSigners.find(s => s.role === role);
                         return (

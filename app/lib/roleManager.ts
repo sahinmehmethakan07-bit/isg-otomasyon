@@ -79,6 +79,39 @@ export const ROLE_CONFIG: Record<
   },
 };
 
+export function isUserRole(value: unknown): value is UserRole {
+  return typeof value === "string" && value in ROLE_CONFIG;
+}
+
+export function normalizeUserProfile(uid: string, data: Record<string, any>): UserProfile {
+  const role = isUserRole(data.role) ? data.role : "doctor";
+  const rolesFromData = Array.isArray(data.roles)
+    ? data.roles.filter(isUserRole)
+    : [];
+  const roles = Array.from(new Set(rolesFromData.length > 0 ? rolesFromData : [role]));
+  const activeRole = isUserRole(data.activeRole) && roles.includes(data.activeRole)
+    ? data.activeRole
+    : roles[0];
+  const companyIds = Array.isArray(data.companyIds)
+    ? data.companyIds.filter((id: unknown): id is string => typeof id === "string" && id.length > 0)
+    : [];
+  const activeCompanyId = typeof data.activeCompanyId === "string" && companyIds.includes(data.activeCompanyId)
+    ? data.activeCompanyId
+    : companyIds[0] || "";
+
+  return {
+    uid,
+    email: typeof data.email === "string" ? data.email : "",
+    displayName: typeof data.displayName === "string" ? data.displayName : "",
+    role: roles[0],
+    roles,
+    activeRole,
+    companyIds: roles.includes("admin") ? [] : companyIds,
+    activeCompanyId: roles.includes("admin") ? "" : activeCompanyId,
+    createdAt: data.createdAt || null,
+  };
+}
+
 // ── Kullanıcı Profil İşlemleri ───────────────────────────────────────────────
 
 /**
@@ -91,7 +124,7 @@ export async function getUserProfile(
   try {
     const userDoc = await getDoc(doc(db, "users", uid));
     if (!userDoc.exists()) return null;
-    return { uid, ...userDoc.data() } as UserProfile;
+    return normalizeUserProfile(uid, userDoc.data());
   } catch (error) {
     console.error("[RoleManager] getUserProfile error:", error);
     return null;
@@ -128,7 +161,7 @@ export async function setUserProfile(
  */
 export async function getAllUsers(): Promise<UserProfile[]> {
   const snap = await getDocs(collection(db, "users"));
-  return snap.docs.map((d) => ({ uid: d.id, ...d.data() } as UserProfile));
+  return snap.docs.map((d) => normalizeUserProfile(d.id, d.data()));
 }
 
 /**
@@ -137,7 +170,7 @@ export async function getAllUsers(): Promise<UserProfile[]> {
 export async function getUsersByRole(role: UserRole): Promise<UserProfile[]> {
   const q = query(collection(db, "users"), where("role", "==", role));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ uid: d.id, ...d.data() } as UserProfile));
+  return snap.docs.map((d) => normalizeUserProfile(d.id, d.data()));
 }
 
 // ── Veri Filtreleme ──────────────────────────────────────────────────────────

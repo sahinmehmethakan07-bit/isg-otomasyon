@@ -177,6 +177,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
   });
   const [creating, setCreating] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [roleUpdatingUid, setRoleUpdatingUid] = useState<string | null>(null);
   const [showNewUserPassword, setShowNewUserPassword] = useState(false);
 
@@ -190,9 +191,17 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
 
   async function loadUsers() {
     setLoading(true);
-    const all = await getAllUsers();
-    setUsers(all);
-    setLoading(false);
+    setLoadError(null);
+    try {
+      const all = await getAllUsers();
+      setUsers(all);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Bilinmeyen hata";
+      setLoadError(`Kullanıcı listesi yüklenemedi: ${message}`);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleCreateUser(e: React.FormEvent) {
@@ -395,6 +404,20 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
           color: status.startsWith("✅") ? "#86efac" : "#fca5a5",
         }}>
           {status}
+        </div>
+      )}
+
+      {loadError && (
+        <div style={{
+          backgroundColor: "#dc262615",
+          border: "1px solid #dc262633",
+          borderRadius: 8,
+          padding: "10px 14px",
+          marginBottom: 16,
+          fontSize: 13,
+          color: "#fca5a5",
+        }}>
+          ❌ {loadError}
         </div>
       )}
 

@@ -449,6 +449,56 @@ function createOnboardingFromChecklist(checklist: EmployeeChecklist): EmployeeOn
   };
 }
 
+function normalizeChecklist(checklist?: Partial<EmployeeChecklist> | null): EmployeeChecklist {
+  return {
+    ...emptyChecklist,
+    ...(checklist || {}),
+    preTest: !!checklist?.preTest,
+    postTest: !!checklist?.postTest,
+    undertaking: !!checklist?.undertaking,
+    kkdMinutes: !!checklist?.kkdMinutes,
+    attendanceDoc: !!checklist?.attendanceDoc,
+  };
+}
+
+function normalizeOnboarding(onboarding: EmployeeOnboarding | undefined, checklist: EmployeeChecklist): EmployeeOnboarding {
+  const generated = createOnboardingFromChecklist(checklist);
+  const tasks = onboarding?.tasks ? { ...generated.tasks, ...onboarding.tasks } : generated.tasks;
+  const missingSteps = Object.values(tasks).filter(task => !task.completed).map(task => task.label);
+  return {
+    ...generated,
+    ...(onboarding || {}),
+    tasks,
+    missingSteps,
+    status: missingSteps.length === 0 ? "completed" : "pending",
+  };
+}
+
+function normalizeEmployeeRecord(employee: Employee): Employee {
+  const checklist = normalizeChecklist(employee.checklist);
+  return {
+    ...employee,
+    checklist,
+    trainingComplete: !!employee.trainingComplete,
+    isActive: employee.isActive !== false,
+    onboarding: normalizeOnboarding(employee.onboarding, checklist),
+  };
+}
+
+function normalizeTrainingRecord(training: TrainingRecord): TrainingRecord {
+  return {
+    ...training,
+    participantIds: Array.isArray(training.participantIds) ? training.participantIds : [],
+  };
+}
+
+function normalizeCommitteeMeetingRecord(meeting: CommitteeMeetingRecord): CommitteeMeetingRecord {
+  return {
+    ...meeting,
+    participantIds: Array.isArray(meeting.participantIds) ? meeting.participantIds : [],
+  };
+}
+
 const sgkCompanyRegistry: Record<string, { officialName: string; naceCode: string }> = {
   "2612345678901234567890": { officialName: "Örnek Turizm Otelcilik İnşaat Sanayi ve Ticaret A.Ş.", naceCode: "55.10.01" },
   "2611111111111111111111": { officialName: "Mavi Deniz Gıda Dağıtım Lojistik Limited Şirketi", naceCode: "46.38.01" },
@@ -1662,17 +1712,17 @@ export default function Page() {
       }
 
       if (compResult.status === "fulfilled") setCompanies(compResult.value);
-      if (empResult.status === "fulfilled") setEmployees(empResult.value);
+      if (empResult.status === "fulfilled") setEmployees(empResult.value.map(normalizeEmployeeRecord));
       if (docResult.status === "fulfilled") setDocuments(docResult.value);
       if (obsResult.status === "fulfilled") setObservers(obsResult.value);
       if (dofResult.status === "fulfilled") setDofs(dofResult.value);
       if (riskResult.status === "fulfilled") setRisks(riskResult.value);
       if (signerResult.status === "fulfilled") setSigners(signerResult.value);
       if (annualPlanResult.status === "fulfilled") setAnnualPlans(annualPlanResult.value);
-      if (trainingResult.status === "fulfilled") setTrainings(trainingResult.value);
+      if (trainingResult.status === "fulfilled") setTrainings(trainingResult.value.map(normalizeTrainingRecord));
       if (ppeResult.status === "fulfilled") setPpeRecords(ppeResult.value);
       if (emergencyPlanResult.status === "fulfilled") setEmergencyPlans(emergencyPlanResult.value);
-      if (committeeMeetingResult.status === "fulfilled") setCommitteeMeetings(committeeMeetingResult.value);
+      if (committeeMeetingResult.status === "fulfilled") setCommitteeMeetings(committeeMeetingResult.value.map(normalizeCommitteeMeetingRecord));
       if (accidentReportResult.status === "fulfilled") setAccidentReports(accidentReportResult.value);
       if (companyVisitResult.status === "fulfilled") setCompanyVisits(companyVisitResult.value);
 
@@ -2182,13 +2232,6 @@ export default function Page() {
       setEmployees(prev => [...prev, { id: ref.id, ...data }]);
       setNewEmployee(emptyNewEmployee);
       setEmployeeAddStatus("✅ Personel kaydı oluşturuldu. Doktor ve İSG uzmanı için onboarding görevleri açıldı.");
-      if (emailSettings.enabled) {
-        await fetch("/api/send-onboarding-notification", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ employeeId: ref.id, type: "created" }),
-        }).catch((error) => console.error("Onboarding bildirimi gönderilemedi", error));
-      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Bilinmeyen hata";
       setEmployeeAddStatus(`❌ Personel eklenemedi: ${message}`);
@@ -3433,18 +3476,6 @@ export default function Page() {
                         <div style={{ fontSize: 11, color: "var(--isg-text-muted)", lineHeight: 1.5 }}>
                           {onboarding.missingSteps.length > 0 ? onboarding.missingSteps.join(" · ") : "Doktor ve İSG uzmanı görevleri tamamlandı."}
                         </div>
-                        {onboarding.missingSteps.length > 0 && (
-                          <button
-                            style={{ ...styles.btnSecondary, width: "100%", marginTop: 10 }}
-                            onClick={() => fetch("/api/send-onboarding-notification", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ employeeId: selectedEmployee.id, type: "reminder" }),
-                            }).catch((error) => console.error("Onboarding uyarısı gönderilemedi", error))}
-                          >
-                            Eksikler için uyarı gönder
-                          </button>
-                        )}
                       </div>
                     );
                   })()}

@@ -9,8 +9,7 @@
 
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, updateDoc } from "firebase/firestore";
-import { auth, db } from "../../lib/firebase";
+import { auth } from "../../lib/firebase";
 import { getUserProfile, UserProfile } from "./roleManager";
 
 type UseUserRoleReturn = {
@@ -38,16 +37,7 @@ export function useUserRole(): UseUserRoleReturn {
       if (profile) {
         const storedRole = localStorage.getItem("isg_activeRole");
         const allowedRoles = profile.roles?.length ? profile.roles : [profile.role];
-        let activeRole = allowedRoles.includes(storedRole as typeof profile.role) ? storedRole as typeof profile.role : profile.role;
-
-        if (allowedRoles.includes("admin") && activeRole !== "admin" && (!profile.companyIds || profile.companyIds.length === 0)) {
-          activeRole = "admin";
-          localStorage.setItem("isg_activeRole", "admin");
-          updateDoc(doc(db, "users", firebaseUser.uid), { activeRole: "admin" }).catch((error) => {
-            console.error("[useUserRole] activeRole admin olarak güncellenemedi:", error);
-          });
-        }
-
+        const activeRole = allowedRoles.includes(storedRole as typeof profile.role) ? storedRole as typeof profile.role : profile.role;
         setUser({ ...profile, activeRole });
       } else {
         setUser(null);

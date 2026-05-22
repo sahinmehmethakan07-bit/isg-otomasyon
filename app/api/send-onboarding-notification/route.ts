@@ -211,7 +211,7 @@ export async function POST(req: NextRequest) {
     }, [notificationField]);
     await logOnboardingEmail(employeeId, uniqueRecipients, "success", result.id, token);
 
-    return NextResponse.json({ success: true, id: result.id, to: uniqueRecipients, cc: settings.ccEmail ? [settings.ccEmail] : [] });
+    return NextResponse.json({ success: true, id: result.id });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Bilinmeyen hata";
     return NextResponse.json({ error: message }, { status: 500 });

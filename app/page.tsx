@@ -3462,16 +3462,7 @@ export default function Page() {
                                     const detail = typeof result.error === "string" ? result.error : JSON.stringify(result.error || result);
                                     throw new Error(detail || "Bildirim gönderilemedi");
                                   }
-                                  const recipients = [
-                                    ...((Array.isArray(result.to) ? result.to : []) as string[]),
-                                    ...((Array.isArray(result.cc) ? result.cc : []) as string[]).map(email => `${email} (CC)`),
-                                  ];
-                                  setOnboardingReminderStatus(prev => ({
-                                    ...prev,
-                                    [selectedEmployee.id]: recipients.length > 0
-                                      ? `Uyarı gönderildi: ${recipients.join(", ")}`
-                                      : "Uyarı gönderildi.",
-                                  }));
+                                  setOnboardingReminderStatus(prev => ({ ...prev, [selectedEmployee.id]: "Uyarı gönderildi." }));
                                 } catch (error) {
                                   const message = error instanceof Error ? error.message : "Uyarı gönderilemedi.";
                                   setOnboardingReminderStatus(prev => ({ ...prev, [selectedEmployee.id]: `Hata: ${message}` }));

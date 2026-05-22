@@ -3249,7 +3249,7 @@ export default function Page() {
         )}
 
         {activeTab === "personel" && (
-          <div style={{ display: "grid", gridTemplateColumns: selectedEmployee && !compactLayout ? "minmax(0, 1fr) minmax(300px, 340px)" : "minmax(0, 1fr)", gap: 20, minWidth: 0 }}>
+          <div style={{ display: "grid", gridTemplateColumns: selectedEmployee && !compactLayout ? "minmax(0, 1fr) minmax(380px, 420px)" : "minmax(0, 1fr)", gap: 20, minWidth: 0, alignItems: "start" }}>
             <div style={{ minWidth: 0 }}>
               <div style={styles.card} className="isg-card">
                 <p style={styles.sectionTitle} className="isg-text-muted">Yeni Personel Ekle</p>
@@ -3349,12 +3349,13 @@ export default function Page() {
                   </div>
                 )}
               </div>
-              <div style={styles.searchBar}>
+            </div>
+            <div style={{ ...styles.searchBar, gridColumn: "1 / -1" }}>
                 <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
                 <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
                 <span style={{ color: "#64748b", fontSize: 13 }}>{filteredEmployees.length} kişi</span>
               </div>
-              <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
+            <div style={{ ...styles.card, gridColumn: "1 / -1", padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
                 <table style={styles.table}>
                   <thead><tr>{["Ad Soyad", "TC No", "İletişim", "Birim", "Unvan", "Firma", "İşe Giriş", "Onboarding", "Eksikler", "Kontrol Listesi", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
                   <tbody>
@@ -3396,10 +3397,9 @@ export default function Page() {
                   </tbody>
                 </table>
               </div>
-            </div>
             {selectedEmployee && (
               <div style={{ minWidth: 0, maxWidth: "100%" }}>
-                <div style={{ ...styles.card, position: compactLayout ? "relative" : "sticky", top: compactLayout ? undefined : 82, maxHeight: compactLayout ? undefined : "calc(100vh - 112px)", overflowY: "auto", overflowX: "hidden" }} className="isg-card">
+                <div style={{ ...styles.card, overflow: "visible" }} className="isg-card">
                   <p style={styles.sectionTitle} className="isg-text-muted">Personel Detayı</p>
                   <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                     {selectedEmployee.photo ? <img src={selectedEmployee.photo} alt="" style={{ width: 76, height: 92, borderRadius: 8, objectFit: "cover", border: "1px solid var(--isg-border)" }} /> : <div style={{ width: 76, height: 92, borderRadius: 8, backgroundColor: "var(--isg-input-bg)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--isg-text-muted)" }}>👤</div>}

@@ -43,14 +43,12 @@ export function useUserRole(): UseUserRoleReturn {
         if (allowedRoles.includes("admin") && activeRole !== "admin" && (!profile.companyIds || profile.companyIds.length === 0)) {
           activeRole = "admin";
           localStorage.setItem("isg_activeRole", "admin");
-          try {
-            await updateDoc(doc(db, "users", firebaseUser.uid), { activeRole: "admin" });
-          } catch (error) {
+          updateDoc(doc(db, "users", firebaseUser.uid), { activeRole: "admin" }).catch((error) => {
             console.error("[useUserRole] activeRole admin olarak güncellenemedi:", error);
-          }
+          });
         }
 
-        setUser({ ...profile, activeRole, activeCompanyId: activeRole === "admin" ? "" : profile.activeCompanyId });
+        setUser({ ...profile, activeRole });
       } else {
         setUser(null);
       }

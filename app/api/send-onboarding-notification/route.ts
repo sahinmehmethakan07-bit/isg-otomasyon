@@ -1,18 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, addDoc, collection, doc, getDoc, updateDoc } from "firebase/firestore";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDCCKqJLR7V_VN9n4NPM5_ZlPlc-O1alAk",
-  authDomain: "isg-otomasyon.firebaseapp.com",
-  projectId: "isg-otomasyon",
-  storageBucket: "isg-otomasyon.firebasestorage.app",
-  messagingSenderId: "664404617229",
-  appId: "1:664404617229:web:12cba547e7cbebf46b4d44",
-};
-
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const db = getFirestore(app);
+const PROJECT_ID = "isg-otomasyon";
 
 type NotificationType = "created" | "reminder";
 
@@ -41,6 +29,74 @@ type EmployeeData = {
   onboarding?: { missingSteps?: string[] };
 };
 
+type FirestoreValue = {
+  stringValue?: string;
+  integerValue?: string;
+  doubleValue?: number;
+  booleanValue?: boolean;
+  timestampValue?: string;
+  nullValue?: null;
+  arrayValue?: { values?: FirestoreValue[] };
+  mapValue?: { fields?: Record<string, FirestoreValue> };
+};
+
+function documentUrl(path: string) {
+  const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+  return `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${encodedPath}`;
+}
+
+function parseFirestoreValue(value: FirestoreValue): any {
+  if ("stringValue" in value) return value.stringValue;
+  if ("integerValue" in value) return Number(value.integerValue);
+  if ("doubleValue" in value) return value.doubleValue;
+  if ("booleanValue" in value) return value.booleanValue;
+  if ("timestampValue" in value) return value.timestampValue;
+  if ("nullValue" in value) return null;
+  if (value.arrayValue) return (value.arrayValue.values || []).map(parseFirestoreValue);
+  if (value.mapValue) return parseFirestoreFields(value.mapValue.fields || {});
+  return undefined;
+}
+
+function parseFirestoreFields(fields: Record<string, FirestoreValue>) {
+  return Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, parseFirestoreValue(value)]));
+}
+
+async function firestoreGet(path: string, token: string) {
+  const response = await fetch(documentUrl(path), {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Firestore okuma hatası (${response.status}): ${detail}`);
+  }
+  const document = await response.json();
+  return parseFirestoreFields(document.fields || {});
+}
+
+async function firestorePatch(path: string, token: string, body: unknown, updateMask: string[]) {
+  const params = updateMask.map(field => `updateMask.fieldPaths=${encodeURIComponent(field)}`).join("&");
+  const response = await fetch(`${documentUrl(path)}?${params}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    console.error("Firestore güncelleme hatası:", await response.text());
+  }
+}
+
+async function firestoreAdd(path: string, token: string, body: unknown) {
+  const response = await fetch(documentUrl(path), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    console.error("Firestore log yazma hatası:", await response.text());
+  }
+}
+
 function missingSteps(checklist: EmployeeChecklist = {}) {
   const missing: string[] = [];
   if (!checklist.ek2Date) missing.push("İşyeri hekimi EK-2 formunu tamamlamalı");
@@ -57,26 +113,27 @@ function employeeName(employee: EmployeeData) {
 
 export async function POST(req: NextRequest) {
   try {
+    const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+    if (!token) return NextResponse.json({ error: "Oturum doğrulaması gerekli" }, { status: 401 });
+
     const { employeeId, type = "created" } = await req.json() as { employeeId?: string; type?: NotificationType };
     if (!employeeId) return NextResponse.json({ error: "employeeId gerekli" }, { status: 400 });
 
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return NextResponse.json({ error: "RESEND_API_KEY tanımlı değil" }, { status: 500 });
 
-    const settingsSnap = await getDoc(doc(db, "settings", "emailNotifications"));
-    const settings = settingsSnap.exists() ? settingsSnap.data() : {};
+    const settings = await firestoreGet("settings/emailNotifications", token);
     if (settings.enabled === false) return NextResponse.json({ message: "Email bildirimi pasif" }, { status: 200 });
 
-    const employeeSnap = await getDoc(doc(db, "employees", employeeId));
-    if (!employeeSnap.exists()) return NextResponse.json({ error: "Personel kaydı bulunamadı" }, { status: 404 });
-    const employee = employeeSnap.data() as EmployeeData;
+    const employee = await firestoreGet(`employees/${employeeId}`, token) as EmployeeData;
 
     let companyName = "—";
     if (employee.companyId) {
-      const companySnap = await getDoc(doc(db, "companies", employee.companyId));
-      if (companySnap.exists()) {
-        const company = companySnap.data();
+      try {
+        const company = await firestoreGet(`companies/${employee.companyId}`, token);
         companyName = company.officialName || company.nickName || "—";
+      } catch (error) {
+        console.error("Firma bilgisi okunamadı:", error);
       }
     }
 
@@ -121,12 +178,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Alıcı email adresi tanımlı değil" }, { status: 400 });
     }
 
+    const uniqueRecipients = Array.from(new Set(recipients));
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         from: "ISG Otomasyon <onboarding@resend.dev>",
-        to: Array.from(new Set(recipients)),
+        to: uniqueRecipients,
         cc: settings.ccEmail ? [settings.ccEmail] : undefined,
         subject,
         html,
@@ -135,14 +193,23 @@ export async function POST(req: NextRequest) {
 
     const result = await response.json();
     if (!response.ok) {
-      await logOnboardingEmail(employeeId, Array.from(new Set(recipients)), "failed", JSON.stringify(result));
+      await logOnboardingEmail(employeeId, uniqueRecipients, "failed", JSON.stringify(result), token);
       return NextResponse.json({ error: result }, { status: response.status });
     }
 
-    await updateDoc(doc(db, "employees", employeeId), {
-      [type === "reminder" ? "onboarding.lastReminderAt" : "onboarding.notifiedAt"]: new Date().toISOString(),
-    });
-    await logOnboardingEmail(employeeId, Array.from(new Set(recipients)), "success", result.id);
+    const notificationField = type === "reminder" ? "onboarding.lastReminderAt" : "onboarding.notifiedAt";
+    await firestorePatch(`employees/${employeeId}`, token, {
+      fields: {
+        onboarding: {
+          mapValue: {
+            fields: {
+              [type === "reminder" ? "lastReminderAt" : "notifiedAt"]: { stringValue: new Date().toISOString() },
+            },
+          },
+        },
+      },
+    }, [notificationField]);
+    await logOnboardingEmail(employeeId, uniqueRecipients, "success", result.id, token);
 
     return NextResponse.json({ success: true, id: result.id });
   } catch (error) {
@@ -151,17 +218,15 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function logOnboardingEmail(employeeId: string, to: string[], status: string, detail: string) {
-  try {
-    await addDoc(collection(db, "emailLogs"), {
-      employeeId,
-      type: "employeeOnboarding",
-      to,
-      status,
-      detail,
-      createdAt: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error("Onboarding email log yazılamadı:", error);
-  }
+async function logOnboardingEmail(employeeId: string, to: string[], status: string, detail: string, token: string) {
+  await firestoreAdd("emailLogs", token, {
+    fields: {
+      employeeId: { stringValue: employeeId },
+      type: { stringValue: "employeeOnboarding" },
+      status: { stringValue: status },
+      detail: { stringValue: detail },
+      createdAt: { stringValue: new Date().toISOString() },
+      to: { arrayValue: { values: to.map(email => ({ stringValue: email })) } },
+    },
+  });
 }

@@ -1593,6 +1593,7 @@ export default function Page() {
   const [dofAdding, setDofAdding] = useState(false);
   const [dofAddStatus, setDofAddStatus] = useState<string | null>(null);
   const [employeeAddStatus, setEmployeeAddStatus] = useState<string | null>(null);
+  const [onboardingReminderStatus, setOnboardingReminderStatus] = useState<Record<string, string>>({});
 
   async function loadCompanyScopedRecords<T extends { id: string }>(collectionName: string): Promise<T[]> {
     if (!userProfile) return [];
@@ -2183,11 +2184,19 @@ export default function Page() {
       setNewEmployee(emptyNewEmployee);
       setEmployeeAddStatus("✅ Personel kaydı oluşturuldu. Doktor ve İSG uzmanı için onboarding görevleri açıldı.");
       if (emailSettings.enabled) {
-        await fetch("/api/send-onboarding-notification", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ employeeId: ref.id, type: "created" }),
-        }).catch((error) => console.error("Onboarding bildirimi gönderilemedi", error));
+        const token = await auth.currentUser?.getIdToken();
+        if (token) {
+          const response = await fetch("/api/send-onboarding-notification", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ employeeId: ref.id, type: "created" }),
+          });
+          if (!response.ok) {
+            const result = await response.json().catch(() => ({}));
+            console.error("Onboarding bildirimi gönderilemedi", result);
+            setEmployeeAddStatus("⚠️ Personel kaydı oluşturuldu fakat e-posta bildirimi gönderilemedi. Email ayarlarını kontrol edin.");
+          }
+        }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Bilinmeyen hata";
@@ -3434,16 +3443,40 @@ export default function Page() {
                           {onboarding.missingSteps.length > 0 ? onboarding.missingSteps.join(" · ") : "Doktor ve İSG uzmanı görevleri tamamlandı."}
                         </div>
                         {onboarding.missingSteps.length > 0 && (
-                          <button
-                            style={{ ...styles.btnSecondary, width: "100%", marginTop: 10 }}
-                            onClick={() => fetch("/api/send-onboarding-notification", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ employeeId: selectedEmployee.id, type: "reminder" }),
-                            }).catch((error) => console.error("Onboarding uyarısı gönderilemedi", error))}
-                          >
-                            Eksikler için uyarı gönder
-                          </button>
+                          <>
+                            <button
+                              style={{ ...styles.btnSecondary, width: "100%", marginTop: 10, opacity: onboardingReminderStatus[selectedEmployee.id] === "Gönderiliyor..." ? 0.65 : 1 }}
+                              disabled={onboardingReminderStatus[selectedEmployee.id] === "Gönderiliyor..."}
+                              onClick={async () => {
+                                setOnboardingReminderStatus(prev => ({ ...prev, [selectedEmployee.id]: "Gönderiliyor..." }));
+                                try {
+                                  const token = await auth.currentUser?.getIdToken();
+                                  if (!token) throw new Error("Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+                                  const response = await fetch("/api/send-onboarding-notification", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                                    body: JSON.stringify({ employeeId: selectedEmployee.id, type: "reminder" }),
+                                  });
+                                  const result = await response.json().catch(() => ({}));
+                                  if (!response.ok) {
+                                    const detail = typeof result.error === "string" ? result.error : JSON.stringify(result.error || result);
+                                    throw new Error(detail || "Bildirim gönderilemedi");
+                                  }
+                                  setOnboardingReminderStatus(prev => ({ ...prev, [selectedEmployee.id]: "Uyarı gönderildi." }));
+                                } catch (error) {
+                                  const message = error instanceof Error ? error.message : "Uyarı gönderilemedi.";
+                                  setOnboardingReminderStatus(prev => ({ ...prev, [selectedEmployee.id]: `Hata: ${message}` }));
+                                }
+                              }}
+                            >
+                              {onboardingReminderStatus[selectedEmployee.id] === "Gönderiliyor..." ? "Gönderiliyor..." : "Eksikler için uyarı gönder"}
+                            </button>
+                            {onboardingReminderStatus[selectedEmployee.id] && onboardingReminderStatus[selectedEmployee.id] !== "Gönderiliyor..." && (
+                              <div style={{ marginTop: 8, fontSize: 12, color: onboardingReminderStatus[selectedEmployee.id].startsWith("Hata:") ? "#fca5a5" : "#86efac" }}>
+                                {onboardingReminderStatus[selectedEmployee.id]}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     );

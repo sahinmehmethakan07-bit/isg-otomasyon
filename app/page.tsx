@@ -2816,6 +2816,12 @@ export default function Page() {
   const highRisks = risks.filter(r => r.score >= 15).length;
   const incompleteEmployees = employees.filter(e => !e.trainingComplete).length;
   const activeRoleLabel = activeRole ? t(`role.${activeRole}`) : "";
+  const criticalTasks = taskItems.filter(task => task.priority === "Kritik");
+  const highPriorityTasks = taskItems.filter(task => task.priority === "Yüksek");
+  const upcomingTrainings = trainings.filter(training => training.status === "Planlandı").length;
+  const openAccidentReports = accidentReports.filter(report => report.status !== "Kapandı").length;
+  const followUpVisits = companyVisits.filter(visit => visit.status === "Takip Gerekli" || visit.status === "Planlandı").length;
+  const topDashboardTasks = taskItems.slice(0, 5);
   const compactLayout = isMobileScreen();
 
   return (
@@ -2920,11 +2926,16 @@ export default function Page() {
               {[
                 { value: companies.length, label: "Firma", color: "#38bdf8" },
                 { value: employees.length, label: "Personel", color: "#a78bfa" },
+                { value: criticalTasks.length, label: "Kritik Görev", color: criticalTasks.length > 0 ? "#dc2626" : "#16a34a" },
+                { value: highPriorityTasks.length, label: "Yüksek Öncelik", color: highPriorityTasks.length > 0 ? "#d97706" : "#16a34a" },
                 { value: totalExpiredDocs, label: "Süresi Dolmuş Belge", color: totalExpiredDocs > 0 ? "#dc2626" : "#16a34a" },
                 { value: totalSoonDocs, label: "Yaklaşan Belge", color: totalSoonDocs > 0 ? "#d97706" : "#16a34a" },
                 { value: openDofs, label: "Açık DÖF", color: openDofs > 0 ? "#d97706" : "#16a34a" },
                 { value: highRisks, label: "Yüksek Risk (≥15)", color: highRisks > 0 ? "#dc2626" : "#16a34a" },
                 { value: incompleteEmployees, label: "Eğitim Eksik", color: incompleteEmployees > 0 ? "#d97706" : "#16a34a" },
+                { value: upcomingTrainings, label: "Planlı Eğitim", color: upcomingTrainings > 0 ? "#0ea5e9" : "#16a34a" },
+                { value: openAccidentReports, label: "Açık Olay", color: openAccidentReports > 0 ? "#dc2626" : "#16a34a" },
+                { value: followUpVisits, label: "Ziyaret Takibi", color: followUpVisits > 0 ? "#d97706" : "#16a34a" },
               ].map(({ value, label, color }) => (
                 <div key={label} style={styles.statCard} className="isg-stat-card"
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.15)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
@@ -2934,6 +2945,64 @@ export default function Page() {
                 </div>
               ))}
             </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(360px, 100%), 1fr))", gap: 16, marginBottom: 24 }}>
+              <div style={styles.card} className="isg-card">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                  <p style={{ ...styles.sectionTitle, marginBottom: 0 }} className="isg-text-muted">Bugünün Öncelikleri</p>
+                  <button style={styles.btnSecondary} onClick={() => setActiveTab("gorevler")}>Tüm Görevler</button>
+                </div>
+                <div style={{ display: "grid", gap: 10 }}>
+                  {topDashboardTasks.map(task => {
+                    const company = companies.find(c => c.id === task.companyId);
+                    const color: Record<TaskPriority, string> = { Kritik: "#dc2626", Yüksek: "#d97706", Orta: "#0ea5e9", Düşük: "#16a34a" };
+                    return (
+                      <div key={task.id} style={{ border: "1px solid var(--isg-border)", borderRadius: 8, padding: 12, backgroundColor: "var(--isg-input-bg)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+                          <div>
+                            <div style={{ fontWeight: 800, marginBottom: 4 }}>{task.title}</div>
+                            <div style={{ color: "var(--isg-text-muted)", fontSize: 12, lineHeight: 1.45 }}>{task.detail}</div>
+                            <div style={{ color: "var(--isg-text-subtle)", fontSize: 11, marginTop: 6 }}>{company?.nickName || "Firma"} · {task.dueDate ? new Date(task.dueDate).toLocaleDateString("tr-TR") : "Termin yok"}</div>
+                          </div>
+                          <Badge text={task.priority} color={color[task.priority]} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {topDashboardTasks.length === 0 && (
+                    <div style={{ color: "var(--isg-text-muted)", fontSize: 13, padding: "10px 0" }}>Şu an kritik takip görünmüyor.</div>
+                  )}
+                </div>
+              </div>
+
+              <div style={styles.card} className="isg-card">
+                <p style={styles.sectionTitle} className="isg-text-muted">Hızlı Aksiyonlar</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
+                  {[
+                    { label: "Yeni Personel", tab: "personel" },
+                    { label: "DÖF Oluştur", tab: "dof" },
+                    { label: "Risk Ekle", tab: "risk" },
+                    { label: "Eğitim Planla", tab: "egitimler" },
+                    { label: "Firma Ziyareti", tab: "firma-ziyaretleri" },
+                    { label: "Arşivi Aç", tab: "arsiv" },
+                  ].map(action => (
+                    <button key={action.tab} style={{ ...styles.btnSecondary, width: "100%", justifyContent: "center" as any }} onClick={() => setActiveTab(action.tab)}>
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ marginTop: 18, borderTop: "1px solid var(--isg-border)", paddingTop: 14 }}>
+                  <p style={{ ...styles.sectionTitle, marginBottom: 10 }} className="isg-text-muted">Operasyon Özeti</p>
+                  <div style={{ display: "grid", gap: 8, fontSize: 13, color: "var(--isg-text-muted)" }}>
+                    <div>Planlı eğitim: <strong style={{ color: "var(--isg-text)" }}>{upcomingTrainings}</strong></div>
+                    <div>Açık olay/ramak kala: <strong style={{ color: "var(--isg-text)" }}>{openAccidentReports}</strong></div>
+                    <div>Ziyaret takibi: <strong style={{ color: "var(--isg-text)" }}>{followUpVisits}</strong></div>
+                    <div>Arşiv kaydı: <strong style={{ color: "var(--isg-text)" }}>{archiveItems.length}</strong></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <p style={styles.sectionTitle} className="isg-text-muted">Firma Durumları</p>
             {companies.map(c => {
               const ind = getCompanyIndicator(c.id);

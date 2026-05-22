@@ -1485,6 +1485,10 @@ export default function Page() {
   const [activeTab, setActiveTab] = useState("firmalar");
   const [search, setSearch] = useState("");
   const [selectedCompanyId, setSelectedCompanyId] = useState("all");
+  const [archiveTypeFilter, setArchiveTypeFilter] = useState("all");
+  const [archiveStatusFilter, setArchiveStatusFilter] = useState("all");
+  const [archiveDateFrom, setArchiveDateFrom] = useState("");
+  const [archiveDateTo, setArchiveDateTo] = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [editingDofId, setEditingDofId] = useState<string | null>(null);
 
@@ -1912,8 +1916,15 @@ export default function Page() {
   const filteredArchiveItems = useMemo(() => archiveItems.filter(item => {
     const company = companies.find(c => c.id === item.companyId);
     const matchesCompany = selectedCompanyId === "all" || item.companyId === selectedCompanyId;
-    return matchesCompany && `${item.type} ${item.title} ${item.owner} ${item.status} ${company?.nickName || ""} ${company?.officialName || ""}`.toLowerCase().includes(search.toLowerCase());
-  }), [archiveItems, companies, selectedCompanyId, search]);
+    const matchesType = archiveTypeFilter === "all" || item.type === archiveTypeFilter;
+    const matchesStatus = archiveStatusFilter === "all" || item.status === archiveStatusFilter;
+    const matchesDateFrom = !archiveDateFrom || (!!item.date && item.date >= archiveDateFrom);
+    const matchesDateTo = !archiveDateTo || (!!item.date && item.date <= archiveDateTo);
+    const matchesSearch = `${item.type} ${item.title} ${item.owner} ${item.status} ${company?.nickName || ""} ${company?.officialName || ""}`.toLowerCase().includes(search.toLowerCase());
+    return matchesCompany && matchesType && matchesStatus && matchesDateFrom && matchesDateTo && matchesSearch;
+  }), [archiveItems, companies, selectedCompanyId, search, archiveTypeFilter, archiveStatusFilter, archiveDateFrom, archiveDateTo]);
+  const archiveTypes = useMemo(() => Array.from(new Set(archiveItems.map(item => item.type))).sort(), [archiveItems]);
+  const archiveStatuses = useMemo(() => Array.from(new Set(archiveItems.map(item => item.status || "Arşivde"))).sort(), [archiveItems]);
   const taskItems = useMemo<TaskItem[]>(() => {
     const items: TaskItem[] = [];
     const today = new Date();
@@ -4496,6 +4507,25 @@ export default function Page() {
             <div style={styles.searchBar}>
               <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Arşivde ara..." value={search} onChange={e => setSearch(e.target.value)} />
               <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
+              <select style={{ ...styles.select, maxWidth: 170 }} value={archiveTypeFilter} onChange={e => setArchiveTypeFilter(e.target.value)}>
+                <option value="all">Tüm Türler</option>
+                {archiveTypes.map(type => <option key={type} value={type}>{type}</option>)}
+              </select>
+              <select style={{ ...styles.select, maxWidth: 170 }} value={archiveStatusFilter} onChange={e => setArchiveStatusFilter(e.target.value)}>
+                <option value="all">Tüm Durumlar</option>
+                {archiveStatuses.map(status => <option key={status} value={status}>{status}</option>)}
+              </select>
+              <div style={{ minWidth: 150, maxWidth: 170 }}>
+                <div style={{ ...styles.label, marginBottom: 4 }}>Başlangıç</div>
+                <DatePicker value={archiveDateFrom} onChange={setArchiveDateFrom} />
+              </div>
+              <div style={{ minWidth: 150, maxWidth: 170 }}>
+                <div style={{ ...styles.label, marginBottom: 4 }}>Bitiş</div>
+                <DatePicker value={archiveDateTo} onChange={setArchiveDateTo} />
+              </div>
+              {(archiveTypeFilter !== "all" || archiveStatusFilter !== "all" || archiveDateFrom || archiveDateTo) && (
+                <button style={styles.btnSecondary} onClick={() => { setArchiveTypeFilter("all"); setArchiveStatusFilter("all"); setArchiveDateFrom(""); setArchiveDateTo(""); }}>Filtreleri Temizle</button>
+              )}
               <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredArchiveItems.length} kayıt</span>
             </div>
 

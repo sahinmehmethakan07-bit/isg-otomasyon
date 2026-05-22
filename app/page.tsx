@@ -393,6 +393,20 @@ type ArchiveItem = {
   sourceTab: string;
 };
 
+type TaskPriority = "Kritik" | "Yüksek" | "Orta" | "Düşük";
+
+type TaskItem = {
+  id: string;
+  companyId: string;
+  title: string;
+  detail: string;
+  owner: string;
+  dueDate: string;
+  priority: TaskPriority;
+  sourceTab: string;
+  category: string;
+};
+
 const emptyChecklist: EmployeeChecklist = {
   isgCertificateDate: "",
   ek2Date: "",
@@ -1694,6 +1708,7 @@ export default function Page() {
 
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId) ?? null;
   const selectedEmployeeCompany = selectedEmployee ? companies.find(c => c.id === selectedEmployee.companyId) ?? null : null;
+  const activeRole = userProfile?.activeRole || userProfile?.role;
 
   function getCompanyDocuments(companyId: string) { return documents.filter(d => d.companyId === companyId && d.employeeId === null); }
 
@@ -1899,6 +1914,165 @@ export default function Page() {
     const matchesCompany = selectedCompanyId === "all" || item.companyId === selectedCompanyId;
     return matchesCompany && `${item.type} ${item.title} ${item.owner} ${item.status} ${company?.nickName || ""} ${company?.officialName || ""}`.toLowerCase().includes(search.toLowerCase());
   }), [archiveItems, companies, selectedCompanyId, search]);
+  const taskItems = useMemo<TaskItem[]>(() => {
+    const items: TaskItem[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const soonLimit = new Date(today);
+    soonLimit.setDate(soonLimit.getDate() + 30);
+    const isPast = (date?: string) => !!date && new Date(date) < today;
+    const isSoon = (date?: string) => !!date && new Date(date) <= soonLimit;
+    const companyName = (companyId: string) => companies.find(c => c.id === companyId)?.nickName || "Firma";
+    const employeeName = (employeeId?: string | null) => {
+      const employee = employees.find(e => e.id === employeeId);
+      return employee ? `${employee.firstName} ${employee.lastName}` : "";
+    };
+
+    documents.forEach(document => {
+      if (!document.expiryDate || !isSoon(document.expiryDate)) return;
+      const expired = isPast(document.expiryDate);
+      items.push({
+        id: `document-${document.id}`,
+        companyId: document.companyId,
+        title: expired ? "Süresi dolmuş belge" : "Yaklaşan belge yenileme",
+        detail: `${document.type} · ${employeeName(document.employeeId) || companyName(document.companyId)}`,
+        owner: "Belge sorumlusu",
+        dueDate: document.expiryDate,
+        priority: expired ? "Kritik" : "Yüksek",
+        sourceTab: "belgeler",
+        category: "Belge",
+      });
+    });
+
+    employees.forEach(employee => {
+      const onboarding = employee.onboarding || createOnboardingFromChecklist(employee.checklist);
+      if (onboarding.status === "completed") return;
+      const missingTasks = Object.values(onboarding.tasks).filter(task => !task.completed);
+      const roleTasks = activeRole === "doctor"
+        ? missingTasks.filter(task => task.ownerRole === "doctor")
+        : activeRole === "safety_expert"
+          ? missingTasks.filter(task => task.ownerRole === "safety_expert")
+          : missingTasks;
+      if (roleTasks.length === 0) return;
+      items.push({
+        id: `employee-${employee.id}`,
+        companyId: employee.companyId,
+        title: "Personel onboarding eksik",
+        detail: `${employee.firstName} ${employee.lastName} · ${roleTasks.map(task => task.label).join(", ")}`,
+        owner: activeRole === "doctor" ? "Doktor" : activeRole === "safety_expert" ? "İş Güvenliği Uzmanı" : "Sorumlu ekip",
+        dueDate: employee.hireDate,
+        priority: "Yüksek",
+        sourceTab: activeRole === "doctor" ? "ek2muayene" : "personel",
+        category: "Personel",
+      });
+    });
+
+    dofs.forEach(dof => {
+      if (dof.status === "Çözüldü" || dof.status === "Riske Aktarıldı") return;
+      items.push({
+        id: `dof-${dof.id}`,
+        companyId: dof.companyId,
+        title: dof.status === "Önlem Alındı" ? "DÖF riske aktarılmalı" : "Açık DÖF takibi",
+        detail: `${dof.title} · ${dof.location || "Konum yok"}`,
+        owner: dof.responsible || "Sorumlu girilmedi",
+        dueDate: dof.dueDate,
+        priority: isPast(dof.dueDate) ? "Kritik" : dof.priority === "Yüksek" ? "Yüksek" : "Orta",
+        sourceTab: "dof",
+        category: "DÖF",
+      });
+    });
+
+    risks.forEach(risk => {
+      if (risk.status === "Kapandı") return;
+      if (risk.score < 15 && !isPast(risk.dueDate)) return;
+      items.push({
+        id: `risk-${risk.id}`,
+        companyId: risk.companyId,
+        title: risk.score >= 15 ? "Yüksek risk aksiyonu" : "Geciken risk aksiyonu",
+        detail: `${risk.hazard} · Skor ${risk.score}`,
+        owner: risk.responsible || "Sorumlu girilmedi",
+        dueDate: risk.dueDate || risk.controlDate || "",
+        priority: risk.score >= 15 || isPast(risk.dueDate) ? "Kritik" : "Yüksek",
+        sourceTab: "risk",
+        category: "Risk",
+      });
+    });
+
+    trainings.forEach(training => {
+      if (training.status !== "Planlandı" || !isSoon(training.trainingDate)) return;
+      items.push({
+        id: `training-${training.id}`,
+        companyId: training.companyId,
+        title: "Planlanan eğitim",
+        detail: `${training.title || training.type} · ${training.participantIds.length} katılımcı`,
+        owner: training.trainer || "Eğitmen girilmedi",
+        dueDate: training.trainingDate,
+        priority: isPast(training.trainingDate) ? "Kritik" : "Orta",
+        sourceTab: "egitimler",
+        category: "Eğitim",
+      });
+    });
+
+    annualPlans.forEach(plan => {
+      if (plan.status === "Tamamlandı") return;
+      if (plan.status !== "Gecikti" && !isSoon(plan.plannedDate)) return;
+      items.push({
+        id: `annual-${plan.id}`,
+        companyId: plan.companyId,
+        title: plan.status === "Gecikti" || isPast(plan.plannedDate) ? "Geciken yıllık plan" : "Yaklaşan yıllık plan",
+        detail: `${plan.type} · ${plan.title}`,
+        owner: plan.responsible || "Sorumlu girilmedi",
+        dueDate: plan.plannedDate,
+        priority: plan.status === "Gecikti" || isPast(plan.plannedDate) ? "Kritik" : "Orta",
+        sourceTab: "yillik-planlar",
+        category: "Plan",
+      });
+    });
+
+    accidentReports.forEach(report => {
+      if (report.status === "Kapandı") return;
+      items.push({
+        id: `accident-${report.id}`,
+        companyId: report.companyId,
+        title: "İş kazası / ramak kala takibi",
+        detail: `${report.incidentType} · ${employeeName(report.employeeId) || report.location || "Detay bekliyor"}`,
+        owner: report.responsible || "Sorumlu girilmedi",
+        dueDate: report.dueDate || report.accidentDate,
+        priority: report.severity === "Ağır" ? "Kritik" : report.severity === "Orta" ? "Yüksek" : "Orta",
+        sourceTab: "is-kazasi-raporu",
+        category: "Olay",
+      });
+    });
+
+    companyVisits.forEach(visit => {
+      if (visit.status === "Tamamlandı" && !isSoon(visit.nextVisitDate)) return;
+      if (visit.status === "Planlandı" || visit.status === "Takip Gerekli" || isSoon(visit.nextVisitDate)) {
+        items.push({
+          id: `visit-${visit.id}`,
+          companyId: visit.companyId,
+          title: visit.status === "Takip Gerekli" ? "Ziyaret sonrası takip" : "Firma ziyareti",
+          detail: `${visit.purpose} · ${visit.findings || visit.actions || "Plan detayı bekliyor"}`,
+          owner: visit.visitor || "Ziyaretçi girilmedi",
+          dueDate: visit.nextVisitDate || visit.visitDate,
+          priority: visit.status === "Takip Gerekli" ? "Yüksek" : isPast(visit.visitDate) && visit.status !== "Tamamlandı" ? "Kritik" : "Düşük",
+          sourceTab: "firma-ziyaretleri",
+          category: "Ziyaret",
+        });
+      }
+    });
+
+    return items.sort((a, b) => {
+      const priorityWeight: Record<TaskPriority, number> = { Kritik: 0, Yüksek: 1, Orta: 2, Düşük: 3 };
+      const byPriority = priorityWeight[a.priority] - priorityWeight[b.priority];
+      if (byPriority !== 0) return byPriority;
+      return (a.dueDate || "9999-12-31").localeCompare(b.dueDate || "9999-12-31");
+    });
+  }, [activeRole, annualPlans, accidentReports, companies, companyVisits, documents, dofs, employees, risks, trainings]);
+  const filteredTaskItems = useMemo(() => taskItems.filter(task => {
+    const company = companies.find(c => c.id === task.companyId);
+    const matchesCompany = selectedCompanyId === "all" || task.companyId === selectedCompanyId;
+    return matchesCompany && `${task.category} ${task.title} ${task.detail} ${task.owner} ${task.priority} ${company?.nickName || ""} ${company?.officialName || ""}`.toLowerCase().includes(search.toLowerCase());
+  }), [taskItems, companies, selectedCompanyId, search]);
 
   async function addCompany() {
     if (!isAdmin) return;
@@ -2594,6 +2768,7 @@ export default function Page() {
     ? [{ id: "personel", label: "👥 İnsan Kaynakları" }]
     : [
       { id: "ozet", label: "📊 Özet" },
+      { id: "gorevler", label: "✅ Görevler" },
       { id: "firmalar", label: "🏢 Firmalar" },
       { id: "personel", label: "👤 Personel" },
       { id: "belgeler", label: "📄 Belgeler" },
@@ -2615,7 +2790,7 @@ export default function Page() {
   const menuGroups: Array<{ title: string; items: Array<{ id: string; label: string; disabled?: boolean }> }> = isHumanResources && !isAdmin
     ? [{ title: "Yönetim", items: tabs }]
     : [
-      { title: "Yönetim", items: tabs.filter(tab => ["ozet", "firmalar", "personel", "kullanicilar"].includes(tab.id)) },
+      { title: "Yönetim", items: tabs.filter(tab => ["ozet", "gorevler", "firmalar", "personel", "kullanicilar"].includes(tab.id)) },
       { title: "Risk Yönetimi", items: tabs.filter(tab => ["gozlemciler", "dof", "risk"].includes(tab.id)) },
       { title: "Formlar & Belgeler", items: tabs.filter(tab => ["belgeler", "imzacilar", "ek2muayene", "kkd-formu", "is-kazasi-raporu"].includes(tab.id)) },
       {
@@ -2640,7 +2815,6 @@ export default function Page() {
   const openDofs = dofs.filter(d => d.status !== "Çözüldü" && d.status !== "Riske Aktarıldı").length;
   const highRisks = risks.filter(r => r.score >= 15).length;
   const incompleteEmployees = employees.filter(e => !e.trainingComplete).length;
-  const activeRole = userProfile?.activeRole || userProfile?.role;
   const activeRoleLabel = activeRole ? t(`role.${activeRole}`) : "";
   const compactLayout = isMobileScreen();
 
@@ -2780,6 +2954,73 @@ export default function Page() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {activeTab === "gorevler" && (
+          <div>
+            <div style={styles.statGrid}>
+              {[
+                { value: taskItems.length, label: "Toplam Görev", color: "#0ea5e9" },
+                { value: taskItems.filter(task => task.priority === "Kritik").length, label: "Kritik", color: "#dc2626" },
+                { value: taskItems.filter(task => task.priority === "Yüksek").length, label: "Yüksek", color: "#d97706" },
+                { value: taskItems.filter(task => task.category === "Personel").length, label: "Personel Görevi", color: "#a78bfa" },
+              ].map(({ value, label, color }) => (
+                <div key={label} style={styles.statCard} className="isg-stat-card">
+                  <div style={{ ...styles.statValue, color }}>{value}</div>
+                  <div style={styles.statLabel}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">Görev / Takip Paneli</p>
+              <div style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.55 }}>
+                Bu panel, mevcut kayıtlardan otomatik görev çıkarır: süresi yaklaşan belgeler, açık DÖF'ler, yüksek riskler, eksik onboarding adımları, yaklaşan eğitimler, açık iş kazası raporları ve firma ziyaret takipleri.
+              </div>
+            </div>
+
+            <div style={styles.searchBar}>
+              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Görevlerde ara..." value={search} onChange={e => setSearch(e.target.value)} />
+              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
+              <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredTaskItems.length} görev</span>
+            </div>
+
+            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
+              <table style={styles.table}>
+                <thead><tr>{["Öncelik", "Kategori", "Görev", "Firma", "Sorumlu", "Termin", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+                <tbody>
+                  {filteredTaskItems.map(task => {
+                    const company = companies.find(c => c.id === task.companyId);
+                    const priorityColorMap: Record<TaskPriority, string> = {
+                      Kritik: "#dc2626",
+                      Yüksek: "#d97706",
+                      Orta: "#0ea5e9",
+                      Düşük: "#16a34a",
+                    };
+                    return (
+                      <tr key={task.id}>
+                        <td style={styles.td} className="isg-td"><Badge text={task.priority} color={priorityColorMap[task.priority]} /></td>
+                        <td style={styles.td} className="isg-td"><Badge text={task.category} color="#64748b" /></td>
+                        <td style={{ ...styles.td, minWidth: 280 }} className="isg-td">
+                          <div style={{ fontWeight: 800, marginBottom: 4 }}>{task.title}</div>
+                          <div style={{ color: "var(--isg-text-muted)", fontSize: 12 }}>{task.detail}</div>
+                        </td>
+                        <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
+                        <td style={{ ...styles.td, color: "var(--isg-text-muted)" }} className="isg-td">{task.owner}</td>
+                        <td style={styles.td} className="isg-td">{task.dueDate ? new Date(task.dueDate).toLocaleDateString("tr-TR") : "—"}</td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnSecondary} onClick={() => setActiveTab(task.sourceTab)}>Modüle Git</button></td>
+                      </tr>
+                    );
+                  })}
+                  {filteredTaskItems.length === 0 && (
+                    <tr>
+                      <td colSpan={7} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Şu an takip gerektiren görev bulunamadı.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

@@ -9,7 +9,8 @@
 
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { doc, updateDoc } from "firebase/firestore";
+import { auth, db } from "../../lib/firebase";
 import { getUserProfile, UserProfile } from "./roleManager";
 
 type UseUserRoleReturn = {
@@ -37,7 +38,26 @@ export function useUserRole(): UseUserRoleReturn {
       if (profile) {
         const storedRole = localStorage.getItem("isg_activeRole");
         const allowedRoles = profile.roles?.length ? profile.roles : [profile.role];
-        const activeRole = allowedRoles.includes(storedRole as typeof profile.role) ? storedRole as typeof profile.role : profile.role;
+        const firestoreRole = profile.activeRole && allowedRoles.includes(profile.activeRole) ? profile.activeRole : profile.role;
+        const activeRole = allowedRoles.includes(storedRole as typeof profile.role)
+          ? storedRole as typeof profile.role
+          : firestoreRole;
+
+        if (storedRole && !allowedRoles.includes(storedRole as typeof profile.role)) {
+          localStorage.removeItem("isg_activeRole");
+        }
+
+        if (activeRole !== profile.activeRole) {
+          try {
+            await updateDoc(doc(db, "users", firebaseUser.uid), { activeRole });
+          } catch (error) {
+            console.error("[useUserRole] activeRole güncellenemedi:", error);
+            setUser({ ...profile, activeRole: firestoreRole });
+            setLoading(false);
+            return;
+          }
+        }
+
         setUser({ ...profile, activeRole });
       } else {
         setUser(null);

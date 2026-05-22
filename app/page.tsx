@@ -4650,7 +4650,7 @@ export default function Page() {
             styles={styles}
             companies={companies}
             employees={employees}
-            userRole={typeof window !== "undefined" ? localStorage.getItem("isg_activeRole") || userProfile?.role || "" : userProfile?.role || ""}
+            userRole={userProfile?.activeRole || userProfile?.role || ""}
             userId={userProfile?.uid || ""}
           />
         )}

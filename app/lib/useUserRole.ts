@@ -35,9 +35,8 @@ export function useUserRole(): UseUserRoleReturn {
 
       const profile = await getUserProfile(firebaseUser.uid);
       if (profile) {
-        const storedRole = localStorage.getItem("isg_activeRole");
         const allowedRoles = profile.roles?.length ? profile.roles : [profile.role];
-        const activeRole = allowedRoles.includes(storedRole as typeof profile.role) ? storedRole as typeof profile.role : profile.role;
+        const activeRole = profile.activeRole && allowedRoles.includes(profile.activeRole) ? profile.activeRole : profile.role;
         setUser({ ...profile, activeRole });
       } else {
         setUser(null);

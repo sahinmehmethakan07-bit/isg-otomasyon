@@ -382,6 +382,17 @@ type CompanyVisitRecord = {
   notes: string;
 };
 
+type ArchiveItem = {
+  id: string;
+  companyId: string;
+  type: string;
+  title: string;
+  owner: string;
+  date: string;
+  status: string;
+  sourceTab: string;
+};
+
 const emptyChecklist: EmployeeChecklist = {
   isgCertificateDate: "",
   ek2Date: "",
@@ -1774,6 +1785,120 @@ export default function Page() {
     const matchesCompany = selectedCompanyId === "all" || visit.companyId === selectedCompanyId;
     return matchesCompany && `${visit.purpose} ${visit.visitor} ${visit.contactedPerson} ${visit.findings} ${visit.actions} ${visit.status} ${visit.notes} ${company?.nickName || ""} ${company?.officialName || ""}`.toLowerCase().includes(search.toLowerCase());
   }), [companyVisits, companies, selectedCompanyId, search]);
+  const archiveItems = useMemo<ArchiveItem[]>(() => {
+    const employeeName = (employeeId?: string | null) => {
+      const employee = employees.find(e => e.id === employeeId);
+      return employee ? `${employee.firstName} ${employee.lastName}` : "Firma";
+    };
+
+    return [
+      ...documents.map(item => ({
+        id: item.id,
+        companyId: item.companyId,
+        type: "Belge",
+        title: item.type,
+        owner: employeeName(item.employeeId),
+        date: item.issueDate || item.expiryDate || "",
+        status: item.expiryDate ? getDateStatus(item.expiryDate) : "Arşivde",
+        sourceTab: "belgeler",
+      })),
+      ...annualPlans.map(item => ({
+        id: item.id,
+        companyId: item.companyId,
+        type: "Yıllık Plan",
+        title: `${item.year} - ${item.title || item.type}`,
+        owner: item.responsible || "Firma",
+        date: item.plannedDate,
+        status: item.status,
+        sourceTab: "yillik-planlar",
+      })),
+      ...trainings.map(item => ({
+        id: item.id,
+        companyId: item.companyId,
+        type: "Eğitim",
+        title: item.title || item.type,
+        owner: item.trainer || "Eğitmen girilmedi",
+        date: item.trainingDate,
+        status: item.status,
+        sourceTab: "egitimler",
+      })),
+      ...ppeRecords.map(item => ({
+        id: item.id,
+        companyId: item.companyId,
+        type: "KKD",
+        title: item.equipment,
+        owner: employeeName(item.employeeId),
+        date: item.issueDate,
+        status: item.status,
+        sourceTab: "kkd-formu",
+      })),
+      ...emergencyPlans.map(item => ({
+        id: item.id,
+        companyId: item.companyId,
+        type: "Acil Durum",
+        title: item.title,
+        owner: item.responsible || "Firma",
+        date: item.planDate,
+        status: item.status,
+        sourceTab: "acil-durum-plani",
+      })),
+      ...committeeMeetings.map(item => ({
+        id: item.id,
+        companyId: item.companyId,
+        type: "Kurul",
+        title: item.meetingNo || "Kurul Toplantısı",
+        owner: item.chairperson || "Kurul",
+        date: item.meetingDate,
+        status: item.status,
+        sourceTab: "kurul-toplantisi",
+      })),
+      ...accidentReports.map(item => ({
+        id: item.id,
+        companyId: item.companyId,
+        type: "İş Kazası",
+        title: item.incidentType,
+        owner: employeeName(item.employeeId),
+        date: item.accidentDate,
+        status: item.status,
+        sourceTab: "is-kazasi-raporu",
+      })),
+      ...companyVisits.map(item => ({
+        id: item.id,
+        companyId: item.companyId,
+        type: "Firma Ziyareti",
+        title: item.purpose,
+        owner: item.visitor || "Ziyaretçi girilmedi",
+        date: item.visitDate,
+        status: item.status,
+        sourceTab: "firma-ziyaretleri",
+      })),
+      ...dofs.map(item => ({
+        id: item.id,
+        companyId: item.companyId,
+        type: "DÖF",
+        title: item.title,
+        owner: item.responsible || "Sorumlu girilmedi",
+        date: item.dueDate,
+        status: item.status,
+        sourceTab: "dof",
+      })),
+      ...risks.map(item => ({
+        id: item.id,
+        companyId: item.companyId,
+        type: "Risk",
+        title: item.hazard,
+        owner: item.responsible || "Sorumlu girilmedi",
+        date: item.dueDate || item.controlDate || "",
+        status: item.status,
+        sourceTab: "risk",
+      })),
+    ].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  }, [documents, annualPlans, trainings, ppeRecords, emergencyPlans, committeeMeetings, accidentReports, companyVisits, dofs, risks, employees]);
+  const filteredArchiveItems = useMemo(() => archiveItems.filter(item => {
+    const company = companies.find(c => c.id === item.companyId);
+    const matchesCompany = selectedCompanyId === "all" || item.companyId === selectedCompanyId;
+    return matchesCompany && `${item.type} ${item.title} ${item.owner} ${item.status} ${company?.nickName || ""} ${company?.officialName || ""}`.toLowerCase().includes(search.toLowerCase());
+  }), [archiveItems, companies, selectedCompanyId, search]);
 
   async function addCompany() {
     if (!isAdmin) return;
@@ -2483,6 +2608,7 @@ export default function Page() {
       { id: "acil-durum-plani", label: "⚠️ Acil Durum Planı" },
       { id: "kurul-toplantisi", label: "👥 Kurul Toplantısı" },
       { id: "firma-ziyaretleri", label: "📍 Firma Ziyaretleri" },
+      { id: "arsiv", label: "🗂 Arşiv" },
       { id: "is-kazasi-raporu", label: "🚑 İş Kazası Raporu" },
       ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
     ];
@@ -2495,8 +2621,7 @@ export default function Page() {
       {
         title: "Planlama & Arşiv",
         items: [
-          ...tabs.filter(tab => ["yillik-planlar", "egitimler", "acil-durum-plani", "kurul-toplantisi", "firma-ziyaretleri"].includes(tab.id)),
-          { id: "arsiv", label: "🗂 Arşiv", disabled: true },
+          ...tabs.filter(tab => ["yillik-planlar", "egitimler", "acil-durum-plani", "kurul-toplantisi", "firma-ziyaretleri", "arsiv"].includes(tab.id)),
         ],
       },
     ];
@@ -4022,6 +4147,70 @@ export default function Page() {
                   {filteredCompanyVisits.length === 0 && (
                     <tr>
                       <td colSpan={10} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz firma ziyareti kaydı yok.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "arsiv" && (
+          <div>
+            <div style={styles.statGrid}>
+              <div style={styles.statCard} className="isg-stat-card">
+                <div style={{ ...styles.statValue, color: "#0ea5e9" }}>{archiveItems.length}</div>
+                <div style={styles.statLabel}>Toplam Arşiv Kaydı</div>
+              </div>
+              <div style={styles.statCard} className="isg-stat-card">
+                <div style={{ ...styles.statValue, color: "#16a34a" }}>{documents.length}</div>
+                <div style={styles.statLabel}>Belge</div>
+              </div>
+              <div style={styles.statCard} className="isg-stat-card">
+                <div style={{ ...styles.statValue, color: "#d97706" }}>{trainings.length + annualPlans.length}</div>
+                <div style={styles.statLabel}>Plan / Eğitim</div>
+              </div>
+              <div style={styles.statCard} className="isg-stat-card">
+                <div style={{ ...styles.statValue, color: "#ef4444" }}>{accidentReports.length + risks.length + dofs.length}</div>
+                <div style={styles.statLabel}>Risk / DÖF / Kaza</div>
+              </div>
+            </div>
+
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">Arşiv Merkezi</p>
+              <div style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.55 }}>
+                Belgeler, eğitimler, yıllık planlar, KKD kayıtları, acil durum planları, kurul toplantıları, iş kazası raporları, firma ziyaretleri, DÖF ve risk kayıtları bu ekranda firma bazlı toplanır.
+              </div>
+            </div>
+
+            <div style={styles.searchBar}>
+              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Arşivde ara..." value={search} onChange={e => setSearch(e.target.value)} />
+              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
+              <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredArchiveItems.length} kayıt</span>
+            </div>
+
+            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
+              <table style={styles.table}>
+                <thead><tr>{["Tür", "Başlık", "Firma", "İlgili", "Tarih", "Durum", "Kaynak"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+                <tbody>
+                  {filteredArchiveItems.map(item => {
+                    const company = companies.find(c => c.id === item.companyId);
+                    const color = item.status === "Süresi Dolmuş" || item.status === "Açık" ? "#dc2626" : item.status === "Tamamlandı" || item.status === "Kapandı" || item.status === "Geçerli" ? "#16a34a" : "#d97706";
+                    return (
+                      <tr key={`${item.type}-${item.id}`}>
+                        <td style={styles.td} className="isg-td"><Badge text={item.type} color="#0ea5e9" /></td>
+                        <td style={{ ...styles.td, minWidth: 220, fontWeight: 700 }} className="isg-td">{item.title || "—"}</td>
+                        <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
+                        <td style={{ ...styles.td, color: "var(--isg-text-muted)" }} className="isg-td">{item.owner || "—"}</td>
+                        <td style={styles.td} className="isg-td">{item.date ? new Date(item.date).toLocaleDateString("tr-TR") : "—"}</td>
+                        <td style={styles.td} className="isg-td"><Badge text={item.status || "Arşivde"} color={color} /></td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnSecondary} onClick={() => setActiveTab(item.sourceTab)}>Modüle Git</button></td>
+                      </tr>
+                    );
+                  })}
+                  {filteredArchiveItems.length === 0 && (
+                    <tr>
+                      <td colSpan={7} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Arşivde gösterilecek kayıt bulunamadı.</td>
                     </tr>
                   )}
                 </tbody>

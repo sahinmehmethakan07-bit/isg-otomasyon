@@ -345,6 +345,26 @@ type CommitteeMeetingRecord = {
   notes: string;
 };
 
+type AccidentReportStatus = "Açık" | "İncelemede" | "Aksiyon Planlandı" | "Kapandı";
+type AccidentSeverity = "Ramak Kala" | "Hafif" | "Orta" | "Ağır";
+
+type AccidentReportRecord = {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  accidentDate: string;
+  location: string;
+  severity: AccidentSeverity;
+  incidentType: string;
+  description: string;
+  rootCause: string;
+  actionPlan: string;
+  responsible: string;
+  dueDate?: string;
+  status: AccidentReportStatus;
+  notes: string;
+};
+
 const emptyChecklist: EmployeeChecklist = {
   isgCertificateDate: "",
   ek2Date: "",
@@ -1142,6 +1162,59 @@ async function generateCommitteeMeetingPDF(meeting: CommitteeMeetingRecord, comp
   }).download(`Kurul_Toplantisi_${meeting.meetingNo || meeting.meetingDate}.pdf`);
 }
 
+async function generateAccidentReportPDF(report: AccidentReportRecord, company: Company | undefined, employee: Employee | undefined) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
+  const maker = pdfMake.default || pdfMake;
+  maker.vfs = (pdfFonts.default || pdfFonts).vfs;
+
+  const content: any[] = [
+    { text: "İŞ KAZASI / RAMAK KALA RAPORU", fontSize: 16, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 12] },
+    {
+      table: {
+        widths: [90, "*", 90, "*"],
+        body: [
+          ["Firma", company?.officialName || company?.nickName || "-", "Tarih", report.accidentDate ? new Date(report.accidentDate).toLocaleDateString("tr-TR") : "-"],
+          ["Personel", employee ? `${employee.firstName} ${employee.lastName}` : "-", "T.C. Kimlik No", employee?.tcNo || "-"],
+          ["Olay Yeri", report.location || "-", "Şiddet", report.severity],
+          ["Olay Türü", report.incidentType || "-", "Durum", report.status],
+        ].map(row => row.map((text, index) => ({ text, fontSize: 8, bold: index % 2 === 0, color: "#334155", margin: [4, 5, 4, 5] }))),
+      },
+      layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+      margin: [0, 0, 0, 12],
+    },
+    ...[
+      ["Olay Açıklaması", report.description],
+      ["Kök Neden", report.rootCause],
+      ["Aksiyon Planı", report.actionPlan],
+      ["Sorumlu / Termin", `${report.responsible || "-"} / ${report.dueDate ? new Date(report.dueDate).toLocaleDateString("tr-TR") : "-"}`],
+      ["Not", report.notes],
+    ].flatMap(([title, text]) => [
+      { text: title, fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+      {
+        table: { widths: ["*"], body: [[{ text: text || "-", fontSize: 9, color: "#334155", margin: [5, 8, 5, 8] }]] },
+        layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
+        margin: [0, 0, 0, 12],
+      },
+    ]),
+    {
+      columns: [
+        { width: "*", text: "Raporu Hazırlayan\n\n\nAd Soyad / İmza", fontSize: 9, alignment: "center" },
+        { width: "*", text: "İşveren / İşveren Vekili\n\n\nAd Soyad / İmza", fontSize: 9, alignment: "center" },
+      ],
+    },
+  ];
+
+  maker.createPdf({
+    pageSize: "A4",
+    pageMargins: [28, 28, 28, 28],
+    content,
+    defaultStyle: { font: "Roboto" },
+  }).download(`Is_Kazasi_Raporu_${report.accidentDate || report.id}.pdf`);
+}
+
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 // ── Mobil algılama yardımcısı (styles dışında kullanılır) ──
@@ -1313,6 +1386,7 @@ export default function Page() {
   const [ppeRecords, setPpeRecords] = useState<PpeRecord[]>([]);
   const [emergencyPlans, setEmergencyPlans] = useState<EmergencyPlanRecord[]>([]);
   const [committeeMeetings, setCommitteeMeetings] = useState<CommitteeMeetingRecord[]>([]);
+  const [accidentReports, setAccidentReports] = useState<AccidentReportRecord[]>([]);
 
   const [activeTab, setActiveTab] = useState("firmalar");
   const [search, setSearch] = useState("");
@@ -1388,6 +1462,21 @@ export default function Page() {
     status: "Planlandı" as CommitteeMeetingStatus,
     notes: "",
   });
+  const [newAccidentReport, setNewAccidentReport] = useState({
+    companyId: "",
+    employeeId: "",
+    accidentDate: "",
+    location: "",
+    severity: "Hafif" as AccidentSeverity,
+    incidentType: "İş Kazası",
+    description: "",
+    rootCause: "",
+    actionPlan: "",
+    responsible: "",
+    dueDate: "",
+    status: "Açık" as AccidentReportStatus,
+    notes: "",
+  });
 
   const [signers, setSigners] = useState<Signer[]>([]);
   const [emailSettings, setEmailSettings] = useState<EmailSettings>({ enabled: true, toEmail: "", ccEmail: "", subject: "[İSG] Yeni DÖF Bildirimi: {dofTitle}", message: "" });
@@ -1424,7 +1513,7 @@ export default function Page() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult, annualPlanResult, trainingResult, ppeResult, emergencyPlanResult, committeeMeetingResult] = await Promise.allSettled([
+      const [compResult, empResult, docResult, obsResult, dofResult, riskResult, signerResult, annualPlanResult, trainingResult, ppeResult, emergencyPlanResult, committeeMeetingResult, accidentReportResult] = await Promise.allSettled([
         loadCompanyScopedRecords<Company>("companies"),
         loadCompanyScopedRecords<Employee>("employees"),
         loadCompanyScopedRecords<DocumentRecord>("documents"),
@@ -1437,6 +1526,7 @@ export default function Page() {
         loadCompanyScopedRecords<PpeRecord>("ppeRecords"),
         loadCompanyScopedRecords<EmergencyPlanRecord>("emergencyPlans"),
         loadCompanyScopedRecords<CommitteeMeetingRecord>("committeeMeetings"),
+        loadCompanyScopedRecords<AccidentReportRecord>("accidentReports"),
       ]);
       const loadResults: Array<{ label: string; result: PromiseSettledResult<unknown> }> = [
         { label: "Firmalar", result: compResult },
@@ -1451,6 +1541,7 @@ export default function Page() {
         { label: "KKD", result: ppeResult },
         { label: "Acil Durum Planları", result: emergencyPlanResult },
         { label: "Kurul Toplantıları", result: committeeMeetingResult },
+        { label: "İş Kazası Raporları", result: accidentReportResult },
       ];
       const failedLoads = loadResults.filter(({ result }) => result.status === "rejected").map(({ label }) => label);
 
@@ -1470,6 +1561,7 @@ export default function Page() {
       if (ppeResult.status === "fulfilled") setPpeRecords(ppeResult.value);
       if (emergencyPlanResult.status === "fulfilled") setEmergencyPlans(emergencyPlanResult.value);
       if (committeeMeetingResult.status === "fulfilled") setCommitteeMeetings(committeeMeetingResult.value);
+      if (accidentReportResult.status === "fulfilled") setAccidentReports(accidentReportResult.value);
 
       // Email ayarlarını yükle
       const emailDoc = await getDoc(doc(db, "settings", "emailNotifications"));
@@ -1587,6 +1679,12 @@ export default function Page() {
     const matchesCompany = selectedCompanyId === "all" || meeting.companyId === selectedCompanyId;
     return matchesCompany && `${meeting.meetingNo} ${meeting.location} ${meeting.chairperson} ${meeting.agenda} ${meeting.decisions} ${meeting.status} ${meeting.notes} ${participantNames} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
   }), [committeeMeetings, companies, employees, selectedCompanyId, search]);
+  const filteredAccidentReports = useMemo(() => accidentReports.filter(report => {
+    const company = companies.find(c => c.id === report.companyId);
+    const employee = employees.find(e => e.id === report.employeeId);
+    const matchesCompany = selectedCompanyId === "all" || report.companyId === selectedCompanyId;
+    return matchesCompany && `${report.incidentType} ${report.location} ${report.severity} ${report.description} ${report.rootCause} ${report.actionPlan} ${report.responsible} ${report.status} ${report.notes} ${company?.nickName || ""} ${employee?.firstName || ""} ${employee?.lastName || ""}`.toLowerCase().includes(search.toLowerCase());
+  }), [accidentReports, companies, employees, selectedCompanyId, search]);
 
   async function addCompany() {
     if (!isAdmin) return;
@@ -2214,6 +2312,38 @@ export default function Page() {
     setCommitteeMeetings(prev => prev.filter(meeting => meeting.id !== id));
   }
 
+  async function addAccidentReport() {
+    if (!newAccidentReport.companyId || !newAccidentReport.accidentDate || !newAccidentReport.description) return;
+    const data = {
+      companyId: newAccidentReport.companyId,
+      employeeId: newAccidentReport.employeeId,
+      accidentDate: newAccidentReport.accidentDate,
+      location: newAccidentReport.location,
+      severity: newAccidentReport.severity,
+      incidentType: newAccidentReport.incidentType,
+      description: newAccidentReport.description,
+      rootCause: newAccidentReport.rootCause,
+      actionPlan: newAccidentReport.actionPlan,
+      responsible: newAccidentReport.responsible,
+      dueDate: newAccidentReport.dueDate,
+      status: newAccidentReport.status,
+      notes: newAccidentReport.notes,
+    };
+    const ref = await addDoc(collection(db, "accidentReports"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
+    setAccidentReports(prev => [...prev, { id: ref.id, ...data }]);
+    setNewAccidentReport({ companyId: "", employeeId: "", accidentDate: "", location: "", severity: "Hafif", incidentType: "İş Kazası", description: "", rootCause: "", actionPlan: "", responsible: "", dueDate: "", status: "Açık", notes: "" });
+  }
+
+  async function updateAccidentReportStatus(id: string, status: AccidentReportStatus) {
+    await updateDoc(doc(db, "accidentReports", id), { status });
+    setAccidentReports(prev => prev.map(report => report.id === id ? { ...report, status } : report));
+  }
+
+  async function deleteAccidentReport(id: string) {
+    await deleteDoc(doc(db, "accidentReports", id));
+    setAccidentReports(prev => prev.filter(report => report.id !== id));
+  }
+
   const tabs = isHumanResources && !isAdmin
     ? [{ id: "personel", label: "👥 İnsan Kaynakları" }]
     : [
@@ -2231,6 +2361,7 @@ export default function Page() {
       { id: "kkd-formu", label: "🧤 KKD Formu" },
       { id: "acil-durum-plani", label: "⚠️ Acil Durum Planı" },
       { id: "kurul-toplantisi", label: "👥 Kurul Toplantısı" },
+      { id: "is-kazasi-raporu", label: "🚑 İş Kazası Raporu" },
       ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
     ];
   const menuGroups: Array<{ title: string; items: Array<{ id: string; label: string; disabled?: boolean }> }> = isHumanResources && !isAdmin
@@ -2238,19 +2369,13 @@ export default function Page() {
     : [
       { title: "Yönetim", items: tabs.filter(tab => ["ozet", "firmalar", "personel", "kullanicilar"].includes(tab.id)) },
       { title: "Risk Yönetimi", items: tabs.filter(tab => ["gozlemciler", "dof", "risk"].includes(tab.id)) },
-      { title: "Formlar & Belgeler", items: tabs.filter(tab => ["belgeler", "imzacilar", "ek2muayene", "kkd-formu"].includes(tab.id)) },
+      { title: "Formlar & Belgeler", items: tabs.filter(tab => ["belgeler", "imzacilar", "ek2muayene", "kkd-formu", "is-kazasi-raporu"].includes(tab.id)) },
       {
         title: "Planlama & Arşiv",
         items: [
           ...tabs.filter(tab => ["yillik-planlar", "egitimler", "acil-durum-plani", "kurul-toplantisi"].includes(tab.id)),
           { id: "arsiv", label: "🗂 Arşiv", disabled: true },
           { id: "firma-ziyaretleri", label: "📍 Firma Ziyaretleri", disabled: true },
-        ],
-      },
-      {
-        title: "Yakında",
-        items: [
-          { id: "is-kazasi-raporu", label: "🚑 İş Kazası Raporu", disabled: true },
         ],
       },
     ];
@@ -3588,6 +3713,108 @@ export default function Page() {
                   {filteredCommitteeMeetings.length === 0 && (
                     <tr>
                       <td colSpan={10} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz kurul toplantısı kaydı yok.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "is-kazasi-raporu" && (
+          <div>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">İş Kazası / Ramak Kala Raporu</p>
+              <div style={styles.formGrid}>
+                <FormField label="Firma *">
+                  <select style={styles.select} className="isg-input" value={newAccidentReport.companyId} onChange={e => setNewAccidentReport({ ...newAccidentReport, companyId: e.target.value, employeeId: "" })}>
+                    <option value="">Seçin...</option>
+                    {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Personel">
+                  <select style={styles.select} className="isg-input" value={newAccidentReport.employeeId} onChange={e => setNewAccidentReport({ ...newAccidentReport, employeeId: e.target.value })}>
+                    <option value="">Seçin...</option>
+                    {employees.filter(employee => employee.companyId === newAccidentReport.companyId).map(employee => <option key={employee.id} value={employee.id}>{employee.firstName} {employee.lastName}</option>)}
+                  </select>
+                </FormField>
+                <FormField label="Olay Tarihi *"><DatePicker value={newAccidentReport.accidentDate} onChange={v => setNewAccidentReport({ ...newAccidentReport, accidentDate: v })} /></FormField>
+                <FormField label="Olay Yeri"><input style={styles.input} className="isg-input" value={newAccidentReport.location} onChange={e => setNewAccidentReport({ ...newAccidentReport, location: e.target.value })} placeholder="Bölüm, saha, alan..." /></FormField>
+                <FormField label="Olay Türü">
+                  <select style={styles.select} className="isg-input" value={newAccidentReport.incidentType} onChange={e => setNewAccidentReport({ ...newAccidentReport, incidentType: e.target.value })}>
+                    <option>İş Kazası</option>
+                    <option>Ramak Kala</option>
+                    <option>Meslek Hastalığı Şüphesi</option>
+                    <option>Malzeme Hasarı</option>
+                    <option>Diğer</option>
+                  </select>
+                </FormField>
+                <FormField label="Şiddet">
+                  <select style={styles.select} className="isg-input" value={newAccidentReport.severity} onChange={e => setNewAccidentReport({ ...newAccidentReport, severity: e.target.value as AccidentSeverity })}>
+                    <option>Ramak Kala</option>
+                    <option>Hafif</option>
+                    <option>Orta</option>
+                    <option>Ağır</option>
+                  </select>
+                </FormField>
+                <FormField label="Durum">
+                  <select style={styles.select} className="isg-input" value={newAccidentReport.status} onChange={e => setNewAccidentReport({ ...newAccidentReport, status: e.target.value as AccidentReportStatus })}>
+                    <option>Açık</option>
+                    <option>İncelemede</option>
+                    <option>Aksiyon Planlandı</option>
+                    <option>Kapandı</option>
+                  </select>
+                </FormField>
+                <FormField label="Aksiyon Sorumlusu"><input style={styles.input} className="isg-input" value={newAccidentReport.responsible} onChange={e => setNewAccidentReport({ ...newAccidentReport, responsible: e.target.value })} placeholder="Ad Soyad / birim" /></FormField>
+                <FormField label="Termin"><DatePicker value={newAccidentReport.dueDate} onChange={v => setNewAccidentReport({ ...newAccidentReport, dueDate: v })} /></FormField>
+                <FormField label="Olay Açıklaması *"><input style={styles.input} className="isg-input" value={newAccidentReport.description} onChange={e => setNewAccidentReport({ ...newAccidentReport, description: e.target.value })} placeholder="Olay nasıl gerçekleşti?" /></FormField>
+                <FormField label="Kök Neden"><input style={styles.input} className="isg-input" value={newAccidentReport.rootCause} onChange={e => setNewAccidentReport({ ...newAccidentReport, rootCause: e.target.value })} placeholder="Ekipman, eğitim, ortam, davranış..." /></FormField>
+                <FormField label="Aksiyon Planı"><input style={styles.input} className="isg-input" value={newAccidentReport.actionPlan} onChange={e => setNewAccidentReport({ ...newAccidentReport, actionPlan: e.target.value })} placeholder="Alınacak önlemler" /></FormField>
+                <FormField label="Not"><input style={styles.input} className="isg-input" value={newAccidentReport.notes} onChange={e => setNewAccidentReport({ ...newAccidentReport, notes: e.target.value })} placeholder="Ek açıklamalar" /></FormField>
+              </div>
+              <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button style={styles.btnPrimary} onClick={addAccidentReport}>Rapor Kaydı Ekle</button>
+              </div>
+            </div>
+
+            <div style={styles.searchBar}>
+              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
+              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
+              <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredAccidentReports.length} rapor</span>
+            </div>
+
+            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
+              <table style={styles.table}>
+                <thead><tr>{["Firma", "Personel", "Tarih", "Yer", "Tür", "Şiddet", "Durum", "Açıklama / Aksiyon", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+                <tbody>
+                  {filteredAccidentReports.map(report => {
+                    const company = companies.find(c => c.id === report.companyId);
+                    const employee = employees.find(e => e.id === report.employeeId);
+                    return (
+                      <tr key={report.id}>
+                        <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
+                        <td style={styles.td} className="isg-td">{employee ? `${employee.firstName} ${employee.lastName}` : "—"}</td>
+                        <td style={styles.td} className="isg-td">{report.accidentDate ? new Date(report.accidentDate).toLocaleDateString("tr-TR") : "—"}</td>
+                        <td style={styles.td} className="isg-td">{report.location || "—"}</td>
+                        <td style={styles.td} className="isg-td"><Badge text={report.incidentType} color="#ef4444" /></td>
+                        <td style={styles.td} className="isg-td"><Badge text={report.severity} color={report.severity === "Ağır" ? "#dc2626" : report.severity === "Orta" ? "#d97706" : "#16a34a"} /></td>
+                        <td style={styles.td} className="isg-td">
+                          <select style={{ ...styles.select, minWidth: 150 }} value={report.status} onChange={e => updateAccidentReportStatus(report.id, e.target.value as AccidentReportStatus)}>
+                            <option>Açık</option>
+                            <option>İncelemede</option>
+                            <option>Aksiyon Planlandı</option>
+                            <option>Kapandı</option>
+                          </select>
+                        </td>
+                        <td style={{ ...styles.td, minWidth: 260, color: "var(--isg-text-muted)" }} className="isg-td">{[report.description, report.rootCause, report.actionPlan].filter(Boolean).join(" / ") || "—"}</td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnSecondary} onClick={() => generateAccidentReportPDF(report, company, employee)}>Rapor PDF</button></td>
+                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteAccidentReport(report.id)}>Sil</button></td>
+                      </tr>
+                    );
+                  })}
+                  {filteredAccidentReports.length === 0 && (
+                    <tr>
+                      <td colSpan={10} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz iş kazası / ramak kala raporu yok.</td>
                     </tr>
                   )}
                 </tbody>

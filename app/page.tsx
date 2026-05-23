@@ -18,7 +18,24 @@ import {
   generateTrainingCertificatesPDF,
   generateTrainingPDF,
 } from "./lib/pdf";
-import { documentTemplates, emptyNewEmployee, mykRecords, naceRecords, requiredCompanyDocs, sgkCompanyRegistry } from "./lib/constants";
+import { documentTemplates, emptyNewEmployee, mykRecords, naceRecords, requiredCompanyDocs } from "./lib/constants";
+import {
+  annualPlanStatusColor,
+  checklistCompletion,
+  createOnboardingFromChecklist,
+  dangerFromNace,
+  daysUntil,
+  emptyChecklist,
+  extractNaceFromSgk,
+  getDateStatus,
+  normalizeCommitteeMeetingRecord,
+  normalizeEmployeeRecord,
+  normalizeTrainingRecord,
+  officialNameFromSgk,
+  priorityColor,
+  riskScoreColor,
+  statusColor,
+} from "./lib/dashboardUtils";
 import type {
   AccidentReportRecord,
   AccidentReportStatus,
@@ -41,11 +58,8 @@ import type {
   EmergencyPlanStatus,
   Employee,
   EmployeeChecklist,
-  EmployeeOnboarding,
   NewEmployeeForm,
   Observer,
-  OnboardingTask,
-  OnboardingTaskKey,
   PpeRecord,
   PpeStatus,
   RiskRecord,
@@ -76,164 +90,6 @@ import {
   where,
   documentId,
 } from "firebase/firestore";
-
-const emptyChecklist: EmployeeChecklist = {
-  isgCertificateDate: "",
-  ek2Date: "",
-  orientationDate: "",
-  preTest: false,
-  postTest: false,
-  undertaking: false,
-  kkdMinutes: false,
-  attendanceDoc: false,
-};
-
-function createOnboardingFromChecklist(checklist: EmployeeChecklist): EmployeeOnboarding {
-  const tasks: Record<OnboardingTaskKey, OnboardingTask> = {
-    doctorEk2: {
-      key: "doctorEk2",
-      label: "İşyeri hekimi EK-2 formunu tamamlamalı",
-      ownerRole: "doctor",
-      completed: !!checklist.ek2Date,
-      completedAt: checklist.ek2Date || undefined,
-    },
-    safetyTraining: {
-      key: "safetyTraining",
-      label: "İSG uzmanı eğitim planlamasını tamamlamalı",
-      ownerRole: "safety_expert",
-      completed: !!checklist.orientationDate && !!checklist.isgCertificateDate,
-      completedAt: checklist.isgCertificateDate || checklist.orientationDate || undefined,
-    },
-    safetyDocuments: {
-      key: "safetyDocuments",
-      label: "İSG uzmanı personel evraklarını tamamlamalı",
-      ownerRole: "safety_expert",
-      completed: checklist.preTest && checklist.postTest && checklist.undertaking && checklist.kkdMinutes && checklist.attendanceDoc,
-    },
-  };
-  const missingSteps = Object.values(tasks).filter(task => !task.completed).map(task => task.label);
-  return {
-    status: missingSteps.length === 0 ? "completed" : "pending",
-    tasks,
-    missingSteps,
-  };
-}
-
-function normalizeChecklist(checklist?: Partial<EmployeeChecklist> | null): EmployeeChecklist {
-  return {
-    ...emptyChecklist,
-    ...(checklist || {}),
-    preTest: !!checklist?.preTest,
-    postTest: !!checklist?.postTest,
-    undertaking: !!checklist?.undertaking,
-    kkdMinutes: !!checklist?.kkdMinutes,
-    attendanceDoc: !!checklist?.attendanceDoc,
-  };
-}
-
-function normalizeOnboarding(onboarding: EmployeeOnboarding | undefined, checklist: EmployeeChecklist): EmployeeOnboarding {
-  const generated = createOnboardingFromChecklist(checklist);
-  const tasks = onboarding?.tasks ? { ...generated.tasks, ...onboarding.tasks } : generated.tasks;
-  const missingSteps = Object.values(tasks).filter(task => !task.completed).map(task => task.label);
-  return {
-    ...generated,
-    ...(onboarding || {}),
-    tasks,
-    missingSteps,
-    status: missingSteps.length === 0 ? "completed" : "pending",
-  };
-}
-
-function normalizeEmployeeRecord(employee: Employee): Employee {
-  const checklist = normalizeChecklist(employee.checklist);
-  return {
-    ...employee,
-    checklist,
-    trainingComplete: !!employee.trainingComplete,
-    isActive: employee.isActive !== false,
-    onboarding: normalizeOnboarding(employee.onboarding, checklist),
-  };
-}
-
-function normalizeTrainingRecord(training: TrainingRecord): TrainingRecord {
-  return {
-    ...training,
-    participantIds: Array.isArray(training.participantIds) ? training.participantIds : [],
-  };
-}
-
-function normalizeCommitteeMeetingRecord(meeting: CommitteeMeetingRecord): CommitteeMeetingRecord {
-  return {
-    ...meeting,
-    participantIds: Array.isArray(meeting.participantIds) ? meeting.participantIds : [],
-  };
-}
-
-function daysUntil(dateString: string) {
-  const now = new Date();
-  const target = new Date(dateString);
-  return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-function getDateStatus(dateString: string) {
-  const days = daysUntil(dateString);
-  if (days < 0) return "Süresi Dolmuş";
-  if (days <= 30) return "Yaklaşıyor";
-  return "Geçerli";
-}
-
-function dangerFromNace(naceCode: string): DangerClass {
-  const code = naceCode.trim();
-  if (code.startsWith("41") || code.startsWith("42") || code.startsWith("43") || code.startsWith("55") || code.startsWith("56")) return "Çok Tehlikeli";
-  if (code.startsWith("46") || code.startsWith("49") || code.startsWith("52") || code.startsWith("81")) return "Tehlikeli";
-  return "Az Tehlikeli";
-}
-
-function extractNaceFromSgk(sgkSicil: string) {
-  const clean = sgkSicil.replace(/\D/g, "");
-  if (sgkCompanyRegistry[clean]) return sgkCompanyRegistry[clean].naceCode;
-  if (clean.length >= 6) return `${clean.slice(0, 2)}.${clean.slice(2, 4)}.${clean.slice(4, 6)}`;
-  return "00.00.00";
-}
-
-function officialNameFromSgk(sgkSicil: string) {
-  const clean = sgkSicil.replace(/\D/g, "");
-  return sgkCompanyRegistry[clean]?.officialName || "";
-}
-
-function statusColor(status: string) {
-  if (status === "Süresi Dolmuş") return "#dc2626";
-  if (status === "Yaklaşıyor") return "#d97706";
-  return "#16a34a";
-}
-
-function priorityColor(priority: string) {
-  if (priority === "Yüksek") return "#dc2626";
-  if (priority === "Orta") return "#d97706";
-  return "#16a34a";
-}
-
-function riskScoreColor(value: number) {
-  if (value >= 15) return "#dc2626";
-  if (value >= 8) return "#d97706";
-  return "#16a34a";
-}
-
-function annualPlanStatusColor(status: AnnualPlanStatus) {
-  if (status === "Tamamlandı") return "#16a34a";
-  if (status === "Devam Ediyor") return "#0ea5e9";
-  if (status === "Gecikti") return "#dc2626";
-  return "#d97706";
-}
-
-function checklistCompletion(checklist: EmployeeChecklist) {
-  const items = [
-    !!checklist.isgCertificateDate, !!checklist.ek2Date, !!checklist.orientationDate,
-    checklist.preTest, checklist.postTest, checklist.undertaking, checklist.kkdMinutes, checklist.attendanceDoc,
-  ];
-  const completed = items.filter(Boolean).length;
-  return { completed, total: items.length, missing: items.length - completed };
-}
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 // ── Mobil algılama yardımcısı (styles dışında kullanılır) ──

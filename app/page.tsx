@@ -504,6 +504,19 @@ const sgkCompanyRegistry: Record<string, { officialName: string; naceCode: strin
   "2611111111111111111111": { officialName: "Mavi Deniz Gıda Dağıtım Lojistik Limited Şirketi", naceCode: "46.38.01" },
 };
 
+const naceRecords = [
+  { code: "41.20.01", title: "Bina inşaatı", dangerClass: "Çok Tehlikeli" as DangerClass, note: "Şantiye, yüksekte çalışma, elektrik ve mekanik riskleri yüksek takip ister." },
+  { code: "43.21.01", title: "Elektrik tesisatı işleri", dangerClass: "Çok Tehlikeli" as DangerClass, note: "Elektrik enerjisi, pano ve geçici tesisat kontrolleri kritik kabul edilir." },
+  { code: "55.10.01", title: "Otel ve konaklama tesisleri", dangerClass: "Az Tehlikeli" as DangerClass, note: "Mutfak, teknik servis, havuz, kat hizmetleri ve yangın planı ayrı izlenmelidir." },
+  { code: "56.10.01", title: "Lokanta ve yiyecek hizmetleri", dangerClass: "Az Tehlikeli" as DangerClass, note: "Mutfak yanığı, kesici-delici aletler, hijyen ve kaygan zemin kontrolleri öne çıkar." },
+  { code: "46.38.01", title: "Gıda toptan ticareti", dangerClass: "Tehlikeli" as DangerClass, note: "Depo, yükleme-boşaltma, forklift ve soğuk zincir riskleri izlenmelidir." },
+  { code: "49.41.01", title: "Karayolu yük taşımacılığı", dangerClass: "Tehlikeli" as DangerClass, note: "Araç güvenliği, sürücü eğitimleri ve yük sabitleme kayıtları önemlidir." },
+  { code: "52.10.01", title: "Depolama ve antrepo faaliyetleri", dangerClass: "Tehlikeli" as DangerClass, note: "Raf sistemleri, istifleme, forklift yolları ve acil çıkışlar takip edilmelidir." },
+  { code: "81.21.01", title: "Genel temizlik hizmetleri", dangerClass: "Tehlikeli" as DangerClass, note: "Kimyasal kullanımı, kaygan zemin ve KKD teslimleri düzenli kontrol ister." },
+  { code: "86.21.01", title: "Genel hekimlik uygulamaları", dangerClass: "Az Tehlikeli" as DangerClass, note: "Biyolojik risk, kesici-delici atık ve sağlık kayıtları öne çıkar." },
+  { code: "96.02.01", title: "Kuaförlük ve güzellik salonları", dangerClass: "Az Tehlikeli" as DangerClass, note: "Kimyasal maruziyet, hijyen ve ergonomi kontrolleri takip edilmelidir." },
+];
+
 const requiredCompanyDocs = ["Risk Değerlendirme Raporu", "Acil Durum Eylem Planı", "Yıllık Eğitim Planı", "Yıllık Çalışma Planı"];
 
 const documentTemplates = [
@@ -1539,6 +1552,7 @@ export default function Page() {
   const [archiveStatusFilter, setArchiveStatusFilter] = useState("all");
   const [archiveDateFrom, setArchiveDateFrom] = useState("");
   const [archiveDateTo, setArchiveDateTo] = useState("");
+  const [naceSearch, setNaceSearch] = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [editingDofId, setEditingDofId] = useState<string | null>(null);
 
@@ -1975,6 +1989,13 @@ export default function Page() {
   }), [archiveItems, companies, selectedCompanyId, search, archiveTypeFilter, archiveStatusFilter, archiveDateFrom, archiveDateTo]);
   const archiveTypes = useMemo(() => Array.from(new Set(archiveItems.map(item => item.type))).sort(), [archiveItems]);
   const archiveStatuses = useMemo(() => Array.from(new Set(archiveItems.map(item => item.status || "Arşivde"))).sort(), [archiveItems]);
+  const filteredNaceRecords = useMemo(() => {
+    const term = naceSearch.trim().toLowerCase();
+    if (!term) return naceRecords;
+    return naceRecords.filter(record =>
+      `${record.code} ${record.title} ${record.dangerClass} ${record.note}`.toLowerCase().includes(term)
+    );
+  }, [naceSearch]);
   const taskItems = useMemo<TaskItem[]>(() => {
     const items: TaskItem[] = [];
     const today = new Date();
@@ -2839,6 +2860,7 @@ export default function Page() {
       { id: "firma-ziyaretleri", label: "📍 Firma Ziyaretleri" },
       { id: "arsiv", label: "🗂 Arşiv" },
       { id: "is-kazasi-raporu", label: "🚑 İş Kazası Raporu" },
+      { id: "nace-sorgula", label: "🔎 NACE Sorgula" },
       ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
     ];
   const menuGroups: Array<{ title: string; items: Array<{ id: string; label: string; disabled?: boolean }> }> = isHumanResources && !isAdmin
@@ -2853,6 +2875,7 @@ export default function Page() {
           ...tabs.filter(tab => ["yillik-planlar", "egitimler", "acil-durum-plani", "kurul-toplantisi", "firma-ziyaretleri", "arsiv"].includes(tab.id)),
         ],
       },
+      { title: "Araçlar", items: tabs.filter(tab => ["nace-sorgula"].includes(tab.id)) },
     ];
 
   if (!mounted || loading) {
@@ -4676,7 +4699,7 @@ export default function Page() {
           </div>
         )}
 
-                {activeTab === "ek2muayene" && (
+        {activeTab === "ek2muayene" && (
           <Ek2MuayeneFormu
             styles={styles}
             companies={companies}
@@ -4684,6 +4707,63 @@ export default function Page() {
             userRole={userProfile?.activeRole || userProfile?.role || ""}
             userId={userProfile?.uid || ""}
           />
+        )}
+
+        {activeTab === "nace-sorgula" && (
+          <div>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">NACE Sorgula</p>
+              <div style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.55, marginBottom: 16 }}>
+                NACE kodu, faaliyet adı veya tehlike sınıfına göre hızlı arama yapın. Firma oluştururken kodu seçip forma aktarabilirsiniz.
+              </div>
+              <div style={styles.searchBar}>
+                <input
+                  style={{ ...styles.input, maxWidth: 420 }}
+                  className="isg-input"
+                  placeholder="Örn. otel, 55.10.01, tehlikeli..."
+                  value={naceSearch}
+                  onChange={e => setNaceSearch(e.target.value)}
+                />
+                <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredNaceRecords.length} sonuç</span>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: compactLayout ? "1fr" : "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
+              {filteredNaceRecords.map(record => {
+                const color = record.dangerClass === "Çok Tehlikeli" ? "#dc2626" : record.dangerClass === "Tehlikeli" ? "#d97706" : "#16a34a";
+                return (
+                  <div key={record.code} style={styles.card} className="isg-card">
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", marginBottom: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 20, fontWeight: 900, color: "var(--isg-text)", marginBottom: 4 }}>{record.code}</div>
+                        <div style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.45 }}>{record.title}</div>
+                      </div>
+                      <Badge text={record.dangerClass} color={color} />
+                    </div>
+                    <p style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.55, minHeight: 42, margin: "0 0 14px" }}>
+                      {record.note}
+                    </p>
+                    {isAdmin && (
+                      <button
+                        style={styles.btnSecondary}
+                        onClick={() => {
+                          setNewCompany({ ...newCompany, naceCode: record.code, dangerClass: record.dangerClass });
+                          setActiveTab("firmalar");
+                        }}
+                      >
+                        Firma Formuna Aktar
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              {filteredNaceRecords.length === 0 && (
+                <div style={{ ...styles.card, color: "var(--isg-text-muted)", fontSize: 13 }} className="isg-card">
+                  Aradığınız kriterlere uygun NACE kaydı bulunamadı.
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {activeTab === "kullanicilar" && isAdmin && (

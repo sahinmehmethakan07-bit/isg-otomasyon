@@ -7,6 +7,7 @@ import { AdminUserPanel } from "./lib/AdminUserPanel";
 import { AnnualPlansTab } from "./lib/AnnualPlansTab";
 import { Ek2MuayeneFormu } from "./lib/Ek2MuayeneFormu";
 import { MykLookupTab, NaceLookupTab } from "./lib/LookupTabs";
+import { TrainingsTab } from "./lib/TrainingsTab";
 import { useLanguage } from "./lib/i18n";
 import {
   generateAccidentReportPDF,
@@ -15,9 +16,6 @@ import {
   generateEmergencyPlanPDF,
   generatePpeAssignmentPDF,
   generateRiskPDF,
-  generateTrainingAttendancePDF,
-  generateTrainingCertificatesPDF,
-  generateTrainingPDF,
 } from "./lib/pdf";
 import { documentTemplates, emptyNewEmployee, requiredCompanyDocs } from "./lib/constants";
 import {
@@ -2668,136 +2666,22 @@ export default function Page() {
         )}
 
         {activeTab === "egitimler" && (
-          <div>
-            <div style={styles.card} className="isg-card">
-              <p style={styles.sectionTitle} className="isg-text-muted">Eğitim Yönetimi</p>
-              <div style={styles.formGrid}>
-                <FormField label="Firma *">
-                  <select
-                    style={styles.select}
-                    className="isg-input"
-                    value={newTraining.companyId}
-                    onChange={e => setNewTraining({ ...newTraining, companyId: e.target.value, participantIds: [] })}
-                  >
-                    <option value="">Seçin...</option>
-                    {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
-                  </select>
-                </FormField>
-                <FormField label="Eğitim Türü">
-                  <select style={styles.select} className="isg-input" value={newTraining.type} onChange={e => setNewTraining({ ...newTraining, type: e.target.value as TrainingType })}>
-                    <option>Temel İSG Eğitimi</option>
-                    <option>İşe Giriş Eğitimi</option>
-                    <option>Yenileme Eğitimi</option>
-                    <option>Acil Durum Eğitimi</option>
-                    <option>KKD Eğitimi</option>
-                    <option>Hijyen Eğitimi</option>
-                  </select>
-                </FormField>
-                <FormField label="Eğitim Başlığı *"><input style={styles.input} className="isg-input" value={newTraining.title} onChange={e => setNewTraining({ ...newTraining, title: e.target.value })} placeholder="Örn. Yeni başlayan personel eğitimi" /></FormField>
-                <FormField label="Eğitim Tarihi *"><DatePicker value={newTraining.trainingDate} onChange={v => setNewTraining({ ...newTraining, trainingDate: v })} /></FormField>
-                <FormField label="Süre (Saat)"><input style={styles.input} className="isg-input" value={newTraining.durationHours} onChange={e => setNewTraining({ ...newTraining, durationHours: e.target.value })} placeholder="Örn. 4" /></FormField>
-                <FormField label="Eğitim Yeri"><input style={styles.input} className="isg-input" value={newTraining.location} onChange={e => setNewTraining({ ...newTraining, location: e.target.value })} placeholder="Toplantı salonu, saha..." /></FormField>
-                <FormField label="Eğitmen / Sorumlu"><input style={styles.input} className="isg-input" value={newTraining.trainer} onChange={e => setNewTraining({ ...newTraining, trainer: e.target.value })} placeholder="Eğitimi veren kişi" /></FormField>
-                <FormField label="Durum">
-                  <select style={styles.select} className="isg-input" value={newTraining.status} onChange={e => setNewTraining({ ...newTraining, status: e.target.value as TrainingStatus })}>
-                    <option>Planlandı</option>
-                    <option>Tamamlandı</option>
-                    <option>İptal</option>
-                  </select>
-                </FormField>
-                <FormField label="Not"><input style={styles.input} className="isg-input" value={newTraining.notes} onChange={e => setNewTraining({ ...newTraining, notes: e.target.value })} placeholder="Kısa açıklama" /></FormField>
-              </div>
-
-              <div style={{ marginTop: 18 }}>
-                <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Katılımcılar</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {employees.filter(employee => employee.companyId === newTraining.companyId).map(employee => {
-                    const checked = newTraining.participantIds.includes(employee.id);
-                    return (
-                      <button
-                        key={employee.id}
-                        type="button"
-                        onClick={() => toggleTrainingParticipant(employee.id)}
-                        style={{
-                          border: checked ? "1px solid color-mix(in srgb, var(--isg-accent) 72%, white)" : "1px solid var(--isg-border)",
-                          backgroundColor: checked ? "rgba(104, 211, 180, 0.16)" : "var(--isg-input-bg)",
-                          color: checked ? "var(--isg-accent)" : "var(--isg-text-muted)",
-                          borderRadius: 8,
-                          padding: "8px 11px",
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {checked ? "✓ " : ""}{employee.firstName} {employee.lastName}
-                      </button>
-                    );
-                  })}
-                  {!newTraining.companyId && <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>Katılımcı seçmek için önce firma seçin.</span>}
-                  {newTraining.companyId && employees.filter(employee => employee.companyId === newTraining.companyId).length === 0 && (
-                    <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>Bu firmaya kayıtlı personel bulunamadı.</span>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button style={styles.btnPrimary} onClick={addTraining}>Eğitim Kaydı Ekle</button>
-                <button style={styles.btnSecondary} onClick={() => generateTrainingPDF(filteredTrainings, companies, employees)}>PDF İndir</button>
-              </div>
-            </div>
-
-            <div style={styles.searchBar}>
-              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
-              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-              <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredTrainings.length} eğitim</span>
-            </div>
-
-            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
-              <table style={styles.table}>
-                <thead><tr>{["Firma", "Eğitim", "Tür", "Tarih", "Süre / Yer", "Eğitmen", "Katılımcı", "Durum", "Not", "Çıktılar", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
-                <tbody>
-                  {filteredTrainings.map(training => {
-                    const company = companies.find(c => c.id === training.companyId);
-                    const participants = training.participantIds
-                      .map(id => employees.find(employee => employee.id === id))
-                      .filter(Boolean)
-                      .map(employee => `${employee!.firstName} ${employee!.lastName}`);
-                    return (
-                      <tr key={training.id}>
-                        <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
-                        <td style={{ ...styles.td, minWidth: 180 }} className="isg-td"><strong>{training.title}</strong></td>
-                        <td style={styles.td} className="isg-td"><Badge text={training.type} color="#8b5cf6" /></td>
-                        <td style={styles.td} className="isg-td">{training.trainingDate ? new Date(training.trainingDate).toLocaleDateString("tr-TR") : "—"}</td>
-                        <td style={styles.td} className="isg-td">{training.durationHours || training.location ? `${training.durationHours || "—"} saat / ${training.location || "—"}` : "—"}</td>
-                        <td style={styles.td} className="isg-td">{training.trainer || "—"}</td>
-                        <td style={{ ...styles.td, minWidth: 180 }} className="isg-td">{participants.length > 0 ? participants.join(", ") : "—"}</td>
-                        <td style={styles.td} className="isg-td">
-                          <select style={{ ...styles.select, minWidth: 126 }} value={training.status} onChange={e => updateTrainingStatus(training.id, e.target.value as TrainingStatus)}>
-                            <option>Planlandı</option>
-                            <option>Tamamlandı</option>
-                            <option>İptal</option>
-                          </select>
-                        </td>
-                        <td style={{ ...styles.td, color: "var(--isg-text-muted)", minWidth: 150 }}>{training.notes || "—"}</td>
-                        <td style={{ ...styles.td, minWidth: 190 }} className="isg-td">
-                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                            <button style={styles.btnSecondary} onClick={() => generateTrainingAttendancePDF(training, company, employees)}>Katılım Formu</button>
-                            <button style={styles.btnSecondary} onClick={() => generateTrainingCertificatesPDF(training, company, employees)}>Sertifika</button>
-                          </div>
-                        </td>
-                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteTraining(training.id)}>Sil</button></td>
-                      </tr>
-                    );
-                  })}
-                  {filteredTrainings.length === 0 && (
-                    <tr>
-                      <td colSpan={11} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz eğitim kaydı yok.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <TrainingsTab
+            styles={styles}
+            companies={companies}
+            employees={employees}
+            filteredTrainings={filteredTrainings}
+            newTraining={newTraining}
+            setNewTraining={setNewTraining}
+            search={search}
+            setSearch={setSearch}
+            selectedCompanyId={selectedCompanyId}
+            setSelectedCompanyId={setSelectedCompanyId}
+            toggleTrainingParticipant={toggleTrainingParticipant}
+            addTraining={addTraining}
+            updateTrainingStatus={updateTrainingStatus}
+            deleteTraining={deleteTraining}
+          />
         )}
 
         {activeTab === "kkd-formu" && (

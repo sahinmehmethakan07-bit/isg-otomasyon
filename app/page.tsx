@@ -517,6 +517,17 @@ const naceRecords = [
   { code: "96.02.01", title: "Kuaförlük ve güzellik salonları", dangerClass: "Az Tehlikeli" as DangerClass, note: "Kimyasal maruziyet, hijyen ve ergonomi kontrolleri takip edilmelidir." },
 ];
 
+const mykRecords = [
+  { code: "12UY0054-3", title: "İnşaat İşçisi", level: "Seviye 3", sector: "İnşaat", mandatory: true, note: "Şantiye girişlerinde mesleki yeterlilik ve İSG eğitimi birlikte takip edilmelidir." },
+  { code: "11UY0011-3", title: "Ahşap Kalıpçı", level: "Seviye 3", sector: "İnşaat", mandatory: true, note: "Yüksekte çalışma, iskele ve kalıp güvenliği kontrolleriyle birlikte izlenmelidir." },
+  { code: "12UY0056-3", title: "Betonarme Demircisi", level: "Seviye 3", sector: "İnşaat", mandatory: true, note: "Kesici-delici ekipman, kaldırma operasyonu ve eldiven/gözlük KKD kaydı önemlidir." },
+  { code: "15UY0215-4", title: "Elektrik Tesisatçısı", level: "Seviye 4", sector: "Elektrik", mandatory: true, note: "Elektrik pano, kilitleme-etiketleme ve yetkili çalışma kayıtlarıyla kontrol edilmelidir." },
+  { code: "13UY0145-3", title: "Endüstriyel Taşımacı", level: "Seviye 3", sector: "Lojistik", mandatory: true, note: "Forklift, transpalet, yük sabitleme ve trafik planı kontrolleriyle ilişkilidir." },
+  { code: "17UY0264-4", title: "Turizm ve Konaklama Görevlisi", level: "Seviye 4", sector: "Konaklama", mandatory: false, note: "Otel personeli için departman eğitimleri, hijyen ve acil durum planlarıyla izlenebilir." },
+  { code: "10UY0003-3", title: "Makine Bakımcı", level: "Seviye 3", sector: "Metal / Bakım", mandatory: true, note: "Bakım izinleri, hareketli aksam koruyucuları ve enerji kesme kayıtları kritik kabul edilir." },
+  { code: "16UY0241-3", title: "Temizlik Görevlisi", level: "Seviye 3", sector: "Hizmet", mandatory: false, note: "Kimyasal kullanım talimatı, MSDS ve KKD teslimi ile birlikte takip edilmelidir." },
+];
+
 const requiredCompanyDocs = ["Risk Değerlendirme Raporu", "Acil Durum Eylem Planı", "Yıllık Eğitim Planı", "Yıllık Çalışma Planı"];
 
 const documentTemplates = [
@@ -1553,6 +1564,7 @@ export default function Page() {
   const [archiveDateFrom, setArchiveDateFrom] = useState("");
   const [archiveDateTo, setArchiveDateTo] = useState("");
   const [naceSearch, setNaceSearch] = useState("");
+  const [mykSearch, setMykSearch] = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [editingDofId, setEditingDofId] = useState<string | null>(null);
 
@@ -1996,6 +2008,20 @@ export default function Page() {
       `${record.code} ${record.title} ${record.dangerClass} ${record.note}`.toLowerCase().includes(term)
     );
   }, [naceSearch]);
+  const filteredMykRecords = useMemo(() => {
+    const term = mykSearch.trim().toLowerCase();
+    if (!term) return mykRecords;
+    return mykRecords.filter(record =>
+      `${record.code} ${record.title} ${record.level} ${record.sector} ${record.note}`.toLowerCase().includes(term)
+    );
+  }, [mykSearch]);
+  const mykMatchedEmployees = useMemo(() => {
+    const term = mykSearch.trim().toLowerCase();
+    if (!term) return employees.slice(0, 6);
+    return employees.filter(employee =>
+      `${employee.firstName} ${employee.lastName} ${employee.title || ""} ${employee.profession || ""} ${employee.department || ""}`.toLowerCase().includes(term)
+    ).slice(0, 8);
+  }, [employees, mykSearch]);
   const taskItems = useMemo<TaskItem[]>(() => {
     const items: TaskItem[] = [];
     const today = new Date();
@@ -2861,6 +2887,7 @@ export default function Page() {
       { id: "arsiv", label: "🗂 Arşiv" },
       { id: "is-kazasi-raporu", label: "🚑 İş Kazası Raporu" },
       { id: "nace-sorgula", label: "🔎 NACE Sorgula" },
+      { id: "myk-sorgula", label: "🪪 MYK Sorgula" },
       ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
     ];
   const menuGroups: Array<{ title: string; items: Array<{ id: string; label: string; disabled?: boolean }> }> = isHumanResources && !isAdmin
@@ -2875,7 +2902,7 @@ export default function Page() {
           ...tabs.filter(tab => ["yillik-planlar", "egitimler", "acil-durum-plani", "kurul-toplantisi", "firma-ziyaretleri", "arsiv"].includes(tab.id)),
         ],
       },
-      { title: "Araçlar", items: tabs.filter(tab => ["nace-sorgula"].includes(tab.id)) },
+      { title: "Araçlar", items: tabs.filter(tab => ["nace-sorgula", "myk-sorgula"].includes(tab.id)) },
     ];
 
   if (!mounted || loading) {
@@ -4762,6 +4789,87 @@ export default function Page() {
                   Aradığınız kriterlere uygun NACE kaydı bulunamadı.
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "myk-sorgula" && (
+          <div>
+            <div style={styles.card} className="isg-card">
+              <p style={styles.sectionTitle} className="isg-text-muted">MYK Sorgula</p>
+              <div style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.55, marginBottom: 16 }}>
+                Meslek, yeterlilik kodu veya sektör bilgisine göre arama yapın. Aynı arama metni personel unvanlarıyla da eşleştirilir.
+              </div>
+              <div style={styles.searchBar}>
+                <input
+                  style={{ ...styles.input, maxWidth: 420 }}
+                  className="isg-input"
+                  placeholder="Örn. elektrik, kalıpçı, lojistik..."
+                  value={mykSearch}
+                  onChange={e => setMykSearch(e.target.value)}
+                />
+                <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredMykRecords.length} yeterlilik</span>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: compactLayout ? "1fr" : "minmax(0, 1.4fr) minmax(320px, 0.8fr)", gap: 16, alignItems: "start" }}>
+              <div style={{ display: "grid", gap: 14 }}>
+                {filteredMykRecords.map(record => (
+                  <div key={record.code} style={styles.card} className="isg-card">
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", marginBottom: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: "var(--isg-text)", marginBottom: 4 }}>{record.title}</div>
+                        <div style={{ color: "var(--isg-text-muted)", fontSize: 12 }}>{record.code} · {record.level} · {record.sector}</div>
+                      </div>
+                      <Badge text={record.mandatory ? "Zorunlu" : "Takip Edilebilir"} color={record.mandatory ? "#dc2626" : "#0ea5e9"} />
+                    </div>
+                    <p style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.55, margin: 0 }}>{record.note}</p>
+                  </div>
+                ))}
+                {filteredMykRecords.length === 0 && (
+                  <div style={{ ...styles.card, color: "var(--isg-text-muted)", fontSize: 13 }} className="isg-card">
+                    Aradığınız kriterlere uygun MYK kaydı bulunamadı.
+                  </div>
+                )}
+              </div>
+
+              <div style={styles.card} className="isg-card">
+                <p style={styles.sectionTitle} className="isg-text-muted">Personel Eşleşmeleri</p>
+                <div style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.55, marginBottom: 12 }}>
+                  Arama metnine göre mevcut personel unvanı, meslek dalı ve birim alanları taranır.
+                </div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {mykMatchedEmployees.map(employee => {
+                    const company = companies.find(c => c.id === employee.companyId);
+                    return (
+                      <button
+                        key={employee.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedEmployeeId(employee.id);
+                          setActiveTab("personel");
+                        }}
+                        style={{
+                          ...styles.btnSecondary,
+                          justifyContent: "space-between",
+                          textAlign: "left",
+                          width: "100%",
+                          gap: 10,
+                        }}
+                      >
+                        <span>
+                          <strong style={{ display: "block", color: "var(--isg-text)" }}>{employee.firstName} {employee.lastName}</strong>
+                          <span style={{ color: "var(--isg-text-muted)", fontSize: 12 }}>{employee.title || employee.profession || "Unvan girilmedi"} · {company?.nickName || "Firma yok"}</span>
+                        </span>
+                        <span style={{ color: "var(--isg-text-subtle)", fontSize: 12 }}>Aç</span>
+                      </button>
+                    );
+                  })}
+                  {mykMatchedEmployees.length === 0 && (
+                    <div style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>Eşleşen personel bulunamadı.</div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}

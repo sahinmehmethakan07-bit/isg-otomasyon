@@ -6,6 +6,46 @@ import { getUserProfile, UserProfile, UserRole, ROLE_CONFIG, withCreatedBy } fro
 import { AdminUserPanel } from "./lib/AdminUserPanel";
 import { Ek2MuayeneFormu } from "./lib/Ek2MuayeneFormu";
 import { useLanguage } from "./lib/i18n";
+import { documentTemplates, emptyNewEmployee, mykRecords, naceRecords, requiredCompanyDocs, sgkCompanyRegistry } from "./lib/constants";
+import type {
+  AccidentReportRecord,
+  AccidentReportStatus,
+  AccidentSeverity,
+  AnnualPlanRecord,
+  AnnualPlanStatus,
+  AnnualPlanType,
+  ArchiveItem,
+  CommitteeMeetingRecord,
+  CommitteeMeetingStatus,
+  Company,
+  CompanyVisitPurpose,
+  CompanyVisitRecord,
+  CompanyVisitStatus,
+  DangerClass,
+  DocumentRecord,
+  DofRecord,
+  EmailSettings,
+  EmergencyPlanRecord,
+  EmergencyPlanStatus,
+  Employee,
+  EmployeeChecklist,
+  EmployeeOnboarding,
+  NewEmployeeForm,
+  Observer,
+  OnboardingTask,
+  OnboardingTaskKey,
+  PpeRecord,
+  PpeStatus,
+  RiskRecord,
+  ServiceType,
+  Signer,
+  SignerRole,
+  TaskItem,
+  TaskPriority,
+  TrainingRecord,
+  TrainingStatus,
+  TrainingType,
+} from "./lib/types";
 
 import React, { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { db, auth } from "../lib/firebase";
@@ -25,387 +65,6 @@ import {
   where,
   documentId,
 } from "firebase/firestore";
-
-type DangerClass = "Az Tehlikeli" | "Tehlikeli" | "Çok Tehlikeli";
-type ServiceType = "İş Güvenliği" | "İş Güvenliği + İşyeri Hekimliği";
-
-type Company = {
-  id: string;
-  nickName: string;
-  officialName: string;
-  sgkSicil: string;
-  naceCode: string;
-  dangerClass: DangerClass;
-  employeeCount: number;
-  contractEnd: string;
-  serviceType: ServiceType;
-  contactEmail?: string;
-};
-
-type EmployeeChecklist = {
-  isgCertificateDate: string;
-  ek2Date: string;
-  orientationDate: string;
-  preTest: boolean;
-  postTest: boolean;
-  undertaking: boolean;
-  kkdMinutes: boolean;
-  attendanceDoc: boolean;
-};
-
-type OnboardingTaskKey = "doctorEk2" | "safetyTraining" | "safetyDocuments";
-type OnboardingStatus = "pending" | "completed";
-
-type OnboardingTask = {
-  key: OnboardingTaskKey;
-  label: string;
-  ownerRole: "doctor" | "safety_expert";
-  completed: boolean;
-  completedAt?: string;
-};
-
-type EmployeeOnboarding = {
-  status: OnboardingStatus;
-  tasks: Record<OnboardingTaskKey, OnboardingTask>;
-  missingSteps: string[];
-  notifiedAt?: string;
-  lastReminderAt?: string;
-};
-
-type Employee = {
-  id: string;
-  companyId: string;
-  firstName: string;
-  lastName: string;
-  tcNo: string;
-  photo?: string;
-  birthPlace?: string;
-  birthDate?: string;
-  gender?: string;
-  nationality?: string;
-  serialNo?: string;
-  fatherName?: string;
-  motherName?: string;
-  phone?: string;
-  email?: string;
-  department?: string;
-  diplomaInfo?: string;
-  educationLevel?: string;
-  maritalStatus?: string;
-  childrenCount?: string;
-  address?: string;
-  title: string;
-  jobDescription?: string;
-  profession?: string;
-  hireDate: string;
-  sgkNo?: string;
-  iban?: string;
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
-  bloodType?: string;
-  chronicDisease?: string;
-  tetanusVaccine?: string;
-  hepatitisVaccine?: string;
-  allergies?: string;
-  notes?: string;
-  isActive: boolean;
-  trainingComplete: boolean;
-  checklist: EmployeeChecklist;
-  onboarding?: EmployeeOnboarding;
-};
-
-type NewEmployeeForm = {
-  companyId: string;
-  firstName: string;
-  lastName: string;
-  tcNo: string;
-  photo: string;
-  birthPlace: string;
-  birthDate: string;
-  gender: string;
-  nationality: string;
-  nationalityOther: string;
-  serialNo: string;
-  fatherName: string;
-  motherName: string;
-  phone: string;
-  email: string;
-  department: string;
-  diplomaInfo: string;
-  educationLevel: string;
-  maritalStatus: string;
-  childrenCount: string;
-  address: string;
-  title: string;
-  jobDescription: string;
-  profession: string;
-  hireDate: string;
-  sgkNo: string;
-  iban: string;
-  emergencyContactName: string;
-  emergencyContactPhone: string;
-  bloodType: string;
-  chronicDisease: string;
-  tetanusVaccine: string;
-  hepatitisVaccine: string;
-  allergies: string;
-  notes: string;
-};
-
-const emptyNewEmployee: NewEmployeeForm = {
-  companyId: "",
-  firstName: "",
-  lastName: "",
-  tcNo: "",
-  photo: "",
-  birthPlace: "",
-  birthDate: "",
-  gender: "",
-  nationality: "T.C.",
-  nationalityOther: "",
-  serialNo: "",
-  fatherName: "",
-  motherName: "",
-  phone: "",
-  email: "",
-  department: "",
-  diplomaInfo: "",
-  educationLevel: "",
-  maritalStatus: "",
-  childrenCount: "",
-  address: "",
-  title: "",
-  jobDescription: "",
-  profession: "",
-  hireDate: "",
-  sgkNo: "",
-  iban: "",
-  emergencyContactName: "",
-  emergencyContactPhone: "",
-  bloodType: "",
-  chronicDisease: "",
-  tetanusVaccine: "",
-  hepatitisVaccine: "",
-  allergies: "",
-  notes: "",
-};
-
-type DocumentRecord = {
-  id: string;
-  companyId: string;
-  employeeId: string | null;
-  type: string;
-  issueDate: string;
-  expiryDate: string;
-};
-
-type Observer = {
-  id: string;
-  fullName: string;
-  title: string;
-  certificateNo: string;
-  phone: string;
-};
-
-type DofRecord = {
-  id: string;
-  companyId: string;
-  observerId: string;
-  title: string;
-  description: string;
-  lawReference: string;
-  priority: "Düşük" | "Orta" | "Yüksek";
-  responsible: string;
-  dueDate: string;
-  status: "Açık" | "Bildirildi" | "Önlem Alındı" | "Çözüldü" | "Riske Aktarıldı";
-  location: string;
-  beforePhoto?: string;
-  afterPhoto?: string;
-  affectedPersons?: string;
-};
-
-type SignerRole = "İş Güvenliği Uzmanı" | "İşveren / İşveren Vekili" | "Çalışan Temsilcisi";
-
-type EmailSettings = {
-  enabled: boolean;
-  toEmail: string;
-  ccEmail: string;
-  doctorEmail?: string;
-  safetyExpertEmail?: string;
-  subject: string;
-  message: string;
-};
-
-type Signer = {
-  id: string;
-  companyId: string;
-  role: SignerRole;
-  fullName: string;
-};
-
-type RiskRecord = {
-  id: string;
-  companyId: string;
-  sourceDofId: string | null;
-  section: string;
-  hazard: string;
-  risk: string;
-  currentMeasure: string;
-  actionToTake: string;
-  probability: number;
-  severity: number;
-  score: number;
-  residualProbability: number;
-  residualSeverity: number;
-  residualScore: number;
-  responsible: string;
-  dueDate: string;
-  status: "Açık" | "Kontrol Altında" | "Kapandı";
-  affectedPersons?: string;
-  lawReference?: string;
-  controlDate?: string;
-};
-
-type AnnualPlanType = "Eğitim" | "Muayene" | "Risk Değerlendirme" | "Acil Durum Tatbikatı" | "Kurul Toplantısı" | "Saha Ziyareti" | "Belge Yenileme";
-type AnnualPlanStatus = "Planlandı" | "Devam Ediyor" | "Tamamlandı" | "Gecikti";
-
-type AnnualPlanRecord = {
-  id: string;
-  companyId: string;
-  year: number;
-  type: AnnualPlanType;
-  title: string;
-  plannedDate: string;
-  responsible: string;
-  status: AnnualPlanStatus;
-  notes: string;
-};
-
-type TrainingType = "Temel İSG Eğitimi" | "İşe Giriş Eğitimi" | "Yenileme Eğitimi" | "Acil Durum Eğitimi" | "KKD Eğitimi" | "Hijyen Eğitimi";
-type TrainingStatus = "Planlandı" | "Tamamlandı" | "İptal";
-
-type TrainingRecord = {
-  id: string;
-  companyId: string;
-  title: string;
-  type: TrainingType;
-  trainingDate: string;
-  durationHours?: string;
-  location?: string;
-  trainer: string;
-  participantIds: string[];
-  status: TrainingStatus;
-  notes: string;
-};
-
-type PpeStatus = "Teslim Edildi" | "İade Edildi" | "Hasarlı / Kayıp";
-
-type PpeRecord = {
-  id: string;
-  companyId: string;
-  employeeId: string;
-  equipment: string;
-  quantity: number;
-  issueDate: string;
-  returnDate?: string;
-  status: PpeStatus;
-  serialNo?: string;
-  notes: string;
-};
-
-type EmergencyPlanStatus = "Taslak" | "Yürürlükte" | "Tatbikat Planlandı" | "Güncelleme Gerekli";
-
-type EmergencyPlanRecord = {
-  id: string;
-  companyId: string;
-  title: string;
-  scenario: string;
-  assemblyArea: string;
-  emergencyTeam: string;
-  responsible: string;
-  planDate: string;
-  drillDate?: string;
-  status: EmergencyPlanStatus;
-  notes: string;
-};
-
-type CommitteeMeetingStatus = "Planlandı" | "Yapıldı" | "Ertelendi" | "Kararlar Takipte";
-
-type CommitteeMeetingRecord = {
-  id: string;
-  companyId: string;
-  meetingNo: string;
-  meetingDate: string;
-  location: string;
-  chairperson: string;
-  agenda: string;
-  decisions: string;
-  participantIds: string[];
-  status: CommitteeMeetingStatus;
-  notes: string;
-};
-
-type AccidentReportStatus = "Açık" | "İncelemede" | "Aksiyon Planlandı" | "Kapandı";
-type AccidentSeverity = "Ramak Kala" | "Hafif" | "Orta" | "Ağır";
-
-type AccidentReportRecord = {
-  id: string;
-  companyId: string;
-  employeeId: string;
-  accidentDate: string;
-  location: string;
-  severity: AccidentSeverity;
-  incidentType: string;
-  description: string;
-  rootCause: string;
-  actionPlan: string;
-  responsible: string;
-  dueDate?: string;
-  status: AccidentReportStatus;
-  notes: string;
-};
-
-type CompanyVisitStatus = "Planlandı" | "Tamamlandı" | "Ertelendi" | "Takip Gerekli";
-type CompanyVisitPurpose = "Rutin Ziyaret" | "Risk Kontrolü" | "Eğitim / Bilgilendirme" | "DÖF Takibi" | "Acil Ziyaret";
-
-type CompanyVisitRecord = {
-  id: string;
-  companyId: string;
-  visitDate: string;
-  purpose: CompanyVisitPurpose;
-  visitor: string;
-  contactedPerson: string;
-  findings: string;
-  actions: string;
-  nextVisitDate?: string;
-  status: CompanyVisitStatus;
-  notes: string;
-};
-
-type ArchiveItem = {
-  id: string;
-  companyId: string;
-  type: string;
-  title: string;
-  owner: string;
-  date: string;
-  status: string;
-  sourceTab: string;
-};
-
-type TaskPriority = "Kritik" | "Yüksek" | "Orta" | "Düşük";
-
-type TaskItem = {
-  id: string;
-  companyId: string;
-  title: string;
-  detail: string;
-  owner: string;
-  dueDate: string;
-  priority: TaskPriority;
-  sourceTab: string;
-  category: string;
-};
 
 const emptyChecklist: EmployeeChecklist = {
   isgCertificateDate: "",
@@ -498,44 +157,6 @@ function normalizeCommitteeMeetingRecord(meeting: CommitteeMeetingRecord): Commi
     participantIds: Array.isArray(meeting.participantIds) ? meeting.participantIds : [],
   };
 }
-
-const sgkCompanyRegistry: Record<string, { officialName: string; naceCode: string }> = {
-  "2612345678901234567890": { officialName: "Örnek Turizm Otelcilik İnşaat Sanayi ve Ticaret A.Ş.", naceCode: "55.10.01" },
-  "2611111111111111111111": { officialName: "Mavi Deniz Gıda Dağıtım Lojistik Limited Şirketi", naceCode: "46.38.01" },
-};
-
-const naceRecords = [
-  { code: "41.20.01", title: "Bina inşaatı", dangerClass: "Çok Tehlikeli" as DangerClass, note: "Şantiye, yüksekte çalışma, elektrik ve mekanik riskleri yüksek takip ister." },
-  { code: "43.21.01", title: "Elektrik tesisatı işleri", dangerClass: "Çok Tehlikeli" as DangerClass, note: "Elektrik enerjisi, pano ve geçici tesisat kontrolleri kritik kabul edilir." },
-  { code: "55.10.01", title: "Otel ve konaklama tesisleri", dangerClass: "Az Tehlikeli" as DangerClass, note: "Mutfak, teknik servis, havuz, kat hizmetleri ve yangın planı ayrı izlenmelidir." },
-  { code: "56.10.01", title: "Lokanta ve yiyecek hizmetleri", dangerClass: "Az Tehlikeli" as DangerClass, note: "Mutfak yanığı, kesici-delici aletler, hijyen ve kaygan zemin kontrolleri öne çıkar." },
-  { code: "46.38.01", title: "Gıda toptan ticareti", dangerClass: "Tehlikeli" as DangerClass, note: "Depo, yükleme-boşaltma, forklift ve soğuk zincir riskleri izlenmelidir." },
-  { code: "49.41.01", title: "Karayolu yük taşımacılığı", dangerClass: "Tehlikeli" as DangerClass, note: "Araç güvenliği, sürücü eğitimleri ve yük sabitleme kayıtları önemlidir." },
-  { code: "52.10.01", title: "Depolama ve antrepo faaliyetleri", dangerClass: "Tehlikeli" as DangerClass, note: "Raf sistemleri, istifleme, forklift yolları ve acil çıkışlar takip edilmelidir." },
-  { code: "81.21.01", title: "Genel temizlik hizmetleri", dangerClass: "Tehlikeli" as DangerClass, note: "Kimyasal kullanımı, kaygan zemin ve KKD teslimleri düzenli kontrol ister." },
-  { code: "86.21.01", title: "Genel hekimlik uygulamaları", dangerClass: "Az Tehlikeli" as DangerClass, note: "Biyolojik risk, kesici-delici atık ve sağlık kayıtları öne çıkar." },
-  { code: "96.02.01", title: "Kuaförlük ve güzellik salonları", dangerClass: "Az Tehlikeli" as DangerClass, note: "Kimyasal maruziyet, hijyen ve ergonomi kontrolleri takip edilmelidir." },
-];
-
-const mykRecords = [
-  { code: "12UY0054-3", title: "İnşaat İşçisi", level: "Seviye 3", sector: "İnşaat", mandatory: true, note: "Şantiye girişlerinde mesleki yeterlilik ve İSG eğitimi birlikte takip edilmelidir." },
-  { code: "11UY0011-3", title: "Ahşap Kalıpçı", level: "Seviye 3", sector: "İnşaat", mandatory: true, note: "Yüksekte çalışma, iskele ve kalıp güvenliği kontrolleriyle birlikte izlenmelidir." },
-  { code: "12UY0056-3", title: "Betonarme Demircisi", level: "Seviye 3", sector: "İnşaat", mandatory: true, note: "Kesici-delici ekipman, kaldırma operasyonu ve eldiven/gözlük KKD kaydı önemlidir." },
-  { code: "15UY0215-4", title: "Elektrik Tesisatçısı", level: "Seviye 4", sector: "Elektrik", mandatory: true, note: "Elektrik pano, kilitleme-etiketleme ve yetkili çalışma kayıtlarıyla kontrol edilmelidir." },
-  { code: "13UY0145-3", title: "Endüstriyel Taşımacı", level: "Seviye 3", sector: "Lojistik", mandatory: true, note: "Forklift, transpalet, yük sabitleme ve trafik planı kontrolleriyle ilişkilidir." },
-  { code: "17UY0264-4", title: "Turizm ve Konaklama Görevlisi", level: "Seviye 4", sector: "Konaklama", mandatory: false, note: "Otel personeli için departman eğitimleri, hijyen ve acil durum planlarıyla izlenebilir." },
-  { code: "10UY0003-3", title: "Makine Bakımcı", level: "Seviye 3", sector: "Metal / Bakım", mandatory: true, note: "Bakım izinleri, hareketli aksam koruyucuları ve enerji kesme kayıtları kritik kabul edilir." },
-  { code: "16UY0241-3", title: "Temizlik Görevlisi", level: "Seviye 3", sector: "Hizmet", mandatory: false, note: "Kimyasal kullanım talimatı, MSDS ve KKD teslimi ile birlikte takip edilmelidir." },
-];
-
-const requiredCompanyDocs = ["Risk Değerlendirme Raporu", "Acil Durum Eylem Planı", "Yıllık Eğitim Planı", "Yıllık Çalışma Planı"];
-
-const documentTemplates = [
-  "Risk Değerlendirme Raporu", "DÖF Formu", "Acil Durum Eylem Planı", "Yıllık Eğitim Planı",
-  "Yıllık Çalışma Planı", "Yıllık Değerlendirme Raporu", "Çalışan Temsilcisi Atama Tutanağı",
-  "Eğitim Katılım Tutanağı", "İSG Kurul Toplantı Tutanağı", "İşe Giriş Sağlık Muayene Formu",
-  "İSG Sertifikası", "EK-2",
-];
 
 function daysUntil(dateString: string) {
   const now = new Date();

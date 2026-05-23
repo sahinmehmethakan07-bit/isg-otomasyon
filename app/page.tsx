@@ -4,12 +4,12 @@
 import { useUserRole } from "./lib/useUserRole";
 import { getUserProfile, UserProfile, UserRole, ROLE_CONFIG, withCreatedBy } from "./lib/roleManager";
 import { AdminUserPanel } from "./lib/AdminUserPanel";
+import { AnnualPlansTab } from "./lib/AnnualPlansTab";
 import { Ek2MuayeneFormu } from "./lib/Ek2MuayeneFormu";
 import { MykLookupTab, NaceLookupTab } from "./lib/LookupTabs";
 import { useLanguage } from "./lib/i18n";
 import {
   generateAccidentReportPDF,
-  generateAnnualPlanPDF,
   generateCommitteeMeetingPDF,
   generateCompanyVisitPDF,
   generateEmergencyPlanPDF,
@@ -2651,60 +2651,20 @@ export default function Page() {
         )}
 
         {activeTab === "yillik-planlar" && (
-          <div>
-            <div style={styles.card} className="isg-card">
-              <p style={styles.sectionTitle} className="isg-text-muted">Yıllık İSG Planı</p>
-              <div style={styles.formGrid}>
-                <FormField label="Firma *"><select style={styles.select} className="isg-input" value={newAnnualPlan.companyId} onChange={e => setNewAnnualPlan({ ...newAnnualPlan, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
-                <FormField label="Plan Yılı"><input style={styles.input} className="isg-input" type="number" value={newAnnualPlan.year} onChange={e => setNewAnnualPlan({ ...newAnnualPlan, year: e.target.value })} /></FormField>
-                <FormField label="Plan Türü"><select style={styles.select} className="isg-input" value={newAnnualPlan.type} onChange={e => setNewAnnualPlan({ ...newAnnualPlan, type: e.target.value as AnnualPlanType })}><option>Eğitim</option><option>Muayene</option><option>Risk Değerlendirme</option><option>Acil Durum Tatbikatı</option><option>Kurul Toplantısı</option><option>Saha Ziyareti</option><option>Belge Yenileme</option></select></FormField>
-                <FormField label="Başlık *"><input style={styles.input} className="isg-input" value={newAnnualPlan.title} onChange={e => setNewAnnualPlan({ ...newAnnualPlan, title: e.target.value })} placeholder="Örn. Temel İSG eğitimi" /></FormField>
-                <FormField label="Planlanan Tarih *"><DatePicker value={newAnnualPlan.plannedDate} onChange={v => setNewAnnualPlan({ ...newAnnualPlan, plannedDate: v })} /></FormField>
-                <FormField label="Sorumlu"><input style={styles.input} className="isg-input" value={newAnnualPlan.responsible} onChange={e => setNewAnnualPlan({ ...newAnnualPlan, responsible: e.target.value })} placeholder="Doktor, İSG uzmanı..." /></FormField>
-                <FormField label="Durum"><select style={styles.select} className="isg-input" value={newAnnualPlan.status} onChange={e => setNewAnnualPlan({ ...newAnnualPlan, status: e.target.value as AnnualPlanStatus })}><option>Planlandı</option><option>Devam Ediyor</option><option>Tamamlandı</option><option>Gecikti</option></select></FormField>
-                <FormField label="Not"><input style={styles.input} className="isg-input" value={newAnnualPlan.notes} onChange={e => setNewAnnualPlan({ ...newAnnualPlan, notes: e.target.value })} placeholder="Kısa açıklama" /></FormField>
-              </div>
-              <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button style={styles.btnPrimary} onClick={addAnnualPlan}>Plan Kalemi Ekle</button>
-                <button style={styles.btnSecondary} onClick={() => generateAnnualPlanPDF(filteredAnnualPlans, companies)}>PDF İndir</button>
-              </div>
-            </div>
-
-            <div style={styles.searchBar}>
-              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
-              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-              <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredAnnualPlans.length} plan kalemi</span>
-            </div>
-
-            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
-              <table style={styles.table}>
-                <thead><tr>{["Firma", "Yıl", "Tür", "Başlık", "Tarih", "Sorumlu", "Durum", "Not", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
-                <tbody>
-                  {filteredAnnualPlans.map(plan => {
-                    const company = companies.find(c => c.id === plan.companyId);
-                    return (
-                      <tr key={plan.id}>
-                        <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
-                        <td style={styles.td} className="isg-td">{plan.year}</td>
-                        <td style={styles.td} className="isg-td"><Badge text={plan.type} color="#0ea5e9" /></td>
-                        <td style={{ ...styles.td, minWidth: 180 }} className="isg-td"><strong>{plan.title}</strong></td>
-                        <td style={styles.td} className="isg-td">{plan.plannedDate ? new Date(plan.plannedDate).toLocaleDateString("tr-TR") : "—"}</td>
-                        <td style={styles.td} className="isg-td">{plan.responsible || "—"}</td>
-                        <td style={styles.td} className="isg-td"><select style={{ ...styles.select, minWidth: 132 }} value={plan.status} onChange={e => updateAnnualPlanStatus(plan.id, e.target.value as AnnualPlanStatus)}><option>Planlandı</option><option>Devam Ediyor</option><option>Tamamlandı</option><option>Gecikti</option></select></td>
-                        <td style={{ ...styles.td, color: "var(--isg-text-muted)", minWidth: 160 }}>{plan.notes || "—"}</td>
-                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteAnnualPlan(plan.id)}>Sil</button></td>
-                      </tr>
-                    );
-                  })}
-                  {filteredAnnualPlans.length === 0 && (
-                    <tr>
-                      <td colSpan={9} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz yıllık plan kalemi yok.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <AnnualPlansTab
+            styles={styles}
+            companies={companies}
+            filteredAnnualPlans={filteredAnnualPlans}
+            newAnnualPlan={newAnnualPlan}
+            setNewAnnualPlan={setNewAnnualPlan}
+            search={search}
+            setSearch={setSearch}
+            selectedCompanyId={selectedCompanyId}
+            setSelectedCompanyId={setSelectedCompanyId}
+            addAnnualPlan={addAnnualPlan}
+            updateAnnualPlanStatus={updateAnnualPlanStatus}
+            deleteAnnualPlan={deleteAnnualPlan}
+          />
         )}
 
         {activeTab === "egitimler" && (

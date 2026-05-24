@@ -13,6 +13,7 @@ import { CompaniesTab } from "./lib/CompaniesTab";
 import { DocumentsTab } from "./lib/DocumentsTab";
 import { Ek2MuayeneFormu } from "./lib/Ek2MuayeneFormu";
 import { EmployeeDetailPanel } from "./lib/EmployeeDetailPanel";
+import { EmployeeForm } from "./lib/EmployeeForm";
 import { EmployeeTable } from "./lib/EmployeeTable";
 import { EmergencyPlansTab } from "./lib/EmergencyPlansTab";
 import { MykLookupTab, NaceLookupTab } from "./lib/LookupTabs";
@@ -1990,106 +1991,16 @@ export default function Page() {
 
         {activeTab === "personel" && (
           <div style={{ display: "grid", gridTemplateColumns: selectedEmployee && !compactLayout ? "minmax(0, 1fr) minmax(380px, 420px)" : "minmax(0, 1fr)", gap: 20, minWidth: 0, alignItems: "start" }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={styles.card} className="isg-card">
-                <p style={styles.sectionTitle} className="isg-text-muted">Yeni Personel Ekle</p>
-                <div style={{ display: "grid", gridTemplateColumns: compactLayout ? "minmax(0, 1fr)" : "minmax(160px, 190px) minmax(0, 1fr)", gap: 18, alignItems: "start", minWidth: 0 }}>
-                  <div style={{ border: "1px solid var(--isg-border)", borderRadius: 8, padding: 14, backgroundColor: "var(--isg-input-bg)" }}>
-                    <label style={styles.label} className="isg-label">Personel Fotoğrafı</label>
-                    {newEmployee.photo ? (
-                      <div style={{ position: "relative", width: 132 }}>
-                        <img src={newEmployee.photo} alt="personel fotoğrafı" style={{ width: 132, height: 160, objectFit: "cover", borderRadius: 8, border: "1px solid var(--isg-border)" }} />
-                        <button type="button" onClick={() => setNewEmployee({ ...newEmployee, photo: "" })} style={{ position: "absolute", top: -7, right: -7, width: 24, height: 24, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 12, cursor: "pointer" }}>✕</button>
-                      </div>
-                    ) : (
-                      <div>
-                        <div style={{ width: 132, height: 160, borderRadius: 8, border: "1px dashed var(--isg-border-strong)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--isg-text-muted)", fontSize: 12, marginBottom: 10, textAlign: "center", padding: 10 }}>
-                          Fotoğraf seçin
-                        </div>
-                        <label style={{ ...styles.btnSecondary, display: "inline-flex", alignItems: "center", justifyContent: "center", width: "100%", cursor: "pointer", boxSizing: "border-box" as const }}>
-                          Fotoğraf Seç
-                          <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleImageToBase64(e, b64 => setNewEmployee({ ...newEmployee, photo: b64 }))} />
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ display: "grid", gap: 18, minWidth: 0 }}>
-                    <div>
-                      <p style={{ ...styles.sectionTitle, marginBottom: 10 }}>Kimlik Bilgileri</p>
-                      <div style={styles.formGrid}>
-                        <FormField label="Firma *"><select style={styles.select} className="isg-input" value={newEmployee.companyId} onChange={e => setNewEmployee({ ...newEmployee, companyId: e.target.value })}><option value="">{companies.length === 0 ? "Firma bulunamadı" : "Seçin..."}</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
-                        <FormField label="Ad *"><input style={styles.input} className="isg-input" value={newEmployee.firstName} onChange={e => setNewEmployee({ ...newEmployee, firstName: e.target.value })} /></FormField>
-                        <FormField label="Soyad"><input style={styles.input} className="isg-input" value={newEmployee.lastName} onChange={e => setNewEmployee({ ...newEmployee, lastName: e.target.value })} /></FormField>
-                        <FormField label="TC No"><input style={styles.input} className="isg-input" value={newEmployee.tcNo} onChange={e => setNewEmployee({ ...newEmployee, tcNo: e.target.value })} /></FormField>
-                        <FormField label="Doğum Yeri"><input style={styles.input} className="isg-input" value={newEmployee.birthPlace} onChange={e => setNewEmployee({ ...newEmployee, birthPlace: e.target.value })} /></FormField>
-                        <FormField label="Doğum Tarihi"><DatePicker value={newEmployee.birthDate} onChange={v => setNewEmployee({ ...newEmployee, birthDate: v })} /></FormField>
-                        <FormField label="Cinsiyet"><select style={styles.select} className="isg-input" value={newEmployee.gender} onChange={e => setNewEmployee({ ...newEmployee, gender: e.target.value })}><option value="">Seçin...</option><option>Erkek</option><option>Kadın</option><option>Diğer</option></select></FormField>
-                        <FormField label="Uyruk"><select style={styles.select} className="isg-input" value={newEmployee.nationality} onChange={e => setNewEmployee({ ...newEmployee, nationality: e.target.value, nationalityOther: e.target.value === "Diğer" ? newEmployee.nationalityOther : "" })}><option value="T.C.">T.C.</option><option value="Diğer">Diğer</option></select></FormField>
-                        {newEmployee.nationality === "Diğer" && (
-                          <FormField label="Uyruk Açıklaması"><input style={styles.input} className="isg-input" value={newEmployee.nationalityOther} onChange={e => setNewEmployee({ ...newEmployee, nationalityOther: e.target.value })} placeholder="Örn. Bulgaristan, Suriye..." /></FormField>
-                        )}
-                        <FormField label="Seri / Belge No"><input style={styles.input} className="isg-input" value={newEmployee.serialNo} onChange={e => setNewEmployee({ ...newEmployee, serialNo: e.target.value })} /></FormField>
-                        <FormField label="Baba Adı"><input style={styles.input} className="isg-input" value={newEmployee.fatherName} onChange={e => setNewEmployee({ ...newEmployee, fatherName: e.target.value })} /></FormField>
-                        <FormField label="Anne Adı"><input style={styles.input} className="isg-input" value={newEmployee.motherName} onChange={e => setNewEmployee({ ...newEmployee, motherName: e.target.value })} /></FormField>
-                      </div>
-                    </div>
-                    <div>
-                      <p style={{ ...styles.sectionTitle, marginBottom: 10 }}>İletişim ve Aile</p>
-                      <div style={styles.formGrid}>
-                        <FormField label="Telefon"><input style={styles.input} className="isg-input" value={newEmployee.phone} onChange={e => setNewEmployee({ ...newEmployee, phone: e.target.value })} /></FormField>
-                        <FormField label="E-posta"><input style={styles.input} className="isg-input" type="email" value={newEmployee.email} onChange={e => setNewEmployee({ ...newEmployee, email: e.target.value })} /></FormField>
-                        <FormField label="Adres"><input style={styles.input} className="isg-input" value={newEmployee.address} onChange={e => setNewEmployee({ ...newEmployee, address: e.target.value })} /></FormField>
-                        <FormField label="Medeni Durum"><select style={styles.select} className="isg-input" value={newEmployee.maritalStatus} onChange={e => setNewEmployee({ ...newEmployee, maritalStatus: e.target.value })}><option value="">Seçin...</option><option>Bekar</option><option>Evli</option><option>Boşanmış</option><option>Dul</option></select></FormField>
-                        <FormField label="Çocuk Sayısı"><input style={styles.input} className="isg-input" value={newEmployee.childrenCount} onChange={e => setNewEmployee({ ...newEmployee, childrenCount: e.target.value })} /></FormField>
-                        <FormField label="Acil Durum Kişisi"><input style={styles.input} className="isg-input" value={newEmployee.emergencyContactName} onChange={e => setNewEmployee({ ...newEmployee, emergencyContactName: e.target.value })} /></FormField>
-                        <FormField label="Acil Durum Telefonu"><input style={styles.input} className="isg-input" value={newEmployee.emergencyContactPhone} onChange={e => setNewEmployee({ ...newEmployee, emergencyContactPhone: e.target.value })} /></FormField>
-                      </div>
-                    </div>
-                    <div>
-                      <p style={{ ...styles.sectionTitle, marginBottom: 10 }}>İş ve Eğitim Bilgileri</p>
-                      <div style={styles.formGrid}>
-                        <FormField label="Birim"><input style={styles.input} className="isg-input" value={newEmployee.department} onChange={e => setNewEmployee({ ...newEmployee, department: e.target.value })} placeholder="Üretim, muhasebe..." /></FormField>
-                        <FormField label="Unvan"><input style={styles.input} className="isg-input" value={newEmployee.title} onChange={e => setNewEmployee({ ...newEmployee, title: e.target.value })} /></FormField>
-                        <FormField label="Meslek / Meslek Dalı"><input style={styles.input} className="isg-input" value={newEmployee.profession} onChange={e => setNewEmployee({ ...newEmployee, profession: e.target.value })} /></FormField>
-                        <FormField label="Yapacağı İş"><input style={styles.input} className="isg-input" value={newEmployee.jobDescription} onChange={e => setNewEmployee({ ...newEmployee, jobDescription: e.target.value })} /></FormField>
-                        <FormField label="İşe Giriş"><DatePicker value={newEmployee.hireDate} onChange={v => setNewEmployee({ ...newEmployee, hireDate: v })} /></FormField>
-                        <FormField label="Eğitim Durumu"><input style={styles.input} className="isg-input" value={newEmployee.educationLevel} onChange={e => setNewEmployee({ ...newEmployee, educationLevel: e.target.value })} /></FormField>
-                        <FormField label="Diploma Bilgileri"><input style={styles.input} className="isg-input" value={newEmployee.diplomaInfo} onChange={e => setNewEmployee({ ...newEmployee, diplomaInfo: e.target.value })} placeholder="Okul / bölüm / yıl" /></FormField>
-                        <FormField label="SGK No"><input style={styles.input} className="isg-input" value={newEmployee.sgkNo} onChange={e => setNewEmployee({ ...newEmployee, sgkNo: e.target.value })} /></FormField>
-                        <FormField label="IBAN"><input style={styles.input} className="isg-input" value={newEmployee.iban} onChange={e => setNewEmployee({ ...newEmployee, iban: e.target.value })} /></FormField>
-                      </div>
-                    </div>
-                    <div>
-                      <p style={{ ...styles.sectionTitle, marginBottom: 10 }}>Sağlık Ön Bilgileri</p>
-                      <div style={styles.formGrid}>
-                        <FormField label="Kan Grubu"><select style={styles.select} className="isg-input" value={newEmployee.bloodType} onChange={e => setNewEmployee({ ...newEmployee, bloodType: e.target.value })}><option value="">Seçin...</option><option>A Rh+</option><option>A Rh-</option><option>B Rh+</option><option>B Rh-</option><option>AB Rh+</option><option>AB Rh-</option><option>0 Rh+</option><option>0 Rh-</option><option>Bilinmiyor</option></select></FormField>
-                        <FormField label="Kronik Hastalık"><input style={styles.input} className="isg-input" value={newEmployee.chronicDisease} onChange={e => setNewEmployee({ ...newEmployee, chronicDisease: e.target.value })} /></FormField>
-                        <FormField label="Alerji"><input style={styles.input} className="isg-input" value={newEmployee.allergies} onChange={e => setNewEmployee({ ...newEmployee, allergies: e.target.value })} /></FormField>
-                        <FormField label="Tetanoz Aşı Bilgisi"><input style={styles.input} className="isg-input" value={newEmployee.tetanusVaccine} onChange={e => setNewEmployee({ ...newEmployee, tetanusVaccine: e.target.value })} /></FormField>
-                        <FormField label="Hepatit Aşı Bilgisi"><input style={styles.input} className="isg-input" value={newEmployee.hepatitisVaccine} onChange={e => setNewEmployee({ ...newEmployee, hepatitisVaccine: e.target.value })} /></FormField>
-                      </div>
-                      <div style={{ marginTop: 12 }}>
-                        <FormField label="Notlar"><textarea style={{ ...styles.input, minHeight: 76, resize: "vertical" as const }} className="isg-input" value={newEmployee.notes} onChange={e => setNewEmployee({ ...newEmployee, notes: e.target.value })} /></FormField>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addEmployee}>Personel Ekle</button></div>
-                {employeeAddStatus && (
-                  <div style={{
-                    marginTop: 12,
-                    padding: "10px 12px",
-                    borderRadius: 8,
-                    fontSize: 13,
-                    color: employeeAddStatus.startsWith("✅") ? "#86efac" : employeeAddStatus.startsWith("⚠️") ? "#fbbf24" : "#fca5a5",
-                    backgroundColor: employeeAddStatus.startsWith("✅") ? "#16a34a15" : employeeAddStatus.startsWith("⚠️") ? "#d9770615" : "#dc262615",
-                    border: `1px solid ${employeeAddStatus.startsWith("✅") ? "#16a34a33" : employeeAddStatus.startsWith("⚠️") ? "#d9770633" : "#dc262633"}`,
-                  }}>
-                    {employeeAddStatus}
-                  </div>
-                )}
-              </div>
-            </div>
+            <EmployeeForm
+              styles={styles}
+              companies={companies}
+              newEmployee={newEmployee}
+              setNewEmployee={setNewEmployee}
+              compactLayout={compactLayout}
+              employeeAddStatus={employeeAddStatus}
+              addEmployee={addEmployee}
+              handleImageToBase64={handleImageToBase64}
+            />
             <EmployeeTable
               styles={styles}
               companies={companies}

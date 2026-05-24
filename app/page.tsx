@@ -21,6 +21,7 @@ import { MykLookupTab, NaceLookupTab } from "./lib/LookupTabs";
 import { ObserversTab } from "./lib/ObserversTab";
 import { PpeTab } from "./lib/PpeTab";
 import { RiskTab } from "./lib/RiskTab";
+import { SignersTab } from "./lib/SignersTab";
 import { TrainingsTab } from "./lib/TrainingsTab";
 import { useLanguage } from "./lib/i18n";
 import {
@@ -1337,6 +1338,17 @@ export default function Page() {
     setRisks(prev => prev.filter(r => r.id !== id));
   }
 
+  async function addSigner(companyId: string, role: SignerRole, fullName: string) {
+    const data = { companyId, role, fullName };
+    const ref = await addDoc(collection(db, "signers"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
+    setSigners(prev => [...prev, { id: ref.id, ...data }]);
+  }
+
+  async function deleteSigner(id: string) {
+    await deleteDoc(doc(db, "signers", id));
+    setSigners(prev => prev.filter(s => s.id !== id));
+  }
+
   async function addAnnualPlan() {
     if (!newAnnualPlan.companyId || !newAnnualPlan.title || !newAnnualPlan.plannedDate) return;
     const data = {
@@ -2110,65 +2122,14 @@ export default function Page() {
         )}
 
         {activeTab === "imzacilar" && (
-          <div>
-            <div style={styles.card} className="isg-card">
-              <p style={styles.sectionTitle} className="isg-text-muted">İmzacı Yönetimi</p>
-              <p style={{ fontSize: 12, color: "var(--isg-text-muted)", marginBottom: 16 }}>
-                Her firma için PDF raporlarında görünecek 3 imzacıyı belirleyin: İş Güvenliği Uzmanı, İşveren/İşveren Vekili ve Çalışan Temsilcisi.
-                {!isAdmin && " Bu ekranda yalnızca size atanmış firmaların imzacıları görünür."}
-              </p>
-
-              {companies.map(company => {
-                const compSigners = signers.filter(s => s.companyId === company.id);
-                const roles: SignerRole[] = ["İş Güvenliği Uzmanı", "İşveren / İşveren Vekili", "Çalışan Temsilcisi"];
-
-                return (
-                  <div key={company.id} style={{ ...styles.card, marginBottom: 12 }} className="isg-card">
-                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: "var(--isg-text)" }}>{company.nickName}</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(240px, 100%), 1fr))", gap: 12 }}>
-                      {roles.map(role => {
-                        const existing = compSigners.find(s => s.role === role);
-                        return (
-                          <div key={role} style={{ backgroundColor: "var(--isg-input-bg)", border: "1px solid var(--isg-border)", borderRadius: 8, padding: 12 }}>
-                            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--isg-text-muted)", marginBottom: 8 }}>{role}</div>
-                            {existing ? (
-                              <div>
-                                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--isg-text)", marginBottom: 8 }}>{existing.fullName}</div>
-                                <div style={{ display: "flex", gap: 6 }}>
-                                  <button style={styles.btnDanger} onClick={async () => {
-                                    await deleteDoc(doc(db, "signers", existing.id));
-                                    setSigners(prev => prev.filter(s => s.id !== existing.id));
-                                  }}>Sil</button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div>
-                                <input
-                                  style={styles.input}
-                                  className="isg-input"
-                                  placeholder="Ad Soyad girin..."
-                                  onKeyDown={async (e) => {
-                                    if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
-                                      const name = (e.target as HTMLInputElement).value.trim();
-                                      const data = { companyId: company.id, role, fullName: name };
-                                      const ref = await addDoc(collection(db, "signers"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-                                      setSigners(prev => [...prev, { id: ref.id, ...data }]);
-                                      (e.target as HTMLInputElement).value = "";
-                                    }
-                                  }}
-                                />
-                                <div style={{ fontSize: 10, color: "var(--isg-text-muted)", marginTop: 4 }}>Enter ile kaydet</div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <SignersTab
+            styles={styles}
+            companies={companies}
+            signers={signers}
+            isAdmin={isAdmin}
+            addSigner={addSigner}
+            deleteSigner={deleteSigner}
+          />
         )}
 
         {activeTab === "yillik-planlar" && (

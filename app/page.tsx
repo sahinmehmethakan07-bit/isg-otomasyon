@@ -3,6 +3,7 @@
 // destroySession devre disi
 import { useUserRole } from "./lib/useUserRole";
 import { getUserProfile, UserProfile, UserRole, ROLE_CONFIG, withCreatedBy } from "./lib/roleManager";
+import { AccidentReportsTab } from "./lib/AccidentReportsTab";
 import { AdminUserPanel } from "./lib/AdminUserPanel";
 import { AnnualPlansTab } from "./lib/AnnualPlansTab";
 import { CommitteeMeetingsTab } from "./lib/CommitteeMeetingsTab";
@@ -13,7 +14,6 @@ import { PpeTab } from "./lib/PpeTab";
 import { TrainingsTab } from "./lib/TrainingsTab";
 import { useLanguage } from "./lib/i18n";
 import {
-  generateAccidentReportPDF,
   generateCompanyVisitPDF,
   generateRiskPDF,
 } from "./lib/pdf";
@@ -2740,105 +2740,21 @@ export default function Page() {
         )}
 
         {activeTab === "is-kazasi-raporu" && (
-          <div>
-            <div style={styles.card} className="isg-card">
-              <p style={styles.sectionTitle} className="isg-text-muted">İş Kazası / Ramak Kala Raporu</p>
-              <div style={styles.formGrid}>
-                <FormField label="Firma *">
-                  <select style={styles.select} className="isg-input" value={newAccidentReport.companyId} onChange={e => setNewAccidentReport({ ...newAccidentReport, companyId: e.target.value, employeeId: "" })}>
-                    <option value="">Seçin...</option>
-                    {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
-                  </select>
-                </FormField>
-                <FormField label="Personel">
-                  <select style={styles.select} className="isg-input" value={newAccidentReport.employeeId} onChange={e => setNewAccidentReport({ ...newAccidentReport, employeeId: e.target.value })}>
-                    <option value="">Seçin...</option>
-                    {employees.filter(employee => employee.companyId === newAccidentReport.companyId).map(employee => <option key={employee.id} value={employee.id}>{employee.firstName} {employee.lastName}</option>)}
-                  </select>
-                </FormField>
-                <FormField label="Olay Tarihi *"><DatePicker value={newAccidentReport.accidentDate} onChange={v => setNewAccidentReport({ ...newAccidentReport, accidentDate: v })} /></FormField>
-                <FormField label="Olay Yeri"><input style={styles.input} className="isg-input" value={newAccidentReport.location} onChange={e => setNewAccidentReport({ ...newAccidentReport, location: e.target.value })} placeholder="Bölüm, saha, alan..." /></FormField>
-                <FormField label="Olay Türü">
-                  <select style={styles.select} className="isg-input" value={newAccidentReport.incidentType} onChange={e => setNewAccidentReport({ ...newAccidentReport, incidentType: e.target.value })}>
-                    <option>İş Kazası</option>
-                    <option>Ramak Kala</option>
-                    <option>Meslek Hastalığı Şüphesi</option>
-                    <option>Malzeme Hasarı</option>
-                    <option>Diğer</option>
-                  </select>
-                </FormField>
-                <FormField label="Şiddet">
-                  <select style={styles.select} className="isg-input" value={newAccidentReport.severity} onChange={e => setNewAccidentReport({ ...newAccidentReport, severity: e.target.value as AccidentSeverity })}>
-                    <option>Ramak Kala</option>
-                    <option>Hafif</option>
-                    <option>Orta</option>
-                    <option>Ağır</option>
-                  </select>
-                </FormField>
-                <FormField label="Durum">
-                  <select style={styles.select} className="isg-input" value={newAccidentReport.status} onChange={e => setNewAccidentReport({ ...newAccidentReport, status: e.target.value as AccidentReportStatus })}>
-                    <option>Açık</option>
-                    <option>İncelemede</option>
-                    <option>Aksiyon Planlandı</option>
-                    <option>Kapandı</option>
-                  </select>
-                </FormField>
-                <FormField label="Aksiyon Sorumlusu"><input style={styles.input} className="isg-input" value={newAccidentReport.responsible} onChange={e => setNewAccidentReport({ ...newAccidentReport, responsible: e.target.value })} placeholder="Ad Soyad / birim" /></FormField>
-                <FormField label="Termin"><DatePicker value={newAccidentReport.dueDate} onChange={v => setNewAccidentReport({ ...newAccidentReport, dueDate: v })} /></FormField>
-                <FormField label="Olay Açıklaması *"><input style={styles.input} className="isg-input" value={newAccidentReport.description} onChange={e => setNewAccidentReport({ ...newAccidentReport, description: e.target.value })} placeholder="Olay nasıl gerçekleşti?" /></FormField>
-                <FormField label="Kök Neden"><input style={styles.input} className="isg-input" value={newAccidentReport.rootCause} onChange={e => setNewAccidentReport({ ...newAccidentReport, rootCause: e.target.value })} placeholder="Ekipman, eğitim, ortam, davranış..." /></FormField>
-                <FormField label="Aksiyon Planı"><input style={styles.input} className="isg-input" value={newAccidentReport.actionPlan} onChange={e => setNewAccidentReport({ ...newAccidentReport, actionPlan: e.target.value })} placeholder="Alınacak önlemler" /></FormField>
-                <FormField label="Not"><input style={styles.input} className="isg-input" value={newAccidentReport.notes} onChange={e => setNewAccidentReport({ ...newAccidentReport, notes: e.target.value })} placeholder="Ek açıklamalar" /></FormField>
-              </div>
-              <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button style={styles.btnPrimary} onClick={addAccidentReport}>Rapor Kaydı Ekle</button>
-              </div>
-            </div>
-
-            <div style={styles.searchBar}>
-              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
-              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-              <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredAccidentReports.length} rapor</span>
-            </div>
-
-            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
-              <table style={styles.table}>
-                <thead><tr>{["Firma", "Personel", "Tarih", "Yer", "Tür", "Şiddet", "Durum", "Açıklama / Aksiyon", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
-                <tbody>
-                  {filteredAccidentReports.map(report => {
-                    const company = companies.find(c => c.id === report.companyId);
-                    const employee = employees.find(e => e.id === report.employeeId);
-                    return (
-                      <tr key={report.id}>
-                        <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
-                        <td style={styles.td} className="isg-td">{employee ? `${employee.firstName} ${employee.lastName}` : "—"}</td>
-                        <td style={styles.td} className="isg-td">{report.accidentDate ? new Date(report.accidentDate).toLocaleDateString("tr-TR") : "—"}</td>
-                        <td style={styles.td} className="isg-td">{report.location || "—"}</td>
-                        <td style={styles.td} className="isg-td"><Badge text={report.incidentType} color="#ef4444" /></td>
-                        <td style={styles.td} className="isg-td"><Badge text={report.severity} color={report.severity === "Ağır" ? "#dc2626" : report.severity === "Orta" ? "#d97706" : "#16a34a"} /></td>
-                        <td style={styles.td} className="isg-td">
-                          <select style={{ ...styles.select, minWidth: 150 }} value={report.status} onChange={e => updateAccidentReportStatus(report.id, e.target.value as AccidentReportStatus)}>
-                            <option>Açık</option>
-                            <option>İncelemede</option>
-                            <option>Aksiyon Planlandı</option>
-                            <option>Kapandı</option>
-                          </select>
-                        </td>
-                        <td style={{ ...styles.td, minWidth: 260, color: "var(--isg-text-muted)" }} className="isg-td">{[report.description, report.rootCause, report.actionPlan].filter(Boolean).join(" / ") || "—"}</td>
-                        <td style={styles.td} className="isg-td"><button style={styles.btnSecondary} onClick={() => generateAccidentReportPDF(report, company, employee)}>Rapor PDF</button></td>
-                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteAccidentReport(report.id)}>Sil</button></td>
-                      </tr>
-                    );
-                  })}
-                  {filteredAccidentReports.length === 0 && (
-                    <tr>
-                      <td colSpan={10} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz iş kazası / ramak kala raporu yok.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <AccidentReportsTab
+            styles={styles}
+            companies={companies}
+            employees={employees}
+            filteredAccidentReports={filteredAccidentReports}
+            newAccidentReport={newAccidentReport}
+            setNewAccidentReport={setNewAccidentReport}
+            search={search}
+            setSearch={setSearch}
+            selectedCompanyId={selectedCompanyId}
+            setSelectedCompanyId={setSelectedCompanyId}
+            addAccidentReport={addAccidentReport}
+            updateAccidentReportStatus={updateAccidentReportStatus}
+            deleteAccidentReport={deleteAccidentReport}
+          />
         )}
 
         {activeTab === "firma-ziyaretleri" && (

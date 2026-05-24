@@ -6,6 +6,7 @@ import { getUserProfile, UserProfile, UserRole, ROLE_CONFIG, withCreatedBy } fro
 import { AccidentReportsTab } from "./lib/AccidentReportsTab";
 import { AdminUserPanel } from "./lib/AdminUserPanel";
 import { AnnualPlansTab } from "./lib/AnnualPlansTab";
+import { ArchiveTab } from "./lib/ArchiveTab";
 import { CommitteeMeetingsTab } from "./lib/CommitteeMeetingsTab";
 import { CompanyVisitsTab } from "./lib/CompanyVisitsTab";
 import { Ek2MuayeneFormu } from "./lib/Ek2MuayeneFormu";
@@ -2775,86 +2776,30 @@ export default function Page() {
         )}
 
         {activeTab === "arsiv" && (
-          <div>
-            <div style={styles.statGrid}>
-              <div style={styles.statCard} className="isg-stat-card">
-                <div style={{ ...styles.statValue, color: "#0ea5e9" }}>{archiveItems.length}</div>
-                <div style={styles.statLabel}>Toplam Arşiv Kaydı</div>
-              </div>
-              <div style={styles.statCard} className="isg-stat-card">
-                <div style={{ ...styles.statValue, color: "#16a34a" }}>{documents.length}</div>
-                <div style={styles.statLabel}>Belge</div>
-              </div>
-              <div style={styles.statCard} className="isg-stat-card">
-                <div style={{ ...styles.statValue, color: "#d97706" }}>{trainings.length + annualPlans.length}</div>
-                <div style={styles.statLabel}>Plan / Eğitim</div>
-              </div>
-              <div style={styles.statCard} className="isg-stat-card">
-                <div style={{ ...styles.statValue, color: "#ef4444" }}>{accidentReports.length + risks.length + dofs.length}</div>
-                <div style={styles.statLabel}>Risk / DÖF / Kaza</div>
-              </div>
-            </div>
-
-            <div style={styles.card} className="isg-card">
-              <p style={styles.sectionTitle} className="isg-text-muted">Arşiv Merkezi</p>
-              <div style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.55 }}>
-                Belgeler, eğitimler, yıllık planlar, KKD kayıtları, acil durum planları, kurul toplantıları, iş kazası raporları, firma ziyaretleri, DÖF ve risk kayıtları bu ekranda firma bazlı toplanır.
-              </div>
-            </div>
-
-            <div style={styles.searchBar}>
-              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Arşivde ara..." value={search} onChange={e => setSearch(e.target.value)} />
-              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-              <select style={{ ...styles.select, maxWidth: 170 }} value={archiveTypeFilter} onChange={e => setArchiveTypeFilter(e.target.value)}>
-                <option value="all">Tüm Türler</option>
-                {archiveTypes.map(type => <option key={type} value={type}>{type}</option>)}
-              </select>
-              <select style={{ ...styles.select, maxWidth: 170 }} value={archiveStatusFilter} onChange={e => setArchiveStatusFilter(e.target.value)}>
-                <option value="all">Tüm Durumlar</option>
-                {archiveStatuses.map(status => <option key={status} value={status}>{status}</option>)}
-              </select>
-              <div style={{ minWidth: 150, maxWidth: 170 }}>
-                <div style={{ ...styles.label, marginBottom: 4 }}>Başlangıç</div>
-                <DatePicker value={archiveDateFrom} onChange={setArchiveDateFrom} />
-              </div>
-              <div style={{ minWidth: 150, maxWidth: 170 }}>
-                <div style={{ ...styles.label, marginBottom: 4 }}>Bitiş</div>
-                <DatePicker value={archiveDateTo} onChange={setArchiveDateTo} />
-              </div>
-              {(archiveTypeFilter !== "all" || archiveStatusFilter !== "all" || archiveDateFrom || archiveDateTo) && (
-                <button style={styles.btnSecondary} onClick={() => { setArchiveTypeFilter("all"); setArchiveStatusFilter("all"); setArchiveDateFrom(""); setArchiveDateTo(""); }}>Filtreleri Temizle</button>
-              )}
-              <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredArchiveItems.length} kayıt</span>
-            </div>
-
-            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
-              <table style={styles.table}>
-                <thead><tr>{["Tür", "Başlık", "Firma", "İlgili", "Tarih", "Durum", "Kaynak"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
-                <tbody>
-                  {filteredArchiveItems.map(item => {
-                    const company = companies.find(c => c.id === item.companyId);
-                    const color = item.status === "Süresi Dolmuş" || item.status === "Açık" ? "#dc2626" : item.status === "Tamamlandı" || item.status === "Kapandı" || item.status === "Geçerli" ? "#16a34a" : "#d97706";
-                    return (
-                      <tr key={`${item.type}-${item.id}`}>
-                        <td style={styles.td} className="isg-td"><Badge text={item.type} color="#0ea5e9" /></td>
-                        <td style={{ ...styles.td, minWidth: 220, fontWeight: 700 }} className="isg-td">{item.title || "—"}</td>
-                        <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
-                        <td style={{ ...styles.td, color: "var(--isg-text-muted)" }} className="isg-td">{item.owner || "—"}</td>
-                        <td style={styles.td} className="isg-td">{item.date ? new Date(item.date).toLocaleDateString("tr-TR") : "—"}</td>
-                        <td style={styles.td} className="isg-td"><Badge text={item.status || "Arşivde"} color={color} /></td>
-                        <td style={styles.td} className="isg-td"><button style={styles.btnSecondary} onClick={() => setActiveTab(item.sourceTab)}>Modüle Git</button></td>
-                      </tr>
-                    );
-                  })}
-                  {filteredArchiveItems.length === 0 && (
-                    <tr>
-                      <td colSpan={7} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Arşivde gösterilecek kayıt bulunamadı.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <ArchiveTab
+            styles={styles}
+            companies={companies}
+            archiveItems={archiveItems}
+            filteredArchiveItems={filteredArchiveItems}
+            archiveTypes={archiveTypes}
+            archiveStatuses={archiveStatuses}
+            archiveTypeFilter={archiveTypeFilter}
+            setArchiveTypeFilter={setArchiveTypeFilter}
+            archiveStatusFilter={archiveStatusFilter}
+            setArchiveStatusFilter={setArchiveStatusFilter}
+            archiveDateFrom={archiveDateFrom}
+            setArchiveDateFrom={setArchiveDateFrom}
+            archiveDateTo={archiveDateTo}
+            setArchiveDateTo={setArchiveDateTo}
+            documentsCount={documents.length}
+            plansAndTrainingsCount={trainings.length + annualPlans.length}
+            riskDofAccidentCount={accidentReports.length + risks.length + dofs.length}
+            search={search}
+            setSearch={setSearch}
+            selectedCompanyId={selectedCompanyId}
+            setSelectedCompanyId={setSelectedCompanyId}
+            setActiveTab={setActiveTab}
+          />
         )}
 
         {activeTab === "ek2muayene" && (

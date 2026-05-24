@@ -9,6 +9,7 @@ import { AnnualPlansTab } from "./lib/AnnualPlansTab";
 import { ArchiveTab } from "./lib/ArchiveTab";
 import { CommitteeMeetingsTab } from "./lib/CommitteeMeetingsTab";
 import { CompanyVisitsTab } from "./lib/CompanyVisitsTab";
+import { CompaniesTab } from "./lib/CompaniesTab";
 import { DocumentsTab } from "./lib/DocumentsTab";
 import { Ek2MuayeneFormu } from "./lib/Ek2MuayeneFormu";
 import { EmergencyPlansTab } from "./lib/EmergencyPlansTab";
@@ -1970,61 +1971,19 @@ export default function Page() {
         )}
 
         {activeTab === "firmalar" && (
-          <div>
-            {isAdmin ? (
-              <div style={styles.card} className="isg-card">
-                <p style={styles.sectionTitle} className="isg-text-muted">Yeni Firma Ekle</p>
-                <div style={styles.formGrid}>
-                  <FormField label="Kısa Ad *"><input style={styles.input} className="isg-input" value={newCompany.nickName} onChange={e => setNewCompany({ ...newCompany, nickName: e.target.value })} /></FormField>
-                  <FormField label="SGK Sicil No *"><input style={styles.input} className="isg-input" value={newCompany.sgkSicil} onChange={e => { const sgk = e.target.value; const nace = extractNaceFromSgk(sgk); const official = officialNameFromSgk(sgk); setNewCompany({ ...newCompany, sgkSicil: sgk, naceCode: nace, officialName: official || newCompany.officialName, dangerClass: dangerFromNace(nace) }); }} /></FormField>
-                  <FormField label="Resmi Unvan"><input style={styles.input} className="isg-input" value={newCompany.officialName} onChange={e => setNewCompany({ ...newCompany, officialName: e.target.value })} /></FormField>
-                  <FormField label="NACE Kodu"><input style={styles.input} className="isg-input" value={newCompany.naceCode} onChange={e => setNewCompany({ ...newCompany, naceCode: e.target.value, dangerClass: dangerFromNace(e.target.value) })} /></FormField>
-                  <FormField label="Tehlike Sınıfı"><select style={styles.select} className="isg-input" value={newCompany.dangerClass} onChange={e => setNewCompany({ ...newCompany, dangerClass: e.target.value as DangerClass })}><option>Az Tehlikeli</option><option>Tehlikeli</option><option>Çok Tehlikeli</option></select></FormField>
-                  <FormField label="Çalışan Sayısı"><input style={styles.input} className="isg-input" type="number" value={newCompany.employeeCount} onChange={e => setNewCompany({ ...newCompany, employeeCount: e.target.value })} /></FormField>
-                  <FormField label="Sözleşme Bitiş"><DatePicker value={newCompany.contractEnd} onChange={v => setNewCompany({ ...newCompany, contractEnd: v })} /></FormField>
-                  <FormField label="Hizmet Türü"><select style={styles.select} className="isg-input" value={newCompany.serviceType} onChange={e => setNewCompany({ ...newCompany, serviceType: e.target.value as ServiceType })}><option>İş Güvenliği</option><option>İş Güvenliği + İşyeri Hekimliği</option></select></FormField>
-                  <FormField label="İletişim E-posta"><input style={styles.input} className="isg-input" type="email" value={newCompany.contactEmail} onChange={e => setNewCompany({ ...newCompany, contactEmail: e.target.value })} placeholder="firma@ornek.com" /></FormField>
-                </div>
-                <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addCompany}>Firma Ekle</button></div>
-              </div>
-            ) : (
-              <div style={styles.card} className="isg-card">
-                <p style={styles.sectionTitle} className="isg-text-muted">Firma Yetkileriniz</p>
-                <p style={{ margin: 0, color: "var(--isg-text-muted)", fontSize: 13 }}>
-                  Bu ekranda yalnızca size atanmış firmalar görünür. Yeni firma ekleme ve firma silme işlemleri sadece Admin panelinden yapılır.
-                </p>
-              </div>
-            )}
-            <div style={styles.searchBar}>
-              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
-              <span style={{ color: "#64748b", fontSize: 13 }}>{filteredCompanies.length} firma</span>
-            </div>
-            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
-              <table style={styles.table}>
-                <thead><tr>{["Kısa Ad", "Resmi Unvan", "SGK Sicil", "NACE", "Tehlike", "Personel", "Sözleşme", "Hizmet", "Durum", ...(isAdmin ? ["İşlem"] : [])].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
-                <tbody>
-                  {filteredCompanies.map(c => {
-                    const ind = getCompanyIndicator(c.id);
-                    const cs = getDateStatus(c.contractEnd);
-                    return (
-                      <tr key={c.id}>
-                        <td style={styles.td} className="isg-td"><span style={{ fontWeight: 600 }}>{c.nickName}</span></td>
-                        <td style={{ ...styles.td, maxWidth: 180, fontSize: 12, color: "var(--isg-text-muted)" }}>{c.officialName}</td>
-                        <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)" }}>{c.sgkSicil}</td>
-                        <td style={styles.td} className="isg-td">{c.naceCode}</td>
-                        <td style={styles.td} className="isg-td"><Badge text={c.dangerClass} color={c.dangerClass === "Çok Tehlikeli" ? "#dc2626" : c.dangerClass === "Tehlikeli" ? "#d97706" : "#16a34a"} /></td>
-                        <td style={styles.td} className="isg-td">{c.employeeCount}</td>
-                        <td style={styles.td} className="isg-td"><span style={{ fontSize: 12 }}>{c.contractEnd}</span> <Badge text={cs} color={statusColor(cs)} /></td>
-                        <td style={{ ...styles.td, fontSize: 12 }}>{c.serviceType}</td>
-                        <td style={styles.td} className="isg-td"><Badge text={ind.text} color={ind.color} /></td>
-                        {isAdmin && <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteCompany(c.id)}>Sil</button></td>}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <CompaniesTab
+            styles={styles}
+            isAdmin={isAdmin}
+            companies={companies}
+            filteredCompanies={filteredCompanies}
+            newCompany={newCompany}
+            setNewCompany={setNewCompany}
+            search={search}
+            setSearch={setSearch}
+            addCompany={addCompany}
+            deleteCompany={deleteCompany}
+            getCompanyIndicator={getCompanyIndicator}
+          />
         )}
 
         {activeTab === "personel" && (

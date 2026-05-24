@@ -7,6 +7,7 @@ import { AccidentReportsTab } from "./lib/AccidentReportsTab";
 import { AdminUserPanel } from "./lib/AdminUserPanel";
 import { AnnualPlansTab } from "./lib/AnnualPlansTab";
 import { CommitteeMeetingsTab } from "./lib/CommitteeMeetingsTab";
+import { CompanyVisitsTab } from "./lib/CompanyVisitsTab";
 import { Ek2MuayeneFormu } from "./lib/Ek2MuayeneFormu";
 import { EmergencyPlansTab } from "./lib/EmergencyPlansTab";
 import { MykLookupTab, NaceLookupTab } from "./lib/LookupTabs";
@@ -14,7 +15,6 @@ import { PpeTab } from "./lib/PpeTab";
 import { TrainingsTab } from "./lib/TrainingsTab";
 import { useLanguage } from "./lib/i18n";
 import {
-  generateCompanyVisitPDF,
   generateRiskPDF,
 } from "./lib/pdf";
 import { documentTemplates, emptyNewEmployee, requiredCompanyDocs } from "./lib/constants";
@@ -2758,89 +2758,20 @@ export default function Page() {
         )}
 
         {activeTab === "firma-ziyaretleri" && (
-          <div>
-            <div style={styles.card} className="isg-card">
-              <p style={styles.sectionTitle} className="isg-text-muted">Firma Ziyareti Planla</p>
-              <div style={styles.formGrid}>
-                <FormField label="Firma *">
-                  <select style={styles.select} className="isg-input" value={newCompanyVisit.companyId} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, companyId: e.target.value })}>
-                    <option value="">Seçin...</option>
-                    {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
-                  </select>
-                </FormField>
-                <FormField label="Ziyaret Tarihi *"><DatePicker value={newCompanyVisit.visitDate} onChange={v => setNewCompanyVisit({ ...newCompanyVisit, visitDate: v })} /></FormField>
-                <FormField label="Ziyaret Amacı">
-                  <select style={styles.select} className="isg-input" value={newCompanyVisit.purpose} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, purpose: e.target.value as CompanyVisitPurpose })}>
-                    <option>Rutin Ziyaret</option>
-                    <option>Risk Kontrolü</option>
-                    <option>Eğitim / Bilgilendirme</option>
-                    <option>DÖF Takibi</option>
-                    <option>Acil Ziyaret</option>
-                  </select>
-                </FormField>
-                <FormField label="Ziyaret Eden *"><input style={styles.input} className="isg-input" value={newCompanyVisit.visitor} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, visitor: e.target.value })} placeholder="Ad Soyad" /></FormField>
-                <FormField label="Görüşülen Kişi"><input style={styles.input} className="isg-input" value={newCompanyVisit.contactedPerson} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, contactedPerson: e.target.value })} placeholder="Firma yetkilisi" /></FormField>
-                <FormField label="Durum">
-                  <select style={styles.select} className="isg-input" value={newCompanyVisit.status} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, status: e.target.value as CompanyVisitStatus })}>
-                    <option>Planlandı</option>
-                    <option>Tamamlandı</option>
-                    <option>Ertelendi</option>
-                    <option>Takip Gerekli</option>
-                  </select>
-                </FormField>
-                <FormField label="Sonraki Ziyaret"><DatePicker value={newCompanyVisit.nextVisitDate} onChange={v => setNewCompanyVisit({ ...newCompanyVisit, nextVisitDate: v })} /></FormField>
-                <FormField label="Tespitler"><input style={styles.input} className="isg-input" value={newCompanyVisit.findings} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, findings: e.target.value })} placeholder="Sahada görülen durumlar" /></FormField>
-                <FormField label="Aksiyonlar"><input style={styles.input} className="isg-input" value={newCompanyVisit.actions} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, actions: e.target.value })} placeholder="Alınacak aksiyonlar" /></FormField>
-                <FormField label="Not"><input style={styles.input} className="isg-input" value={newCompanyVisit.notes} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, notes: e.target.value })} placeholder="Ek açıklama" /></FormField>
-              </div>
-              <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button style={styles.btnPrimary} onClick={addCompanyVisit}>Ziyaret Kaydı Ekle</button>
-              </div>
-            </div>
-
-            <div style={styles.searchBar}>
-              <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
-              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-              <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredCompanyVisits.length} ziyaret</span>
-            </div>
-
-            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
-              <table style={styles.table}>
-                <thead><tr>{["Firma", "Tarih", "Amaç", "Ziyaret Eden", "Görüşülen", "Durum", "Tespit / Aksiyon", "Sonraki", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
-                <tbody>
-                  {filteredCompanyVisits.map(visit => {
-                    const company = companies.find(c => c.id === visit.companyId);
-                    return (
-                      <tr key={visit.id}>
-                        <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
-                        <td style={styles.td} className="isg-td">{visit.visitDate ? new Date(visit.visitDate).toLocaleDateString("tr-TR") : "—"}</td>
-                        <td style={styles.td} className="isg-td"><Badge text={visit.purpose} color="#0ea5e9" /></td>
-                        <td style={styles.td} className="isg-td">{visit.visitor || "—"}</td>
-                        <td style={styles.td} className="isg-td">{visit.contactedPerson || "—"}</td>
-                        <td style={styles.td} className="isg-td">
-                          <select style={{ ...styles.select, minWidth: 150 }} value={visit.status} onChange={e => updateCompanyVisitStatus(visit.id, e.target.value as CompanyVisitStatus)}>
-                            <option>Planlandı</option>
-                            <option>Tamamlandı</option>
-                            <option>Ertelendi</option>
-                            <option>Takip Gerekli</option>
-                          </select>
-                        </td>
-                        <td style={{ ...styles.td, minWidth: 260, color: "var(--isg-text-muted)" }} className="isg-td">{[visit.findings, visit.actions, visit.notes].filter(Boolean).join(" / ") || "—"}</td>
-                        <td style={styles.td} className="isg-td">{visit.nextVisitDate ? new Date(visit.nextVisitDate).toLocaleDateString("tr-TR") : "—"}</td>
-                        <td style={styles.td} className="isg-td"><button style={styles.btnSecondary} onClick={() => generateCompanyVisitPDF(visit, company)}>Ziyaret PDF</button></td>
-                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteCompanyVisit(visit.id)}>Sil</button></td>
-                      </tr>
-                    );
-                  })}
-                  {filteredCompanyVisits.length === 0 && (
-                    <tr>
-                      <td colSpan={10} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz firma ziyareti kaydı yok.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <CompanyVisitsTab
+            styles={styles}
+            companies={companies}
+            filteredCompanyVisits={filteredCompanyVisits}
+            newCompanyVisit={newCompanyVisit}
+            setNewCompanyVisit={setNewCompanyVisit}
+            search={search}
+            setSearch={setSearch}
+            selectedCompanyId={selectedCompanyId}
+            setSelectedCompanyId={setSelectedCompanyId}
+            addCompanyVisit={addCompanyVisit}
+            updateCompanyVisitStatus={updateCompanyVisitStatus}
+            deleteCompanyVisit={deleteCompanyVisit}
+          />
         )}
 
         {activeTab === "arsiv" && (

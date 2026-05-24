@@ -9,6 +9,7 @@ import { AnnualPlansTab } from "./lib/AnnualPlansTab";
 import { ArchiveTab } from "./lib/ArchiveTab";
 import { CommitteeMeetingsTab } from "./lib/CommitteeMeetingsTab";
 import { CompanyVisitsTab } from "./lib/CompanyVisitsTab";
+import { DocumentsTab } from "./lib/DocumentsTab";
 import { Ek2MuayeneFormu } from "./lib/Ek2MuayeneFormu";
 import { EmergencyPlansTab } from "./lib/EmergencyPlansTab";
 import { MykLookupTab, NaceLookupTab } from "./lib/LookupTabs";
@@ -18,7 +19,7 @@ import { useLanguage } from "./lib/i18n";
 import {
   generateRiskPDF,
 } from "./lib/pdf";
-import { documentTemplates, emptyNewEmployee, requiredCompanyDocs } from "./lib/constants";
+import { emptyNewEmployee, requiredCompanyDocs } from "./lib/constants";
 import {
   annualPlanStatusColor,
   checklistCompletion,
@@ -2244,48 +2245,20 @@ export default function Page() {
         )}
 
         {activeTab === "belgeler" && (
-          <div>
-            <div style={styles.card} className="isg-card">
-              <p style={styles.sectionTitle} className="isg-text-muted">Yeni Belge Ekle</p>
-              <div style={styles.formGrid}>
-                <FormField label="Firma *"><select style={styles.select} className="isg-input" value={newDocument.companyId} onChange={e => setNewDocument({ ...newDocument, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
-                <FormField label="Belge Türü *"><select style={styles.select} className="isg-input" value={newDocument.type} onChange={e => setNewDocument({ ...newDocument, type: e.target.value })}>{documentTemplates.map(t => <option key={t}>{t}</option>)}</select></FormField>
-                <FormField label="Personel (opsiyonel)"><select style={styles.select} className="isg-input" value={newDocument.employeeId} onChange={e => setNewDocument({ ...newDocument, employeeId: e.target.value })}><option value="">Firma Belgesi</option>{employees.filter(e => !newDocument.companyId || e.companyId === newDocument.companyId).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}</select></FormField>
-                <FormField label="Düzenleme Tarihi *"><DatePicker value={newDocument.issueDate} onChange={v => setNewDocument({ ...newDocument, issueDate: v })} /></FormField>
-                <FormField label="Geçerlilik Tarihi"><DatePicker value={newDocument.expiryDate} onChange={v => setNewDocument({ ...newDocument, expiryDate: v })} /></FormField>
-              </div>
-              <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addDocument}>Belge Ekle</button></div>
-            </div>
-            <div style={styles.searchBar}>
-              <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
-              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-              <span style={{ color: "#64748b", fontSize: 13 }}>{filteredDocuments.length} belge</span>
-            </div>
-            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
-              <table style={styles.table}>
-                <thead><tr>{["Belge Türü", "Firma", "Personel", "Düzenleme", "Geçerlilik", "Durum", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
-                <tbody>
-                  {filteredDocuments.map(d => {
-                    const company = companies.find(c => c.id === d.companyId);
-                    const emp = employees.find(e => e.id === d.employeeId);
-                    const ds = d.expiryDate ? getDateStatus(d.expiryDate) : "—";
-                    const days = d.expiryDate ? daysUntil(d.expiryDate) : null;
-                    return (
-                      <tr key={d.id}>
-                        <td style={{ ...styles.td, fontWeight: 500 }}>{d.type}</td>
-                        <td style={styles.td} className="isg-td">{company?.nickName}</td>
-                        <td style={{ ...styles.td, fontSize: 12, color: "var(--isg-text-muted)" }}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</td>
-                        <td style={{ ...styles.td, fontSize: 12 }}>{d.issueDate}</td>
-                        <td style={{ ...styles.td, fontSize: 12 }}>{d.expiryDate || "—"}</td>
-                        <td style={styles.td} className="isg-td">{d.expiryDate ? <div><Badge text={ds} color={statusColor(ds)} />{days !== null && days >= 0 && <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{days} gün</div>}</div> : "—"}</td>
-                        <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteDocument(d.id)}>Sil</button></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <DocumentsTab
+            styles={styles}
+            companies={companies}
+            employees={employees}
+            filteredDocuments={filteredDocuments}
+            newDocument={newDocument}
+            setNewDocument={setNewDocument}
+            search={search}
+            setSearch={setSearch}
+            selectedCompanyId={selectedCompanyId}
+            setSelectedCompanyId={setSelectedCompanyId}
+            addDocument={addDocument}
+            deleteDocument={deleteDocument}
+          />
         )}
 
         {activeTab === "gozlemciler" && (

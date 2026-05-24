@@ -40,8 +40,6 @@ export type EmployeeOnboarding = {
   status: OnboardingStatus;
   tasks: Record<OnboardingTaskKey, OnboardingTask>;
   missingSteps: string[];
-  notifiedAt?: string;
-  lastReminderAt?: string;
 };
 
 export type Employee = {

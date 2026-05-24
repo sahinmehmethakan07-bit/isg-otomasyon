@@ -17,6 +17,7 @@ import { EmployeeForm } from "./lib/EmployeeForm";
 import { EmployeeTable } from "./lib/EmployeeTable";
 import { EmergencyPlansTab } from "./lib/EmergencyPlansTab";
 import { MykLookupTab, NaceLookupTab } from "./lib/LookupTabs";
+import { ObserversTab } from "./lib/ObserversTab";
 import { PpeTab } from "./lib/PpeTab";
 import { TrainingsTab } from "./lib/TrainingsTab";
 import { useLanguage } from "./lib/i18n";
@@ -2044,29 +2045,14 @@ export default function Page() {
         )}
 
         {activeTab === "gozlemciler" && (
-          <div>
-            <div style={styles.card} className="isg-card">
-              <p style={styles.sectionTitle} className="isg-text-muted">Yeni Gözlemci Ekle</p>
-              <div style={styles.formGrid}>
-                <FormField label="Ad Soyad *"><input style={styles.input} className="isg-input" value={newObserver.fullName} onChange={e => setNewObserver({ ...newObserver, fullName: e.target.value })} /></FormField>
-                <FormField label="Unvan"><input style={styles.input} className="isg-input" value={newObserver.title} onChange={e => setNewObserver({ ...newObserver, title: e.target.value })} /></FormField>
-                <FormField label="Sertifika No"><input style={styles.input} className="isg-input" value={newObserver.certificateNo} onChange={e => setNewObserver({ ...newObserver, certificateNo: e.target.value })} /></FormField>
-                <FormField label="Telefon"><input style={styles.input} className="isg-input" value={newObserver.phone} onChange={e => setNewObserver({ ...newObserver, phone: e.target.value })} /></FormField>
-              </div>
-              <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addObserver}>Gözlemci Ekle</button></div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-              {observers.map(obs => (
-                <div key={obs.id} style={styles.card} className="isg-card">
-                  <div style={{ fontWeight: 700, marginBottom: 4 }}>{obs.fullName}</div>
-                  <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 2 }}>{obs.title}</div>
-                  <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Sertifika: {obs.certificateNo}</div>
-                  <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Tel: {obs.phone}</div>
-                  <div style={{ marginTop: 12 }}><button style={styles.btnDanger} onClick={() => deleteObserver(obs.id)}>Sil</button></div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <ObserversTab
+            styles={styles}
+            observers={observers}
+            newObserver={newObserver}
+            setNewObserver={setNewObserver}
+            addObserver={addObserver}
+            deleteObserver={deleteObserver}
+          />
         )}
 
         {activeTab === "dof" && (

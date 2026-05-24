@@ -20,6 +20,7 @@ import { EmergencyPlansTab } from "./lib/EmergencyPlansTab";
 import { MykLookupTab, NaceLookupTab } from "./lib/LookupTabs";
 import { ObserversTab } from "./lib/ObserversTab";
 import { PpeTab } from "./lib/PpeTab";
+import { RiskTab } from "./lib/RiskTab";
 import { TrainingsTab } from "./lib/TrainingsTab";
 import { useLanguage } from "./lib/i18n";
 import {
@@ -2087,111 +2088,26 @@ export default function Page() {
         )}
 
         {activeTab === "risk" && (
-          <div>
-            <div style={styles.card} className="isg-card">
-              <p style={styles.sectionTitle} className="isg-text-muted">Yeni Risk Kaydı</p>
-              <div style={styles.formGrid}>
-                <FormField label="Firma *"><select style={styles.select} className="isg-input" value={newRisk.companyId} onChange={e => setNewRisk({ ...newRisk, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
-                <FormField label="Bölüm / Faaliyet"><input style={styles.input} className="isg-input" value={newRisk.section} onChange={e => setNewRisk({ ...newRisk, section: e.target.value })} /></FormField>
-                <FormField label="Tehlike Kaynağı / Mevcut Durum *"><input style={styles.input} className="isg-input" value={newRisk.hazard} onChange={e => setNewRisk({ ...newRisk, hazard: e.target.value })} /></FormField>
-                <FormField label="Tehlike"><input style={styles.input} className="isg-input" value={newRisk.risk} onChange={e => setNewRisk({ ...newRisk, risk: e.target.value })} /></FormField>
-                <FormField label="Mevcut Önlem"><input style={styles.input} className="isg-input" value={newRisk.currentMeasure} onChange={e => setNewRisk({ ...newRisk, currentMeasure: e.target.value })} /></FormField>
-                <FormField label="Öneriler / Alınacak Önlemler"><input style={styles.input} className="isg-input" value={newRisk.actionToTake} onChange={e => setNewRisk({ ...newRisk, actionToTake: e.target.value })} /></FormField>
-                <FormField label="Olasılık (1-5)"><input style={styles.input} className="isg-input" type="number" min={1} max={5} value={newRisk.probability} onChange={e => setNewRisk({ ...newRisk, probability: e.target.value })} /></FormField>
-                <FormField label="Şiddet (1-5)"><input style={styles.input} className="isg-input" type="number" min={1} max={5} value={newRisk.severity} onChange={e => setNewRisk({ ...newRisk, severity: e.target.value })} /></FormField>
-                <FormField label="Kalıntı Olasılık"><input style={styles.input} className="isg-input" type="number" min={1} max={5} value={newRisk.residualProbability} onChange={e => setNewRisk({ ...newRisk, residualProbability: e.target.value })} /></FormField>
-                <FormField label="Kalıntı Şiddet"><input style={styles.input} className="isg-input" type="number" min={1} max={5} value={newRisk.residualSeverity} onChange={e => setNewRisk({ ...newRisk, residualSeverity: e.target.value })} /></FormField>
-                <FormField label="Etkilenecek Kişiler"><input style={styles.input} className="isg-input" value={newRisk.affectedPersons} onChange={e => setNewRisk({ ...newRisk, affectedPersons: e.target.value })} placeholder="Tüm çalışanlar" /></FormField>
-                <FormField label="Sorumlu"><input style={styles.input} className="isg-input" value={newRisk.responsible} onChange={e => setNewRisk({ ...newRisk, responsible: e.target.value })} /></FormField>
-                <FormField label="Termin"><DatePicker value={newRisk.dueDate} onChange={v => setNewRisk({ ...newRisk, dueDate: v })} /></FormField>
-                <FormField label="Kontrol Tarihi"><DatePicker value={newRisk.controlDate} onChange={v => setNewRisk({ ...newRisk, controlDate: v })} /></FormField>
-                <FormField label="Durum"><select style={styles.select} className="isg-input" value={newRisk.status} onChange={e => setNewRisk({ ...newRisk, status: e.target.value as any })}><option>Açık</option><option>Kontrol Altında</option><option>Kapandı</option></select></FormField>
-                <FormField label="İlgili Mevzuat">
-                  <input style={styles.input} className="isg-input" value={newRisk.lawReference} onChange={e => setNewRisk({ ...newRisk, lawReference: e.target.value })} placeholder="6331 sayılı İSG Kanunu..." />
-                </FormField>
-              </div>
-              <div style={{ marginTop: 8, fontSize: 13, color: "var(--isg-text-muted)" }}>
-                Risk Skoru = <strong style={{ color: riskScoreColor(parseInt(newRisk.probability) * parseInt(newRisk.severity)) }}>{parseInt(newRisk.probability) * parseInt(newRisk.severity)}</strong>
-                {" · "}Kalıntı Skoru = <strong style={{ color: riskScoreColor(parseInt(newRisk.residualProbability) * parseInt(newRisk.residualSeverity)) }}>{parseInt(newRisk.residualProbability) * parseInt(newRisk.residualSeverity)}</strong>
-              </div>
-              <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addRisk}>Risk Ekle</button></div>
-            </div>
-
-            <div style={styles.searchBar}>
-              <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
-              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-              <span style={{ color: "#64748b", fontSize: 13 }}>{filteredRisks.length} kayıt</span>
-              <button
-                style={{ ...styles.btnSuccess, marginLeft: "auto", opacity: pdfLoading || risks.length === 0 ? 0.6 : 1 }}
-                disabled={pdfLoading || risks.length === 0}
-                onClick={async () => {
-                  setPdfLoading(true);
-                  try {
-                    const risksToExport = selectedCompanyId === "all" ? risks : risks.filter(r => r.companyId === selectedCompanyId);
-                    const companiesToExport = selectedCompanyId === "all" ? companies : companies.filter(c => c.id === selectedCompanyId);
-                    await generateRiskPDF(risksToExport, companiesToExport, signers);
-                  } finally {
-                    setPdfLoading(false);
-                  }
-                }}
-              >
-                {pdfLoading ? "⏳ Hazırlanıyor..." : "📄 PDF Rapor İndir"}
-              </button>
-            </div>
-
-            <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    {["Firma", "Bölüm", "Tehlike Kaynağı", "Tehlike", "Mevcut Önlem", "Öneriler", "O", "Ş", "RS", "KO", "KŞ", "KRS", "Etkilenecek", "Sorumlu", "Termin", "K.Tarihi", "Durum", "Mevzuat", "Kaynak", "İşlem"].map(h => (
-                      <th key={h} style={styles.th} className="isg-th">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRisks.map(r => {
-                    const company = companies.find(c => c.id === r.companyId);
-                    const sourceDof = r.sourceDofId ? dofs.find(d => d.id === r.sourceDofId) : null;
-                    return (
-                      <tr key={r.id}>
-                        <td style={{ ...styles.td, fontSize: 12 }}>{company?.nickName}</td>
-                        <td style={styles.td} className="isg-td">{r.section}</td>
-                        <td style={{ ...styles.td, fontWeight: 500 }}>{r.hazard}</td>
-                        <td style={{ ...styles.td, fontSize: 12, color: "var(--isg-text-muted)" }}>{r.risk}</td>
-                        <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)" }}>{r.currentMeasure}</td>
-                        <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)" }}>{r.actionToTake}</td>
-                        <td style={{ ...styles.td, textAlign: "center" as const, fontSize: 12 }}>{r.probability}</td>
-                        <td style={{ ...styles.td, textAlign: "center" as const, fontSize: 12 }}>{r.severity}</td>
-                        <td style={styles.td} className="isg-td"><span style={{ fontWeight: 700, color: riskScoreColor(r.score), fontSize: 14 }}>{r.score}</span></td>
-                        <td style={{ ...styles.td, textAlign: "center" as const, fontSize: 12 }}>{r.residualProbability}</td>
-                        <td style={{ ...styles.td, textAlign: "center" as const, fontSize: 12 }}>{r.residualSeverity}</td>
-                        <td style={styles.td} className="isg-td"><span style={{ fontWeight: 700, color: riskScoreColor(r.residualScore), fontSize: 14 }}>{r.residualScore}</span></td>
-                        <td style={{ ...styles.td, fontSize: 11 }}>{r.affectedPersons || "—"}</td>
-                        <td style={{ ...styles.td, fontSize: 12 }}>{r.responsible}</td>
-                        <td style={{ ...styles.td, fontSize: 12 }}>{r.dueDate}</td>
-                        <td style={{ ...styles.td, fontSize: 12 }}>{r.controlDate || "—"}</td>
-                        <td style={styles.td} className="isg-td"><Badge text={r.status} color={r.status === "Kapandı" ? "#16a34a" : r.status === "Kontrol Altında" ? "#d97706" : "#dc2626"} /></td>
-                        <td style={{ ...styles.td, fontSize: 11, color: "#94a3b8", maxWidth: 140 }}>{r.lawReference || "—"}</td>
-                        <td style={styles.td} className="isg-td">
-                          {sourceDof ? (
-                            <span onClick={() => setActiveTab("dof")} style={{ cursor: "pointer", display: "inline-block", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 600, backgroundColor: "#7c3aed22", color: "#7c3aed", border: "1px solid #7c3aed44" }} title={sourceDof.title}>
-                              DÖF ↗
-                            </span>
-                          ) : <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>Manuel</span>}
-                        </td>
-                        <td style={styles.td} className="isg-td">
-                          <button style={styles.btnDanger} onClick={() => deleteRisk(r.id)}>Sil</button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-          </div>
+          <RiskTab
+            styles={styles}
+            companies={companies}
+            dofs={dofs}
+            risks={risks}
+            signers={signers}
+            filteredRisks={filteredRisks}
+            newRisk={newRisk}
+            setNewRisk={setNewRisk}
+            pdfLoading={pdfLoading}
+            setPdfLoading={setPdfLoading}
+            search={search}
+            setSearch={setSearch}
+            selectedCompanyId={selectedCompanyId}
+            setSelectedCompanyId={setSelectedCompanyId}
+            addRisk={addRisk}
+            deleteRisk={deleteRisk}
+            setActiveTab={setActiveTab}
+          />
         )}
-
 
         {activeTab === "imzacilar" && (
           <div>

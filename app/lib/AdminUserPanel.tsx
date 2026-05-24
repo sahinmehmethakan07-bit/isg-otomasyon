@@ -18,7 +18,7 @@ import React, { useState, useEffect } from "react";
 import { initializeApp, deleteApp } from "firebase/app";
 import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
 import { auth, db, firebaseConfig } from "../../lib/firebase";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
 import {
   getAllUsers,
   setUserProfile,
@@ -179,6 +179,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
   const [status, setStatus] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [roleUpdatingUid, setRoleUpdatingUid] = useState<string | null>(null);
+  const [deletingUid, setDeletingUid] = useState<string | null>(null);
   const [showNewUserPassword, setShowNewUserPassword] = useState(false);
 
   useEffect(() => {
@@ -333,6 +334,40 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
       const companyIds = exists ? prev.companyIds.filter(id => id !== companyId) : [...prev.companyIds, companyId];
       return { ...prev, companyIds };
     });
+  }
+
+  async function deleteUserProfile(user: UserProfile) {
+    setStatus(null);
+    const currentUid = auth.currentUser?.uid;
+    if (user.uid === currentUid) {
+      setStatus("❌ Kendi kullanıcı kaydınızı silemezsiniz. Başka bir admin bu işlemi yapmalı.");
+      return;
+    }
+
+    const userRoles = normalizeRoles(user);
+    if (userRoles.includes("admin")) {
+      const adminCount = users.filter(item => normalizeRoles(item).includes("admin")).length;
+      if (adminCount <= 1) {
+        setStatus("❌ Sistemde en az bir admin kalmalı. Son admin kullanıcısı silinemez.");
+        return;
+      }
+    }
+
+    const label = user.displayName || user.email;
+    const confirmed = window.confirm(`${label} kullanıcısının uygulama kaydı silinsin mi? Bu işlem kullanıcının rol ve firma yetkilerini kaldırır.`);
+    if (!confirmed) return;
+
+    setDeletingUid(user.uid);
+    try {
+      await deleteDoc(doc(db, "users", user.uid));
+      setUsers(prev => prev.filter(item => item.uid !== user.uid));
+      setStatus(`✅ ${label} kullanıcı kaydı silindi.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Bilinmeyen hata";
+      setStatus(`❌ Kullanıcı silinemedi: ${message}`);
+    } finally {
+      setDeletingUid(null);
+    }
   }
 
   async function updateUserCompanies(uid: string, user: UserProfile, companyId: string, checked: boolean) {
@@ -641,6 +676,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
               <th style={styles.th}>Firma Yetkileri</th>
               <th style={styles.th}>Rol Ekle / Kaldır</th>
               <th style={styles.th}>Firma Ekle / Kaldır</th>
+              <th style={styles.th}>İşlem</th>
             </tr>
           </thead>
           <tbody>
@@ -721,12 +757,23 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
                       ))}
                     </div>
                   </td>
+                  <td style={styles.td}>
+                    <button
+                      type="button"
+                      style={{ ...styles.btnDanger, opacity: deletingUid === user.uid || isCurrentUser ? 0.55 : 1 }}
+                      disabled={deletingUid === user.uid || isCurrentUser}
+                      onClick={() => deleteUserProfile(user)}
+                      title={isCurrentUser ? "Kendi hesabınızı buradan silemezsiniz" : "Kullanıcı kaydını sil"}
+                    >
+                      {deletingUid === user.uid ? "Siliniyor..." : "Sil"}
+                    </button>
+                  </td>
                 </tr>
               );
             })}
             {users.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ ...styles.td, textAlign: "center", color: "var(--isg-text-muted)" }}>
+                <td colSpan={7} style={{ ...styles.td, textAlign: "center", color: "var(--isg-text-muted)" }}>
                   Henüz kayıtlı kullanıcı yok
                 </td>
               </tr>
@@ -736,7 +783,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
       </div>
 
       <div style={{ fontSize: 11, color: "#475569", marginTop: 12 }}>
-        ⚠️ Kullanıcı oluşturma işlemi client-side yapılmaktadır. Production ortamında Firebase Cloud Functions kullanılması önerilir.
+        ⚠️ Kullanıcı oluşturma ve Authentication hesabını tamamen silme işlemleri için production ortamında Firebase Cloud Functions kullanılması önerilir.
       </div>
     </div>
   );

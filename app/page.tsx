@@ -11,6 +11,7 @@ import { CommitteeMeetingsTab } from "./lib/CommitteeMeetingsTab";
 import { CompanyVisitsTab } from "./lib/CompanyVisitsTab";
 import { CompaniesTab } from "./lib/CompaniesTab";
 import { DocumentsTab } from "./lib/DocumentsTab";
+import { DofTab } from "./lib/DofTab";
 import { Ek2MuayeneFormu } from "./lib/Ek2MuayeneFormu";
 import { EmployeeDetailPanel } from "./lib/EmployeeDetailPanel";
 import { EmployeeForm } from "./lib/EmployeeForm";
@@ -2056,169 +2057,33 @@ export default function Page() {
         )}
 
         {activeTab === "dof" && (
-          <div>
-            <div style={styles.card} className="isg-card">
-              <p style={styles.sectionTitle} className="isg-text-muted">Yeni DÖF Kaydı</p>
-              <div style={styles.formGrid}>
-                <FormField label="Firma *"><select style={styles.select} className="isg-input" value={newDof.companyId} onChange={e => setNewDof({ ...newDof, companyId: e.target.value })}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
-                <FormField label="Gözlemci"><select style={styles.select} className="isg-input" value={newDof.observerId} onChange={e => setNewDof({ ...newDof, observerId: e.target.value })}><option value="">Seçin...</option>{observers.map(o => <option key={o.id} value={o.id}>{o.fullName}</option>)}</select></FormField>
-                <FormField label="Başlık *"><input style={styles.input} className="isg-input" value={newDof.title} onChange={e => setNewDof({ ...newDof, title: e.target.value })} /></FormField>
-                <FormField label="Konum"><input style={styles.input} className="isg-input" value={newDof.location} onChange={e => setNewDof({ ...newDof, location: e.target.value })} /></FormField>
-                <FormField label="Öncelik"><select style={styles.select} className="isg-input" value={newDof.priority} onChange={e => setNewDof({ ...newDof, priority: e.target.value as any })}><option>Düşük</option><option>Orta</option><option>Yüksek</option></select></FormField>
-                <FormField label="Sorumlu"><input style={styles.input} className="isg-input" value={newDof.responsible} onChange={e => setNewDof({ ...newDof, responsible: e.target.value })} /></FormField>
-                <FormField label="Termin"><DatePicker value={newDof.dueDate} onChange={v => setNewDof({ ...newDof, dueDate: v })} /></FormField>
-                <FormField label="Durum"><select style={styles.select} className="isg-input" value={newDof.status} onChange={e => setNewDof({ ...newDof, status: e.target.value as any })}><option>Açık</option></select></FormField>
-              </div>
-              <div style={{ marginTop: 10 }}>
-                <label style={styles.label} className="isg-label">Açıklama</label>
-                <textarea style={{ ...styles.input, height: 60, resize: "vertical" as const }} value={newDof.description} onChange={e => setNewDof({ ...newDof, description: e.target.value })} />
-              </div>
-              <div style={{ marginTop: 10 }}>
-                <label style={styles.label} className="isg-label">Yasal Dayanak</label>
-                <input style={styles.input} className="isg-input" value={newDof.lawReference} onChange={e => setNewDof({ ...newDof, lawReference: e.target.value })} />
-              </div>
-              <div style={{ marginTop: 10 }}>
-                <label style={styles.label} className="isg-label">Etkilenecek Kişiler</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
-                  {employees.filter(emp => emp.companyId === newDof.companyId).length > 0 ? (
-                    employees.filter(emp => emp.companyId === newDof.companyId).map(emp => {
-                      const fullName = `${emp.firstName} ${emp.lastName}`;
-                      const selected = (newDof.affectedPersons || "").split(",").map(s => s.trim()).filter(Boolean);
-                      const isSelected = selected.includes(fullName);
-                      return (
-                        <button key={emp.id} type="button" onClick={() => {
-                          const current = (newDof.affectedPersons || "").split(",").map(s => s.trim()).filter(Boolean);
-                          const updated = isSelected ? current.filter(n => n !== fullName) : [...current, fullName];
-                          setNewDof({ ...newDof, affectedPersons: updated.join(", ") });
-                        }} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 12, border: isSelected ? "1.5px solid #3b82f6" : "1px solid var(--isg-border, #334155)", backgroundColor: isSelected ? "#3b82f622" : "transparent", color: isSelected ? "#3b82f6" : "var(--isg-text-muted)", cursor: "pointer" }}>
-                          {isSelected ? "✓ " : ""}{fullName}
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <span style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>{newDof.companyId ? "Bu firmaya ait çalışan yok" : "Önce firma seçin"}</span>
-                  )}
-                </div>
-                <input style={{ ...styles.input, fontSize: 12 }} className="isg-input" value={newDof.affectedPersons} onChange={e => setNewDof({ ...newDof, affectedPersons: e.target.value })} placeholder="Tüm çalışanlar veya isimleri seçin/yazın" />
-              </div>
-              <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))", gap: 16 }}>
-                <div>
-                  <label style={styles.label} className="isg-label">Öncesi Fotoğraf (Uygunsuzluk)</label>
-                  {newDof.beforePhoto ? (
-                    <div style={{ position: "relative", display: "inline-block" }}>
-                      <img src={newDof.beforePhoto} alt="önce" style={{ width: 120, height: 90, objectFit: "cover", borderRadius: 6, border: "1px solid var(--isg-border, #334155)" }} />
-                      <button type="button" onClick={() => setNewDof({ ...newDof, beforePhoto: "" })} style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-                    </div>
-                  ) : (
-                    <input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, beforePhoto: b64 }))} />
-                  )}
-                </div>
-                <div>
-                  <label style={styles.label} className="isg-label">Sonrası Fotoğraf (Düzeltme)</label>
-                  {newDof.afterPhoto ? (
-                    <div style={{ position: "relative", display: "inline-block" }}>
-                      <img src={newDof.afterPhoto} alt="sonra" style={{ width: 120, height: 90, objectFit: "cover", borderRadius: 6, border: "1px solid var(--isg-border, #334155)" }} />
-                      <button type="button" onClick={() => setNewDof({ ...newDof, afterPhoto: "" })} style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-                    </div>
-                  ) : (
-                    <input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => setNewDof({ ...newDof, afterPhoto: b64 }))} />
-                  )}
-                </div>
-              </div>
-              <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <button style={{ ...styles.btnPrimary, opacity: dofAdding ? 0.6 : 1 }} disabled={dofAdding} onClick={addDof}>{dofAdding ? "Kaydediliyor..." : "DÖF Ekle"}</button>
-                {dofAddStatus && (
-                  <span style={{ fontSize: 13, padding: "6px 12px", borderRadius: 6, backgroundColor: dofAddStatus.startsWith("✅") ? "#16a34a22" : dofAddStatus.startsWith("⚠️") ? "#d9770622" : "#dc262622", color: dofAddStatus.startsWith("✅") ? "#16a34a" : dofAddStatus.startsWith("⚠️") ? "#d97706" : "#dc2626" }}>{dofAddStatus}</span>
-                )}
-              </div>
-            </div>
-            <div style={styles.searchBar}>
-              <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
-              <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-              <span style={{ color: "#64748b", fontSize: 13 }}>{filteredDofs.length} kayıt</span>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>
-              {filteredDofs.map(dof => {
-                const company = companies.find(c => c.id === dof.companyId);
-                const observer = observers.find(o => o.id === dof.observerId);
-                const isEditing = editingDofId === dof.id;
-                return (
-                  <div key={dof.id} style={{ ...styles.card, borderLeft: `3px solid ${priorityColor(dof.priority)}` }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{dof.title}</div>
-                      <Badge text={dof.priority} color={priorityColor(dof.priority)} />
-                    </div>
-                    <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>{dof.description}</div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-                      <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>📍 {dof.location}</span>
-                      <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>👤 {dof.responsible}</span>
-                      <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>📅 {dof.dueDate}</span>
-                      {dof.affectedPersons && <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>👥 {dof.affectedPersons}</span>}
-                    </div>
-                    <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-                      <Badge text={dof.status} color={dof.status === "Çözüldü" ? "#16a34a" : dof.status === "Riske Aktarıldı" ? "#7c3aed" : dof.status === "Önlem Alındı" ? "#d97706" : dof.status === "Bildirildi" ? "#0ea5e9" : "#dc2626"} />
-                      <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{company?.nickName}</span>
-                      {observer && <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{observer.fullName}</span>}
-                    </div>
-                    {(dof.beforePhoto || dof.afterPhoto) && (
-                      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                        {dof.beforePhoto && <div><div style={{ fontSize: 10, color: "#64748b", marginBottom: 2 }}>Önce</div><img src={dof.beforePhoto} alt="önce" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 4 }} /></div>}
-                        {dof.afterPhoto && <div><div style={{ fontSize: 10, color: "#64748b", marginBottom: 2 }}>Sonra</div><img src={dof.afterPhoto} alt="sonra" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 4 }} /></div>}
-                      </div>
-                    )}
-                    {isEditing && (
-                      <div style={{ marginBottom: 8 }}>
-                        <select style={{ ...styles.select, marginBottom: 10 }} className="isg-input" value={dof.status} onChange={e => updateDofStatus(dof.id, e.target.value as any)}>
-                          <option>Açık</option><option>Bildirildi</option><option>Önlem Alındı</option><option>Çözüldü</option>
-                        </select>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))", gap: 16 }}>
-                          <div>
-                            <label style={{ fontSize: 11, color: "var(--isg-text-muted)", display: "block", marginBottom: 4 }}>Öncesi Fotoğraf (Uygunsuzluk)</label>
-                            {dof.beforePhoto ? (
-                              <div style={{ position: "relative", display: "inline-block" }}>
-                                <img src={dof.beforePhoto} alt="önce" style={{ width: 140, height: 100, objectFit: "cover", borderRadius: 6, border: "1px solid var(--isg-border)" }} />
-                                <button type="button" onClick={() => removeDofPhoto(dof.id, "beforePhoto")} style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-                              </div>
-                            ) : (
-                              <input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => updateDofPhoto(dof.id, "beforePhoto", b64))} />
-                            )}
-                          </div>
-                          <div>
-                            <label style={{ fontSize: 11, color: "var(--isg-text-muted)", display: "block", marginBottom: 4 }}>Sonrası Fotoğraf (Düzeltme)</label>
-                            {dof.afterPhoto ? (
-                              <div style={{ position: "relative", display: "inline-block" }}>
-                                <img src={dof.afterPhoto} alt="sonra" style={{ width: 140, height: 100, objectFit: "cover", borderRadius: 6, border: "1px solid var(--isg-border)" }} />
-                                <button type="button" onClick={() => removeDofPhoto(dof.id, "afterPhoto")} style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-                              </div>
-                            ) : (
-                              <input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => updateDofPhoto(dof.id, "afterPhoto", b64))} />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button style={styles.btnSecondary} onClick={() => setEditingDofId(isEditing ? null : dof.id)}>{isEditing ? "Kapat" : "Düzenle"}</button>
-                      {risks.some(r => r.sourceDofId === dof.id) ? (
-                        <button style={{ ...styles.btnSuccess, fontSize: 11, padding: "4px 10px" }} onClick={() => createRiskFromDof(dof)}>✓ Risk Görüntüle</button>
-                      ) : dof.status !== "Riske Aktarıldı" && (
-                        <button style={{ ...styles.btnPrimary, fontSize: 11, padding: "4px 10px", opacity: dof.status === "Önlem Alındı" ? 1 : 0.6 }} onClick={() => {
-                          if (dof.status !== "Önlem Alındı") {
-                            setDofAddStatus(`⚠️ Riske aktarmak için önce DÖF durumunu "Önlem Alındı" olarak değiştirin`);
-                            setTimeout(() => setDofAddStatus(null), 4000);
-                            return;
-                          }
-                          createRiskFromDof(dof);
-                        }}>⚡ Riske Aktar</button>
-                      )}
-                      <button style={{ ...styles.btnSecondary, fontSize: 11, padding: "4px 8px" }} onClick={() => generateDofPDF(dof)}>📄 PDF</button>
-                      <button style={styles.btnDanger} onClick={() => deleteDof(dof.id)}>Sil</button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <DofTab
+            styles={styles}
+            companies={companies}
+            observers={observers}
+            employees={employees}
+            filteredDofs={filteredDofs}
+            risks={risks}
+            newDof={newDof}
+            setNewDof={setNewDof}
+            dofAdding={dofAdding}
+            dofAddStatus={dofAddStatus}
+            setDofAddStatus={setDofAddStatus}
+            search={search}
+            setSearch={setSearch}
+            selectedCompanyId={selectedCompanyId}
+            setSelectedCompanyId={setSelectedCompanyId}
+            editingDofId={editingDofId}
+            setEditingDofId={setEditingDofId}
+            addDof={addDof}
+            updateDofStatus={updateDofStatus}
+            updateDofPhoto={updateDofPhoto}
+            removeDofPhoto={removeDofPhoto}
+            createRiskFromDof={createRiskFromDof}
+            generateDofPDF={generateDofPDF}
+            deleteDof={deleteDof}
+            handleImageToBase64={handleImageToBase64}
+          />
         )}
 
         {activeTab === "risk" && (

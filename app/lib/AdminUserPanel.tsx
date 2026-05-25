@@ -18,7 +18,7 @@ import React, { useState, useEffect } from "react";
 import { initializeApp, deleteApp } from "firebase/app";
 import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
 import { auth, db, firebaseConfig } from "../../lib/firebase";
-import { addDoc, collection, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import {
   getAllUsers,
   setUserProfile,
@@ -354,14 +354,29 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
     }
 
     const label = user.displayName || user.email;
-    const confirmed = window.confirm(`${label} kullanıcısının uygulama kaydı silinsin mi? Bu işlem rol ve firma yetkilerini kaldırır, Firebase Authentication hesabını silmez.`);
+    const confirmed = window.confirm(`${label} kullanıcısı tamamen silinsin mi? Bu işlem Firebase Authentication hesabını ve uygulama rol/firma kaydını kaldırır.`);
     if (!confirmed) return;
 
     setDeletingUid(user.uid);
     try {
-      await deleteDoc(doc(db, "users", user.uid));
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error("Admin oturumu doğrulanamadı. Lütfen tekrar giriş yapın.");
+
+      const response = await fetch("/api/admin/delete-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ uid: user.uid }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || "Kullanıcı silinemedi.");
+      }
+
       setUsers(prev => prev.filter(item => item.uid !== user.uid));
-      setStatus(`✅ ${label} kullanıcı kaydı silindi.`);
+      setStatus(`✅ ${label} kullanıcısı silindi.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Bilinmeyen hata";
       setStatus(`❌ Kullanıcı silinemedi: ${message}`);
@@ -763,7 +778,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
                       style={{ ...styles.btnDanger, opacity: deletingUid === user.uid || isCurrentUser ? 0.55 : 1 }}
                       disabled={deletingUid === user.uid || isCurrentUser}
                       onClick={() => deleteUserProfile(user)}
-                      title={isCurrentUser ? "Kendi hesabınızı buradan silemezsiniz" : "Uygulama kullanıcı kaydını sil"}
+                      title={isCurrentUser ? "Kendi hesabınızı buradan silemezsiniz" : "Kullanıcıyı tamamen sil"}
                     >
                       {deletingUid === user.uid ? "Siliniyor..." : "Kaydı Sil"}
                     </button>
@@ -783,7 +798,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
       </div>
 
       <div style={{ fontSize: 11, color: "#475569", marginTop: 12 }}>
-        ⚠️ Buradaki silme işlemi uygulama kaydını kaldırır. Firebase Authentication hesabını tamamen silmek için production ortamında Firebase Cloud Functions veya Admin SDK gerekir.
+        ⚠️ Kullanıcı silme işlemi Firebase Authentication hesabını ve uygulama rol/firma kaydını kaldırır. Kendi hesabınızı ve sistemdeki son admin hesabını buradan silemezsiniz.
       </div>
     </div>
   );

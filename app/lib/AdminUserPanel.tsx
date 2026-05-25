@@ -354,7 +354,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
     }
 
     const label = user.displayName || user.email;
-    const confirmed = window.confirm(`${label} kullanıcısının uygulama kaydı silinsin mi? Bu işlem kullanıcının rol ve firma yetkilerini kaldırır.`);
+    const confirmed = window.confirm(`${label} kullanıcısının uygulama kaydı silinsin mi? Bu işlem rol ve firma yetkilerini kaldırır, Firebase Authentication hesabını silmez.`);
     if (!confirmed) return;
 
     setDeletingUid(user.uid);
@@ -763,9 +763,9 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
                       style={{ ...styles.btnDanger, opacity: deletingUid === user.uid || isCurrentUser ? 0.55 : 1 }}
                       disabled={deletingUid === user.uid || isCurrentUser}
                       onClick={() => deleteUserProfile(user)}
-                      title={isCurrentUser ? "Kendi hesabınızı buradan silemezsiniz" : "Kullanıcı kaydını sil"}
+                      title={isCurrentUser ? "Kendi hesabınızı buradan silemezsiniz" : "Uygulama kullanıcı kaydını sil"}
                     >
-                      {deletingUid === user.uid ? "Siliniyor..." : "Sil"}
+                      {deletingUid === user.uid ? "Siliniyor..." : "Kaydı Sil"}
                     </button>
                   </td>
                 </tr>
@@ -783,7 +783,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
       </div>
 
       <div style={{ fontSize: 11, color: "#475569", marginTop: 12 }}>
-        ⚠️ Kullanıcı oluşturma ve Authentication hesabını tamamen silme işlemleri için production ortamında Firebase Cloud Functions kullanılması önerilir.
+        ⚠️ Buradaki silme işlemi uygulama kaydını kaldırır. Firebase Authentication hesabını tamamen silmek için production ortamında Firebase Cloud Functions veya Admin SDK gerekir.
       </div>
     </div>
   );

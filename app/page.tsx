@@ -28,9 +28,15 @@ import {
   generateRiskPDF,
 } from "./lib/pdf";
 import { emptyNewEmployee } from "./lib/constants";
-import { buildEmployeeRecord } from "./lib/employeeData";
 import { getDashboardOverview } from "./lib/dashboardOverview";
 import { generateDofPDF as generateDofPDFDocument } from "./lib/dofPdf";
+import {
+  createEmployeeRecord,
+  deleteEmployeeRecord,
+  saveEmployeeChecklist,
+  saveEmployeeTraining,
+  validateNewEmployee,
+} from "./lib/employeeService";
 import {
   buildArchiveItems,
   buildTaskItems,
@@ -58,7 +64,6 @@ import {
   createOnboardingFromChecklist,
   dangerFromNace,
   daysUntil,
-  emptyChecklist,
   extractNaceFromSgk,
   getDateStatus,
   normalizeCommitteeMeetingRecord,
@@ -618,20 +623,15 @@ export default function Page() {
 
   async function addEmployee() {
     setEmployeeAddStatus(null);
-    if (!newEmployee.companyId) {
-      setEmployeeAddStatus("⚠️ Önce firma seçmelisiniz. Firma listesi boşsa Admin panelinden bu kullanıcıya firma yetkisi verilmelidir.");
-      return;
-    }
-    if (!newEmployee.firstName.trim()) {
-      setEmployeeAddStatus("⚠️ Personel adı zorunlu.");
+    const validationMessage = validateNewEmployee(newEmployee);
+    if (validationMessage) {
+      setEmployeeAddStatus(validationMessage);
       return;
     }
 
     try {
-      const checklist = { ...emptyChecklist };
-      const data = buildEmployeeRecord(newEmployee, checklist);
-      const ref = await addDoc(collection(db, "employees"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-      setEmployees(prev => [...prev, { id: ref.id, ...data }]);
+      const employee = await createEmployeeRecord(db, newEmployee, userProfile!);
+      setEmployees(prev => [...prev, employee]);
       setNewEmployee(emptyNewEmployee);
       setEmployeeAddStatus("✅ Personel kaydı oluşturuldu. Doktor ve İSG uzmanı için onboarding görevleri açıldı.");
     } catch (error) {
@@ -642,23 +642,20 @@ export default function Page() {
 
   async function deleteEmployee(id: string) {
     if (!confirm("Bu personeli silmek istediğinizden emin misiniz?")) return;
-    await deleteDoc(doc(db, "employees", id));
+    await deleteEmployeeRecord(db, id);
     setEmployees(prev => prev.filter(e => e.id !== id));
     if (selectedEmployeeId === id) setSelectedEmployeeId(null);
   }
 
   async function updateEmployeeChecklist(employeeId: string, checklist: EmployeeChecklist) {
-    const onboarding = createOnboardingFromChecklist(checklist);
-    const trainingComplete = onboarding.status === "completed";
-    await updateDoc(doc(db, "employees", employeeId), { checklist, onboarding, trainingComplete });
+    const { onboarding, trainingComplete } = await saveEmployeeChecklist(db, employeeId, checklist);
     setEmployees(prev => prev.map(e => e.id === employeeId ? { ...e, checklist, onboarding, trainingComplete } : e));
   }
 
   async function updateEmployeeTraining(employeeId: string, trainingComplete: boolean) {
     const employee = employees.find(e => e.id === employeeId);
-    const onboarding = employee ? { ...(employee.onboarding || createOnboardingFromChecklist(employee.checklist)), status: trainingComplete ? "completed" as const : "pending" as const, missingSteps: trainingComplete ? [] : (employee.onboarding?.missingSteps || createOnboardingFromChecklist(employee.checklist).missingSteps) } : undefined;
-    await updateDoc(doc(db, "employees", employeeId), onboarding ? { trainingComplete, onboarding } : { trainingComplete });
-    setEmployees(prev => prev.map(e => e.id === employeeId ? { ...e, trainingComplete, ...(onboarding ? { onboarding } : {}) } : e));
+    const update = await saveEmployeeTraining(db, employee, employeeId, trainingComplete);
+    setEmployees(prev => prev.map(e => e.id === employeeId ? { ...e, ...update } : e));
   }
 
   async function addDocument() {

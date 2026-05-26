@@ -28,6 +28,7 @@ import {
   generateRiskPDF,
 } from "./lib/pdf";
 import { emptyNewEmployee, requiredCompanyDocs } from "./lib/constants";
+import { buildEmployeeRecord } from "./lib/employeeData";
 import {
   annualPlanStatusColor,
   checklistCompletion,
@@ -543,7 +544,7 @@ export default function Page() {
   const filteredEmployees = useMemo(() => employees.filter(e => {
     const company = companies.find(c => c.id === e.companyId);
     const matchesCompany = selectedCompanyId === "all" || e.companyId === selectedCompanyId;
-    return matchesCompany && `${e.firstName} ${e.lastName} ${e.tcNo} ${e.phone || ""} ${e.email || ""} ${e.department || ""} ${e.diplomaInfo || ""} ${e.educationLevel || ""} ${e.address || ""} ${e.title} ${e.profession || ""} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
+    return matchesCompany && `${e.firstName} ${e.lastName} ${e.tcNo} ${e.phone || ""} ${e.email || ""} ${e.department || ""} ${e.educationLevel || ""} ${e.address || ""} ${e.title} ${e.workingHours || ""} ${e.shiftPlan || ""} ${e.foreignLanguage || ""} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
   }), [employees, companies, selectedCompanyId, search]);
   const filteredDocuments = useMemo(() => documents.filter(d => { const company = companies.find(c => c.id === d.companyId); const employee = employees.find(e => e.id === d.employeeId); const matchesCompany = selectedCompanyId === "all" || d.companyId === selectedCompanyId; return matchesCompany && `${d.type} ${company?.nickName || ""} ${employee?.firstName || ""} ${employee?.lastName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [documents, companies, employees, selectedCompanyId, search]);
   const filteredDofs = useMemo(() => dofs.filter(d => { const company = companies.find(c => c.id === d.companyId); const matchesCompany = selectedCompanyId === "all" || d.companyId === selectedCompanyId; return matchesCompany && `${d.title} ${d.description} ${d.location} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [dofs, companies, selectedCompanyId, search]);
@@ -928,47 +929,7 @@ export default function Page() {
 
     try {
       const checklist = { ...emptyChecklist };
-      const onboarding = createOnboardingFromChecklist(checklist);
-      const data = {
-        companyId: newEmployee.companyId,
-        firstName: newEmployee.firstName,
-        lastName: newEmployee.lastName,
-        tcNo: newEmployee.tcNo,
-        photo: newEmployee.photo,
-        birthPlace: newEmployee.birthPlace,
-        birthDate: newEmployee.birthDate,
-        gender: newEmployee.gender,
-        nationality: newEmployee.nationality === "Diğer" ? newEmployee.nationalityOther : newEmployee.nationality,
-        serialNo: newEmployee.serialNo,
-        fatherName: newEmployee.fatherName,
-        motherName: newEmployee.motherName,
-        phone: newEmployee.phone,
-        email: newEmployee.email,
-        department: newEmployee.department,
-        diplomaInfo: newEmployee.diplomaInfo,
-        educationLevel: newEmployee.educationLevel,
-        maritalStatus: newEmployee.maritalStatus,
-        childrenCount: newEmployee.childrenCount,
-        address: newEmployee.address,
-        title: newEmployee.title,
-        jobDescription: newEmployee.jobDescription,
-        profession: newEmployee.profession,
-        hireDate: newEmployee.hireDate,
-        sgkNo: newEmployee.sgkNo,
-        iban: newEmployee.iban,
-        emergencyContactName: newEmployee.emergencyContactName,
-        emergencyContactPhone: newEmployee.emergencyContactPhone,
-        bloodType: newEmployee.bloodType,
-        chronicDisease: newEmployee.chronicDisease,
-        tetanusVaccine: newEmployee.tetanusVaccine,
-        hepatitisVaccine: newEmployee.hepatitisVaccine,
-        allergies: newEmployee.allergies,
-        notes: newEmployee.notes,
-        isActive: true,
-        trainingComplete: false,
-        checklist,
-        onboarding,
-      };
+      const data = buildEmployeeRecord(newEmployee, checklist);
       const ref = await addDoc(collection(db, "employees"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
       setEmployees(prev => [...prev, { id: ref.id, ...data }]);
       setNewEmployee(emptyNewEmployee);

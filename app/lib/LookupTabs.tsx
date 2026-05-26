@@ -105,7 +105,7 @@ export function MykLookupTab({
     const term = mykSearch.trim().toLowerCase();
     if (!term) return employees.slice(0, 6);
     return employees.filter(employee =>
-      [employee.firstName, employee.lastName, employee.title || "", employee.profession || "", employee.department || ""].join(" ").toLowerCase().includes(term)
+      [employee.firstName, employee.lastName, employee.title || "", employee.department || ""].join(" ").toLowerCase().includes(term)
     ).slice(0, 8);
   }, [employees, mykSearch]);
 
@@ -152,7 +152,7 @@ export function MykLookupTab({
         <div style={styles.card} className="isg-card">
           <p style={styles.sectionTitle} className="isg-text-muted">Personel Eşleşmeleri</p>
           <div style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.55, marginBottom: 12 }}>
-            Arama metnine göre mevcut personel unvanı, meslek dalı ve birim alanları taranır.
+            Arama metnine göre mevcut personel unvanı ve birim alanları taranır.
           </div>
           <div style={{ display: "grid", gap: 8 }}>
             {mykMatchedEmployees.map(employee => {
@@ -172,7 +172,7 @@ export function MykLookupTab({
                 >
                   <span>
                     <strong style={{ display: "block", color: "var(--isg-text)" }}>{employee.firstName} {employee.lastName}</strong>
-                    <span style={{ color: "var(--isg-text-muted)", fontSize: 12 }}>{employee.title || employee.profession || "Unvan girilmedi"} · {company?.nickName || "Firma yok"}</span>
+                    <span style={{ color: "var(--isg-text-muted)", fontSize: 12 }}>{employee.title || "Unvan girilmedi"} · {company?.nickName || "Firma yok"}</span>
                   </span>
                   <span style={{ color: "var(--isg-text-subtle)", fontSize: 12 }}>Aç</span>
                 </button>

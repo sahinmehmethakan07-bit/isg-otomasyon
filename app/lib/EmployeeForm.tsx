@@ -1,5 +1,5 @@
 import React, { ChangeEvent, useEffect, useState } from "react";
-import type { Company, NewEmployeeForm } from "./types";
+import type { Company, EmployeeScannedDocument, NewEmployeeForm } from "./types";
 
 type EmployeeFormProps = {
   styles: Record<string, React.CSSProperties>;
@@ -138,6 +138,36 @@ export function EmployeeForm({
   const setField = (field: keyof NewEmployeeForm, value: string) => {
     setNewEmployee(current => ({ ...current, [field]: value }));
   };
+  const addScannedDocuments = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const item: EmployeeScannedDocument = {
+          id: crypto.randomUUID(),
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          data: String(reader.result || ""),
+          uploadedAt: new Date().toISOString(),
+        };
+        setNewEmployee(current => ({
+          ...current,
+          scannedDocuments: [...current.scannedDocuments, item],
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+    event.target.value = "";
+  };
+
+  const removeScannedDocument = (id: string) => {
+    setNewEmployee(current => ({
+      ...current,
+      scannedDocuments: current.scannedDocuments.filter(doc => doc.id !== id),
+    }));
+  };
 
   return (
     <div style={{ minWidth: 0 }}>
@@ -179,8 +209,6 @@ export function EmployeeForm({
                   <FormField styles={styles} label="Uyruk Açıklaması"><input style={styles.input} className="isg-input" value={newEmployee.nationalityOther} onChange={e => setField("nationalityOther", e.target.value)} placeholder="Örn. Bulgaristan, Suriye..." /></FormField>
                 )}
                 <FormField styles={styles} label="Seri / Belge No"><input style={styles.input} className="isg-input" value={newEmployee.serialNo} onChange={e => setField("serialNo", e.target.value)} /></FormField>
-                <FormField styles={styles} label="Baba Adı"><input style={styles.input} className="isg-input" value={newEmployee.fatherName} onChange={e => setField("fatherName", e.target.value)} /></FormField>
-                <FormField styles={styles} label="Anne Adı"><input style={styles.input} className="isg-input" value={newEmployee.motherName} onChange={e => setField("motherName", e.target.value)} /></FormField>
               </div>
             </div>
             <div>
@@ -190,7 +218,6 @@ export function EmployeeForm({
                 <FormField styles={styles} label="E-posta"><input style={styles.input} className="isg-input" type="email" value={newEmployee.email} onChange={e => setField("email", e.target.value)} /></FormField>
                 <FormField styles={styles} label="Adres"><input style={styles.input} className="isg-input" value={newEmployee.address} onChange={e => setField("address", e.target.value)} /></FormField>
                 <FormField styles={styles} label="Medeni Durum"><select style={styles.select} className="isg-input" value={newEmployee.maritalStatus} onChange={e => setField("maritalStatus", e.target.value)}><option value="">Seçin...</option><option>Bekar</option><option>Evli</option><option>Boşanmış</option><option>Dul</option></select></FormField>
-                <FormField styles={styles} label="Çocuk Sayısı"><input style={styles.input} className="isg-input" value={newEmployee.childrenCount} onChange={e => setField("childrenCount", e.target.value)} /></FormField>
                 <FormField styles={styles} label="Acil Durum Kişisi"><input style={styles.input} className="isg-input" value={newEmployee.emergencyContactName} onChange={e => setField("emergencyContactName", e.target.value)} /></FormField>
                 <FormField styles={styles} label="Acil Durum Telefonu"><input style={styles.input} className="isg-input" value={newEmployee.emergencyContactPhone} onChange={e => setField("emergencyContactPhone", e.target.value)} /></FormField>
               </div>
@@ -200,26 +227,51 @@ export function EmployeeForm({
               <div style={styles.formGrid}>
                 <FormField styles={styles} label="Birim"><input style={styles.input} className="isg-input" value={newEmployee.department} onChange={e => setField("department", e.target.value)} placeholder="Üretim, muhasebe..." /></FormField>
                 <FormField styles={styles} label="Unvan"><input style={styles.input} className="isg-input" value={newEmployee.title} onChange={e => setField("title", e.target.value)} /></FormField>
-                <FormField styles={styles} label="Meslek / Meslek Dalı"><input style={styles.input} className="isg-input" value={newEmployee.profession} onChange={e => setField("profession", e.target.value)} /></FormField>
-                <FormField styles={styles} label="Yapacağı İş"><input style={styles.input} className="isg-input" value={newEmployee.jobDescription} onChange={e => setField("jobDescription", e.target.value)} /></FormField>
                 <FormField styles={styles} label="İşe Giriş"><DatePicker styles={styles} value={newEmployee.hireDate} onChange={v => setField("hireDate", v)} /></FormField>
                 <FormField styles={styles} label="Eğitim Durumu"><input style={styles.input} className="isg-input" value={newEmployee.educationLevel} onChange={e => setField("educationLevel", e.target.value)} /></FormField>
-                <FormField styles={styles} label="Diploma Bilgileri"><input style={styles.input} className="isg-input" value={newEmployee.diplomaInfo} onChange={e => setField("diplomaInfo", e.target.value)} placeholder="Okul / bölüm / yıl" /></FormField>
-                <FormField styles={styles} label="SGK No"><input style={styles.input} className="isg-input" value={newEmployee.sgkNo} onChange={e => setField("sgkNo", e.target.value)} /></FormField>
                 <FormField styles={styles} label="IBAN"><input style={styles.input} className="isg-input" value={newEmployee.iban} onChange={e => setField("iban", e.target.value)} /></FormField>
+                <FormField styles={styles} label="Çalışma Süreleri"><input style={styles.input} className="isg-input" value={newEmployee.workingHours} onChange={e => setField("workingHours", e.target.value)} placeholder="Örn. 08:00 - 17:00" /></FormField>
+                <FormField styles={styles} label="Vardiya Planlaması"><input style={styles.input} className="isg-input" value={newEmployee.shiftPlan} onChange={e => setField("shiftPlan", e.target.value)} placeholder="Gündüz, gece, 3 vardiya..." /></FormField>
+                <FormField styles={styles} label="Yabancı Dil Bilgisi"><input style={styles.input} className="isg-input" value={newEmployee.foreignLanguage} onChange={e => setField("foreignLanguage", e.target.value)} /></FormField>
+                <FormField styles={styles} label="Askerlik Durumu"><select style={styles.select} className="isg-input" value={newEmployee.militaryStatus} onChange={e => setField("militaryStatus", e.target.value)}><option value="">Seçin...</option><option>Yapıldı</option><option>Tecilli</option><option>Muaf</option><option>Yapılmadı</option><option>Uygun Değil</option></select></FormField>
+                <FormField styles={styles} label="Ehliyet Bilgisi"><select style={styles.select} className="isg-input" value={newEmployee.driverLicense} onChange={e => setNewEmployee(current => ({ ...current, driverLicense: e.target.value, driverLicenseClass: e.target.value === "Var" ? current.driverLicenseClass : "" }))}><option value="">Seçin...</option><option>Var</option><option>Yok</option></select></FormField>
+                {newEmployee.driverLicense === "Var" && (
+                  <FormField styles={styles} label="Ehliyet Sınıfı"><input style={styles.input} className="isg-input" value={newEmployee.driverLicenseClass} onChange={e => setField("driverLicenseClass", e.target.value)} placeholder="B, C, D, E..." /></FormField>
+                )}
+                <FormField styles={styles} label="Sabıka Kaydı"><select style={styles.select} className="isg-input" value={newEmployee.criminalRecord} onChange={e => setField("criminalRecord", e.target.value)}><option value="">Seçin...</option><option>Yok</option><option>Var</option><option>Belge Bekleniyor</option></select></FormField>
+                <FormField styles={styles} label="Emekli Bilgisi"><select style={styles.select} className="isg-input" value={newEmployee.retirementInfo} onChange={e => setField("retirementInfo", e.target.value)}><option value="">Seçin...</option><option>Emekli Değil</option><option>Emekli</option><option>EYT</option><option>Bilinmiyor</option></select></FormField>
               </div>
             </div>
             <div>
               <p style={{ ...styles.sectionTitle, marginBottom: 10 }}>Sağlık Ön Bilgileri</p>
               <div style={styles.formGrid}>
                 <FormField styles={styles} label="Kan Grubu"><select style={styles.select} className="isg-input" value={newEmployee.bloodType} onChange={e => setField("bloodType", e.target.value)}><option value="">Seçin...</option><option>A Rh+</option><option>A Rh-</option><option>B Rh+</option><option>B Rh-</option><option>AB Rh+</option><option>AB Rh-</option><option>0 Rh+</option><option>0 Rh-</option><option>Bilinmiyor</option></select></FormField>
-                <FormField styles={styles} label="Kronik Hastalık"><input style={styles.input} className="isg-input" value={newEmployee.chronicDisease} onChange={e => setField("chronicDisease", e.target.value)} /></FormField>
+                <FormField styles={styles} label="Kronik Rahatsızlıklar"><input style={styles.input} className="isg-input" value={newEmployee.chronicConditions} onChange={e => setField("chronicConditions", e.target.value)} /></FormField>
                 <FormField styles={styles} label="Alerji"><input style={styles.input} className="isg-input" value={newEmployee.allergies} onChange={e => setField("allergies", e.target.value)} /></FormField>
                 <FormField styles={styles} label="Tetanoz Aşı Bilgisi"><input style={styles.input} className="isg-input" value={newEmployee.tetanusVaccine} onChange={e => setField("tetanusVaccine", e.target.value)} /></FormField>
                 <FormField styles={styles} label="Hepatit Aşı Bilgisi"><input style={styles.input} className="isg-input" value={newEmployee.hepatitisVaccine} onChange={e => setField("hepatitisVaccine", e.target.value)} /></FormField>
               </div>
               <div style={{ marginTop: 12 }}>
                 <FormField styles={styles} label="Notlar"><textarea style={{ ...styles.input, minHeight: 76, resize: "vertical" as const }} className="isg-input" value={newEmployee.notes} onChange={e => setField("notes", e.target.value)} /></FormField>
+              </div>
+            </div>
+            <div>
+              <p style={{ ...styles.sectionTitle, marginBottom: 10 }}>Belge Taraması</p>
+              <div style={{ border: "1px solid var(--isg-border)", borderRadius: 8, padding: 12, backgroundColor: "var(--isg-input-bg)" }}>
+                <label style={{ ...styles.btnSecondary, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                  Belge Tara / Dosya Seç
+                  <input type="file" accept="image/*,.pdf" multiple style={{ display: "none" }} onChange={addScannedDocuments} />
+                </label>
+                {newEmployee.scannedDocuments.length > 0 && (
+                  <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                    {newEmployee.scannedDocuments.map(doc => (
+                      <div key={doc.id} style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", border: "1px solid var(--isg-border)", borderRadius: 8, padding: "8px 10px", fontSize: 12 }}>
+                        <span style={{ color: "var(--isg-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</span>
+                        <button type="button" style={{ ...styles.btnDanger, padding: "5px 9px", fontSize: 11 }} onClick={() => removeScannedDocument(doc.id)}>Kaldır</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -129,17 +129,14 @@ type Props = {
     birthDate?: string;
     gender?: string;
     educationLevel?: string;
-    diplomaInfo?: string;
     maritalStatus?: string;
-    childrenCount?: string;
     address?: string;
     phone?: string;
-    profession?: string;
     title?: string;
-    jobDescription?: string;
     department?: string;
     bloodType?: string;
     chronicDisease?: string;
+    chronicConditions?: string;
     tetanusVaccine?: string;
     hepatitisVaccine?: string;
     allergies?: string;
@@ -260,16 +257,16 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
       tcKimlikNo: e.tcNo || "",
       dogumYeriTarihi: birthText,
       cinsiyet: e.gender || "",
-      egitimDurumu: e.educationLevel || e.diplomaInfo || "",
+      egitimDurumu: e.educationLevel || "",
       medeniDurum: e.maritalStatus || "",
-      cocukSayisi: e.childrenCount || "",
+      cocukSayisi: "",
       evAdresi: e.address || "",
       telNo: e.phone || "",
-      meslegi: e.profession || e.title || "",
-      yaptigiIs: e.jobDescription || e.title || "",
+      meslegi: e.title || "",
+      yaptigiIs: e.title || "",
       calistigiBolum: e.department || "",
       kanGrubu: e.bloodType || "",
-      konjenitalKronikHastalik: [e.chronicDisease, e.allergies ? `Alerji: ${e.allergies}` : ""].filter(Boolean).join(" | "),
+      konjenitalKronikHastalik: [e.chronicConditions || e.chronicDisease, e.allergies ? `Alerji: ${e.allergies}` : ""].filter(Boolean).join(" | "),
       bagisiklamaTetanoz: e.tetanusVaccine || "",
       bagisiklamaHepatit: e.hepatitisVaccine || "",
     };

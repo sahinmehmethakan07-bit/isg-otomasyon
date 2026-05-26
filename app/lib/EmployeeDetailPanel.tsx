@@ -37,6 +37,7 @@ export function EmployeeDetailPanel({
   const onboarding = selectedEmployee.onboarding || createOnboardingFromChecklist(selectedEmployee.checklist);
   const onboardingBorder = onboarding.status === "completed" ? "#16a34a33" : "#d9770633";
   const onboardingBackground = onboarding.status === "completed" ? "#16a34a10" : "#d9770610";
+  const scannedDocuments = selectedEmployee.scannedDocuments || [];
 
   return (
     <div style={{ minWidth: 0, maxWidth: "100%" }}>
@@ -56,11 +57,38 @@ export function EmployeeDetailPanel({
           <div><strong style={{ color: "var(--isg-text)" }}>Doğum:</strong> {[selectedEmployee.birthPlace, selectedEmployee.birthDate].filter(Boolean).join(" / ") || "—"}</div>
           <div><strong style={{ color: "var(--isg-text)" }}>Telefon:</strong> {selectedEmployee.phone || "—"}</div>
           <div><strong style={{ color: "var(--isg-text)" }}>E-posta:</strong> {selectedEmployee.email || "—"}</div>
-          {selectedEmployee.diplomaInfo && <div><strong style={{ color: "var(--isg-text)" }}>Diploma:</strong> {selectedEmployee.diplomaInfo}</div>}
           {selectedEmployee.address && <div><strong style={{ color: "var(--isg-text)" }}>Adres:</strong> {selectedEmployee.address}</div>}
           {selectedEmployee.bloodType && <div><strong style={{ color: "var(--isg-text)" }}>Kan Grubu:</strong> {selectedEmployee.bloodType}</div>}
+          {selectedEmployee.chronicConditions && <div><strong style={{ color: "var(--isg-text)" }}>Kronik Rahatsızlık:</strong> {selectedEmployee.chronicConditions}</div>}
+          {selectedEmployee.workingHours && <div><strong style={{ color: "var(--isg-text)" }}>Çalışma Süresi:</strong> {selectedEmployee.workingHours}</div>}
+          {selectedEmployee.shiftPlan && <div><strong style={{ color: "var(--isg-text)" }}>Vardiya:</strong> {selectedEmployee.shiftPlan}</div>}
+          {selectedEmployee.foreignLanguage && <div><strong style={{ color: "var(--isg-text)" }}>Yabancı Dil:</strong> {selectedEmployee.foreignLanguage}</div>}
+          {selectedEmployee.militaryStatus && <div><strong style={{ color: "var(--isg-text)" }}>Askerlik:</strong> {selectedEmployee.militaryStatus}</div>}
+          {selectedEmployee.driverLicense && <div><strong style={{ color: "var(--isg-text)" }}>Ehliyet:</strong> {selectedEmployee.driverLicense}</div>}
+          {selectedEmployee.criminalRecord && <div><strong style={{ color: "var(--isg-text)" }}>Sabıka:</strong> {selectedEmployee.criminalRecord}</div>}
+          {selectedEmployee.retirementInfo && <div><strong style={{ color: "var(--isg-text)" }}>Emekli:</strong> {selectedEmployee.retirementInfo}</div>}
+          {scannedDocuments.length > 0 && <div><strong style={{ color: "var(--isg-text)" }}>Taranan Belge:</strong> {scannedDocuments.length} dosya</div>}
           {selectedEmployee.emergencyContactName && <div><strong style={{ color: "var(--isg-text)" }}>Acil:</strong> {selectedEmployee.emergencyContactName} {selectedEmployee.emergencyContactPhone}</div>}
         </div>
+
+        {scannedDocuments.length > 0 && (
+          <>
+            <p style={{ ...styles.sectionTitle, marginTop: 16 }}>Belge Taramaları</p>
+            <div style={{ display: "grid", gap: 8 }}>
+              {scannedDocuments.map(doc => (
+                <a
+                  key={doc.id}
+                  href={doc.data}
+                  download={doc.name}
+                  style={{ ...styles.btnSecondary, textDecoration: "none", justifyContent: "space-between", fontSize: 12 }}
+                >
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</span>
+                  <span>İndir</span>
+                </a>
+              ))}
+            </div>
+          </>
+        )}
 
         <div style={{ backgroundColor: onboardingBackground, border: "1px solid " + onboardingBorder, borderRadius: 8, padding: 12, marginTop: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>

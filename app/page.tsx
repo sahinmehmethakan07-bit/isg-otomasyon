@@ -31,6 +31,11 @@ import { emptyNewEmployee } from "./lib/constants";
 import { getDashboardOverview } from "./lib/dashboardOverview";
 import { generateDofPDF as generateDofPDFDocument } from "./lib/dofPdf";
 import {
+  createCompanyRecord,
+  deleteCompanyCascade,
+  emptyCompanyDraft,
+} from "./lib/companyService";
+import {
   createEmployeeRecord,
   deleteEmployeeRecord,
   saveEmployeeChecklist,
@@ -62,14 +67,11 @@ import {
   annualPlanStatusColor,
   checklistCompletion,
   createOnboardingFromChecklist,
-  dangerFromNace,
   daysUntil,
-  extractNaceFromSgk,
   getDateStatus,
   normalizeCommitteeMeetingRecord,
   normalizeEmployeeRecord,
   normalizeTrainingRecord,
-  officialNameFromSgk,
   priorityColor,
   riskScoreColor,
   statusColor,
@@ -88,7 +90,6 @@ import type {
   CompanyVisitPurpose,
   CompanyVisitRecord,
   CompanyVisitStatus,
-  DangerClass,
   DocumentRecord,
   DofRecord,
   EmailSettings,
@@ -101,7 +102,6 @@ import type {
   PpeRecord,
   PpeStatus,
   RiskRecord,
-  ServiceType,
   Signer,
   SignerRole,
   TaskItem,
@@ -312,7 +312,7 @@ export default function Page() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [editingDofId, setEditingDofId] = useState<string | null>(null);
 
-  const [newCompany, setNewCompany] = useState({ nickName: "", officialName: "", sgkSicil: "", naceCode: "", dangerClass: "Az Tehlikeli" as DangerClass, employeeCount: "", contractEnd: "", serviceType: "İş Güvenliği" as ServiceType, contactEmail: "" });
+  const [newCompany, setNewCompany] = useState(emptyCompanyDraft);
   const [newEmployee, setNewEmployee] = useState<NewEmployeeForm>(emptyNewEmployee);
   const [newDocument, setNewDocument] = useState({ companyId: "", employeeId: "", type: "Risk Değerlendirme Raporu", issueDate: "", expiryDate: "" });
   const [newObserver, setNewObserver] = useState({ fullName: "", title: "", certificateNo: "", phone: "" });
@@ -584,34 +584,16 @@ export default function Page() {
 
   async function addCompany() {
     if (!isAdmin) return;
-    if (!newCompany.nickName || !newCompany.sgkSicil) return;
-    const naceCode = newCompany.naceCode || extractNaceFromSgk(newCompany.sgkSicil);
-    const officialName = newCompany.officialName || officialNameFromSgk(newCompany.sgkSicil) || newCompany.nickName;
-    const data = { nickName: newCompany.nickName, officialName, sgkSicil: newCompany.sgkSicil, naceCode, dangerClass: dangerFromNace(naceCode), employeeCount: parseInt(newCompany.employeeCount) || 0, contractEnd: newCompany.contractEnd, serviceType: newCompany.serviceType, contactEmail: newCompany.contactEmail };
-    const ref = await addDoc(collection(db, "companies"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-    setCompanies(prev => [...prev, { id: ref.id, ...data }]);
-    setNewCompany({ nickName: "", officialName: "", sgkSicil: "", naceCode: "", dangerClass: "Az Tehlikeli", employeeCount: "", contractEnd: "", serviceType: "İş Güvenliği", contactEmail: "" });
+    const company = await createCompanyRecord(db, newCompany, userProfile!);
+    if (!company) return;
+    setCompanies(prev => [...prev, company]);
+    setNewCompany(emptyCompanyDraft);
   }
 
   async function deleteCompany(id: string) {
     if (!isAdmin) return;
     if (!confirm("Bu firmayı silmek istediğinizden emin misiniz?")) return;
-    // Firestore'dan cascade sil
-    const relatedEmployees = employees.filter(e => e.companyId === id);
-    const relatedDocs = documents.filter(d => d.companyId === id);
-    const relatedDofs = dofs.filter(d => d.companyId === id);
-    const relatedRisks = risks.filter(r => r.companyId === id);
-    const relatedSigners = signers.filter(s => s.companyId === id);
-    const relatedCompanyVisits = companyVisits.filter(v => v.companyId === id);
-    await Promise.all([
-      deleteDoc(doc(db, "companies", id)),
-      ...relatedEmployees.map(e => deleteDoc(doc(db, "employees", e.id))),
-      ...relatedDocs.map(d => deleteDoc(doc(db, "documents", d.id))),
-      ...relatedDofs.map(d => deleteDoc(doc(db, "dofs", d.id))),
-      ...relatedRisks.map(r => deleteDoc(doc(db, "risks", r.id))),
-      ...relatedSigners.map(s => deleteDoc(doc(db, "signers", s.id))),
-      ...relatedCompanyVisits.map(v => deleteDoc(doc(db, "companyVisits", v.id))),
-    ]);
+    await deleteCompanyCascade(db, id, { employees, documents, dofs, risks, signers, companyVisits });
     setCompanies(prev => prev.filter(c => c.id !== id));
     setEmployees(prev => prev.filter(e => e.companyId !== id));
     setDocuments(prev => prev.filter(d => d.companyId !== id));

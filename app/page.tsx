@@ -27,9 +27,30 @@ import { useLanguage } from "./lib/i18n";
 import {
   generateRiskPDF,
 } from "./lib/pdf";
-import { emptyNewEmployee, requiredCompanyDocs } from "./lib/constants";
+import { emptyNewEmployee } from "./lib/constants";
 import { buildEmployeeRecord } from "./lib/employeeData";
 import { generateDofPDF as generateDofPDFDocument } from "./lib/dofPdf";
+import {
+  buildArchiveItems,
+  buildTaskItems,
+  filterAccidentReports,
+  filterAnnualPlans,
+  filterArchiveItems,
+  filterCommitteeMeetings,
+  filterCompanies,
+  filterCompanyVisits,
+  filterDocuments,
+  filterDofs,
+  filterEmergencyPlans,
+  filterEmployees,
+  filterPpeRecords,
+  filterRisks,
+  filterTaskItems,
+  filterTrainings,
+  getCompanyDocSummary as selectCompanyDocSummary,
+  getCompanyDocuments as selectCompanyDocuments,
+  getCompanyIndicator as selectCompanyIndicator,
+} from "./lib/dashboardSelectors";
 import {
   annualPlanStatusColor,
   checklistCompletion,
@@ -507,21 +528,16 @@ export default function Page() {
   const selectedEmployeeCompany = selectedEmployee ? companies.find(c => c.id === selectedEmployee.companyId) ?? null : null;
   const activeRole = userProfile?.activeRole || userProfile?.role;
 
-  function getCompanyDocuments(companyId: string) { return documents.filter(d => d.companyId === companyId && d.employeeId === null); }
+  function getCompanyDocuments(companyId: string) {
+    return selectCompanyDocuments(documents, companyId);
+  }
 
   function getCompanyDocSummary(companyId: string) {
-    const companyDocs = getCompanyDocuments(companyId);
-    const missingCount = requiredCompanyDocs.filter(t => !companyDocs.some(d => d.type === t)).length;
-    const expiredCount = companyDocs.filter(d => getDateStatus(d.expiryDate) === "Süresi Dolmuş").length;
-    const soonCount = companyDocs.filter(d => getDateStatus(d.expiryDate) === "Yaklaşıyor").length;
-    return { missingCount, expiredCount, soonCount };
+    return selectCompanyDocSummary(documents, companyId);
   }
 
   function getCompanyIndicator(companyId: string) {
-    const s = getCompanyDocSummary(companyId);
-    if (s.missingCount > 0 || s.expiredCount > 0) return { text: "Kritik", color: "#dc2626" };
-    if (s.soonCount > 0) return { text: "Yaklaşıyor", color: "#d97706" };
-    return { text: "Uygun", color: "#16a34a" };
+    return selectCompanyIndicator(documents, companyId);
   }
 
   function handleImageToBase64(event: ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) {
@@ -541,342 +557,24 @@ export default function Page() {
     win.document.open(); win.document.write(html); win.document.close(); win.focus(); win.print();
   }
 
-  const filteredCompanies = useMemo(() => companies.filter(c => `${c.nickName} ${c.officialName} ${c.sgkSicil} ${c.naceCode}`.toLowerCase().includes(search.toLowerCase())), [companies, search]);
-  const filteredEmployees = useMemo(() => employees.filter(e => {
-    const company = companies.find(c => c.id === e.companyId);
-    const matchesCompany = selectedCompanyId === "all" || e.companyId === selectedCompanyId;
-    return matchesCompany && `${e.firstName} ${e.lastName} ${e.tcNo} ${e.phone || ""} ${e.email || ""} ${e.department || ""} ${e.educationLevel || ""} ${e.address || ""} ${e.title} ${e.workingHours || ""} ${e.shiftPlan || ""} ${e.foreignLanguage || ""} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
-  }), [employees, companies, selectedCompanyId, search]);
-  const filteredDocuments = useMemo(() => documents.filter(d => { const company = companies.find(c => c.id === d.companyId); const employee = employees.find(e => e.id === d.employeeId); const matchesCompany = selectedCompanyId === "all" || d.companyId === selectedCompanyId; return matchesCompany && `${d.type} ${company?.nickName || ""} ${employee?.firstName || ""} ${employee?.lastName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [documents, companies, employees, selectedCompanyId, search]);
-  const filteredDofs = useMemo(() => dofs.filter(d => { const company = companies.find(c => c.id === d.companyId); const matchesCompany = selectedCompanyId === "all" || d.companyId === selectedCompanyId; return matchesCompany && `${d.title} ${d.description} ${d.location} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [dofs, companies, selectedCompanyId, search]);
-  const filteredRisks = useMemo(() => risks.filter(r => { const company = companies.find(c => c.id === r.companyId); const matchesCompany = selectedCompanyId === "all" || r.companyId === selectedCompanyId; return matchesCompany && `${r.section} ${r.hazard} ${r.risk} ${r.actionToTake} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase()); }), [risks, companies, selectedCompanyId, search]);
-  const filteredAnnualPlans = useMemo(() => annualPlans.filter(plan => {
-    const company = companies.find(c => c.id === plan.companyId);
-    const matchesCompany = selectedCompanyId === "all" || plan.companyId === selectedCompanyId;
-    return matchesCompany && `${plan.year} ${plan.type} ${plan.title} ${plan.responsible} ${plan.status} ${plan.notes} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
-  }), [annualPlans, companies, selectedCompanyId, search]);
-  const filteredTrainings = useMemo(() => trainings.filter(training => {
-    const company = companies.find(c => c.id === training.companyId);
-    const participantNames = training.participantIds
-      .map(id => employees.find(e => e.id === id))
-      .filter(Boolean)
-      .map(employee => `${employee!.firstName} ${employee!.lastName}`)
-      .join(" ");
-    const matchesCompany = selectedCompanyId === "all" || training.companyId === selectedCompanyId;
-    return matchesCompany && `${training.title} ${training.type} ${training.trainer} ${training.status} ${training.notes} ${participantNames} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
-  }), [trainings, companies, employees, selectedCompanyId, search]);
-  const filteredPpeRecords = useMemo(() => ppeRecords.filter(record => {
-    const company = companies.find(c => c.id === record.companyId);
-    const employee = employees.find(e => e.id === record.employeeId);
-    const matchesCompany = selectedCompanyId === "all" || record.companyId === selectedCompanyId;
-    return matchesCompany && `${record.equipment} ${record.status} ${record.serialNo || ""} ${record.notes} ${company?.nickName || ""} ${employee?.firstName || ""} ${employee?.lastName || ""} ${employee?.tcNo || ""}`.toLowerCase().includes(search.toLowerCase());
-  }), [ppeRecords, companies, employees, selectedCompanyId, search]);
-  const filteredEmergencyPlans = useMemo(() => emergencyPlans.filter(plan => {
-    const company = companies.find(c => c.id === plan.companyId);
-    const matchesCompany = selectedCompanyId === "all" || plan.companyId === selectedCompanyId;
-    return matchesCompany && `${plan.title} ${plan.scenario} ${plan.assemblyArea} ${plan.emergencyTeam} ${plan.responsible} ${plan.status} ${plan.notes} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
-  }), [emergencyPlans, companies, selectedCompanyId, search]);
-  const filteredCommitteeMeetings = useMemo(() => committeeMeetings.filter(meeting => {
-    const company = companies.find(c => c.id === meeting.companyId);
-    const participantNames = meeting.participantIds
-      .map(id => employees.find(e => e.id === id))
-      .filter(Boolean)
-      .map(employee => `${employee!.firstName} ${employee!.lastName}`)
-      .join(" ");
-    const matchesCompany = selectedCompanyId === "all" || meeting.companyId === selectedCompanyId;
-    return matchesCompany && `${meeting.meetingNo} ${meeting.location} ${meeting.chairperson} ${meeting.agenda} ${meeting.decisions} ${meeting.status} ${meeting.notes} ${participantNames} ${company?.nickName || ""}`.toLowerCase().includes(search.toLowerCase());
-  }), [committeeMeetings, companies, employees, selectedCompanyId, search]);
-  const filteredAccidentReports = useMemo(() => accidentReports.filter(report => {
-    const company = companies.find(c => c.id === report.companyId);
-    const employee = employees.find(e => e.id === report.employeeId);
-    const matchesCompany = selectedCompanyId === "all" || report.companyId === selectedCompanyId;
-    return matchesCompany && `${report.incidentType} ${report.location} ${report.severity} ${report.description} ${report.rootCause} ${report.actionPlan} ${report.responsible} ${report.status} ${report.notes} ${company?.nickName || ""} ${employee?.firstName || ""} ${employee?.lastName || ""}`.toLowerCase().includes(search.toLowerCase());
-  }), [accidentReports, companies, employees, selectedCompanyId, search]);
-  const filteredCompanyVisits = useMemo(() => companyVisits.filter(visit => {
-    const company = companies.find(c => c.id === visit.companyId);
-    const matchesCompany = selectedCompanyId === "all" || visit.companyId === selectedCompanyId;
-    return matchesCompany && `${visit.purpose} ${visit.visitor} ${visit.contactedPerson} ${visit.findings} ${visit.actions} ${visit.status} ${visit.notes} ${company?.nickName || ""} ${company?.officialName || ""}`.toLowerCase().includes(search.toLowerCase());
-  }), [companyVisits, companies, selectedCompanyId, search]);
-  const archiveItems = useMemo<ArchiveItem[]>(() => {
-    const employeeName = (employeeId?: string | null) => {
-      const employee = employees.find(e => e.id === employeeId);
-      return employee ? `${employee.firstName} ${employee.lastName}` : "Firma";
-    };
-
-    return [
-      ...documents.map(item => ({
-        id: item.id,
-        companyId: item.companyId,
-        type: "Belge",
-        title: item.type,
-        owner: employeeName(item.employeeId),
-        date: item.issueDate || item.expiryDate || "",
-        status: item.expiryDate ? getDateStatus(item.expiryDate) : "Arşivde",
-        sourceTab: "belgeler",
-      })),
-      ...annualPlans.map(item => ({
-        id: item.id,
-        companyId: item.companyId,
-        type: "Yıllık Plan",
-        title: `${item.year} - ${item.title || item.type}`,
-        owner: item.responsible || "Firma",
-        date: item.plannedDate,
-        status: item.status,
-        sourceTab: "yillik-planlar",
-      })),
-      ...trainings.map(item => ({
-        id: item.id,
-        companyId: item.companyId,
-        type: "Eğitim",
-        title: item.title || item.type,
-        owner: item.trainer || "Eğitmen girilmedi",
-        date: item.trainingDate,
-        status: item.status,
-        sourceTab: "egitimler",
-      })),
-      ...ppeRecords.map(item => ({
-        id: item.id,
-        companyId: item.companyId,
-        type: "KKD",
-        title: item.equipment,
-        owner: employeeName(item.employeeId),
-        date: item.issueDate,
-        status: item.status,
-        sourceTab: "kkd-formu",
-      })),
-      ...emergencyPlans.map(item => ({
-        id: item.id,
-        companyId: item.companyId,
-        type: "Acil Durum",
-        title: item.title,
-        owner: item.responsible || "Firma",
-        date: item.planDate,
-        status: item.status,
-        sourceTab: "acil-durum-plani",
-      })),
-      ...committeeMeetings.map(item => ({
-        id: item.id,
-        companyId: item.companyId,
-        type: "Kurul",
-        title: item.meetingNo || "Kurul Toplantısı",
-        owner: item.chairperson || "Kurul",
-        date: item.meetingDate,
-        status: item.status,
-        sourceTab: "kurul-toplantisi",
-      })),
-      ...accidentReports.map(item => ({
-        id: item.id,
-        companyId: item.companyId,
-        type: "İş Kazası",
-        title: item.incidentType,
-        owner: employeeName(item.employeeId),
-        date: item.accidentDate,
-        status: item.status,
-        sourceTab: "is-kazasi-raporu",
-      })),
-      ...companyVisits.map(item => ({
-        id: item.id,
-        companyId: item.companyId,
-        type: "Firma Ziyareti",
-        title: item.purpose,
-        owner: item.visitor || "Ziyaretçi girilmedi",
-        date: item.visitDate,
-        status: item.status,
-        sourceTab: "firma-ziyaretleri",
-      })),
-      ...dofs.map(item => ({
-        id: item.id,
-        companyId: item.companyId,
-        type: "DÖF",
-        title: item.title,
-        owner: item.responsible || "Sorumlu girilmedi",
-        date: item.dueDate,
-        status: item.status,
-        sourceTab: "dof",
-      })),
-      ...risks.map(item => ({
-        id: item.id,
-        companyId: item.companyId,
-        type: "Risk",
-        title: item.hazard,
-        owner: item.responsible || "Sorumlu girilmedi",
-        date: item.dueDate || item.controlDate || "",
-        status: item.status,
-        sourceTab: "risk",
-      })),
-    ].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  }, [documents, annualPlans, trainings, ppeRecords, emergencyPlans, committeeMeetings, accidentReports, companyVisits, dofs, risks, employees]);
-  const filteredArchiveItems = useMemo(() => archiveItems.filter(item => {
-    const company = companies.find(c => c.id === item.companyId);
-    const matchesCompany = selectedCompanyId === "all" || item.companyId === selectedCompanyId;
-    const matchesType = archiveTypeFilter === "all" || item.type === archiveTypeFilter;
-    const matchesStatus = archiveStatusFilter === "all" || item.status === archiveStatusFilter;
-    const matchesDateFrom = !archiveDateFrom || (!!item.date && item.date >= archiveDateFrom);
-    const matchesDateTo = !archiveDateTo || (!!item.date && item.date <= archiveDateTo);
-    const matchesSearch = `${item.type} ${item.title} ${item.owner} ${item.status} ${company?.nickName || ""} ${company?.officialName || ""}`.toLowerCase().includes(search.toLowerCase());
-    return matchesCompany && matchesType && matchesStatus && matchesDateFrom && matchesDateTo && matchesSearch;
-  }), [archiveItems, companies, selectedCompanyId, search, archiveTypeFilter, archiveStatusFilter, archiveDateFrom, archiveDateTo]);
+  const filteredCompanies = useMemo(() => filterCompanies(companies, search), [companies, search]);
+  const filteredEmployees = useMemo(() => filterEmployees(employees, companies, selectedCompanyId, search), [employees, companies, selectedCompanyId, search]);
+  const filteredDocuments = useMemo(() => filterDocuments(documents, companies, employees, selectedCompanyId, search), [documents, companies, employees, selectedCompanyId, search]);
+  const filteredDofs = useMemo(() => filterDofs(dofs, companies, selectedCompanyId, search), [dofs, companies, selectedCompanyId, search]);
+  const filteredRisks = useMemo(() => filterRisks(risks, companies, selectedCompanyId, search), [risks, companies, selectedCompanyId, search]);
+  const filteredAnnualPlans = useMemo(() => filterAnnualPlans(annualPlans, companies, selectedCompanyId, search), [annualPlans, companies, selectedCompanyId, search]);
+  const filteredTrainings = useMemo(() => filterTrainings(trainings, companies, employees, selectedCompanyId, search), [trainings, companies, employees, selectedCompanyId, search]);
+  const filteredPpeRecords = useMemo(() => filterPpeRecords(ppeRecords, companies, employees, selectedCompanyId, search), [ppeRecords, companies, employees, selectedCompanyId, search]);
+  const filteredEmergencyPlans = useMemo(() => filterEmergencyPlans(emergencyPlans, companies, selectedCompanyId, search), [emergencyPlans, companies, selectedCompanyId, search]);
+  const filteredCommitteeMeetings = useMemo(() => filterCommitteeMeetings(committeeMeetings, companies, employees, selectedCompanyId, search), [committeeMeetings, companies, employees, selectedCompanyId, search]);
+  const filteredAccidentReports = useMemo(() => filterAccidentReports(accidentReports, companies, employees, selectedCompanyId, search), [accidentReports, companies, employees, selectedCompanyId, search]);
+  const filteredCompanyVisits = useMemo(() => filterCompanyVisits(companyVisits, companies, selectedCompanyId, search), [companyVisits, companies, selectedCompanyId, search]);
+  const archiveItems = useMemo<ArchiveItem[]>(() => buildArchiveItems({ documents, annualPlans, trainings, ppeRecords, emergencyPlans, committeeMeetings, accidentReports, companyVisits, dofs, risks, employees }), [documents, annualPlans, trainings, ppeRecords, emergencyPlans, committeeMeetings, accidentReports, companyVisits, dofs, risks, employees]);
+  const filteredArchiveItems = useMemo(() => filterArchiveItems(archiveItems, companies, selectedCompanyId, search, archiveTypeFilter, archiveStatusFilter, archiveDateFrom, archiveDateTo), [archiveItems, companies, selectedCompanyId, search, archiveTypeFilter, archiveStatusFilter, archiveDateFrom, archiveDateTo]);
   const archiveTypes = useMemo(() => Array.from(new Set(archiveItems.map(item => item.type))).sort(), [archiveItems]);
   const archiveStatuses = useMemo(() => Array.from(new Set(archiveItems.map(item => item.status || "Arşivde"))).sort(), [archiveItems]);
-  const taskItems = useMemo<TaskItem[]>(() => {
-    const items: TaskItem[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const soonLimit = new Date(today);
-    soonLimit.setDate(soonLimit.getDate() + 30);
-    const isPast = (date?: string) => !!date && new Date(date) < today;
-    const isSoon = (date?: string) => !!date && new Date(date) <= soonLimit;
-    const companyName = (companyId: string) => companies.find(c => c.id === companyId)?.nickName || "Firma";
-    const employeeName = (employeeId?: string | null) => {
-      const employee = employees.find(e => e.id === employeeId);
-      return employee ? `${employee.firstName} ${employee.lastName}` : "";
-    };
-
-    documents.forEach(document => {
-      if (!document.expiryDate || !isSoon(document.expiryDate)) return;
-      const expired = isPast(document.expiryDate);
-      items.push({
-        id: `document-${document.id}`,
-        companyId: document.companyId,
-        title: expired ? "Süresi dolmuş belge" : "Yaklaşan belge yenileme",
-        detail: `${document.type} · ${employeeName(document.employeeId) || companyName(document.companyId)}`,
-        owner: "Belge sorumlusu",
-        dueDate: document.expiryDate,
-        priority: expired ? "Kritik" : "Yüksek",
-        sourceTab: "belgeler",
-        category: "Belge",
-      });
-    });
-
-    employees.forEach(employee => {
-      const onboarding = employee.onboarding || createOnboardingFromChecklist(employee.checklist);
-      if (onboarding.status === "completed") return;
-      const missingTasks = Object.values(onboarding.tasks).filter(task => !task.completed);
-      const roleTasks = activeRole === "doctor"
-        ? missingTasks.filter(task => task.ownerRole === "doctor")
-        : activeRole === "safety_expert"
-          ? missingTasks.filter(task => task.ownerRole === "safety_expert")
-          : missingTasks;
-      if (roleTasks.length === 0) return;
-      items.push({
-        id: `employee-${employee.id}`,
-        companyId: employee.companyId,
-        title: "Personel onboarding eksik",
-        detail: `${employee.firstName} ${employee.lastName} · ${roleTasks.map(task => task.label).join(", ")}`,
-        owner: activeRole === "doctor" ? "Doktor" : activeRole === "safety_expert" ? "İş Güvenliği Uzmanı" : "Sorumlu ekip",
-        dueDate: employee.hireDate,
-        priority: "Yüksek",
-        sourceTab: activeRole === "doctor" ? "ek2muayene" : "personel",
-        category: "Personel",
-      });
-    });
-
-    dofs.forEach(dof => {
-      if (dof.status === "Çözüldü" || dof.status === "Riske Aktarıldı") return;
-      items.push({
-        id: `dof-${dof.id}`,
-        companyId: dof.companyId,
-        title: dof.status === "Önlem Alındı" ? "DÖF riske aktarılmalı" : "Açık DÖF takibi",
-        detail: `${dof.title} · ${dof.location || "Konum yok"}`,
-        owner: dof.responsible || "Sorumlu girilmedi",
-        dueDate: dof.dueDate,
-        priority: isPast(dof.dueDate) ? "Kritik" : dof.priority === "Yüksek" ? "Yüksek" : "Orta",
-        sourceTab: "dof",
-        category: "DÖF",
-      });
-    });
-
-    risks.forEach(risk => {
-      if (risk.status === "Kapandı") return;
-      if (risk.score < 15 && !isPast(risk.dueDate)) return;
-      items.push({
-        id: `risk-${risk.id}`,
-        companyId: risk.companyId,
-        title: risk.score >= 15 ? "Yüksek risk aksiyonu" : "Geciken risk aksiyonu",
-        detail: `${risk.hazard} · Skor ${risk.score}`,
-        owner: risk.responsible || "Sorumlu girilmedi",
-        dueDate: risk.dueDate || risk.controlDate || "",
-        priority: risk.score >= 15 || isPast(risk.dueDate) ? "Kritik" : "Yüksek",
-        sourceTab: "risk",
-        category: "Risk",
-      });
-    });
-
-    trainings.forEach(training => {
-      if (training.status !== "Planlandı" || !isSoon(training.trainingDate)) return;
-      items.push({
-        id: `training-${training.id}`,
-        companyId: training.companyId,
-        title: "Planlanan eğitim",
-        detail: `${training.title || training.type} · ${training.participantIds.length} katılımcı`,
-        owner: training.trainer || "Eğitmen girilmedi",
-        dueDate: training.trainingDate,
-        priority: isPast(training.trainingDate) ? "Kritik" : "Orta",
-        sourceTab: "egitimler",
-        category: "Eğitim",
-      });
-    });
-
-    annualPlans.forEach(plan => {
-      if (plan.status === "Tamamlandı") return;
-      if (plan.status !== "Gecikti" && !isSoon(plan.plannedDate)) return;
-      items.push({
-        id: `annual-${plan.id}`,
-        companyId: plan.companyId,
-        title: plan.status === "Gecikti" || isPast(plan.plannedDate) ? "Geciken yıllık plan" : "Yaklaşan yıllık plan",
-        detail: `${plan.type} · ${plan.title}`,
-        owner: plan.responsible || "Sorumlu girilmedi",
-        dueDate: plan.plannedDate,
-        priority: plan.status === "Gecikti" || isPast(plan.plannedDate) ? "Kritik" : "Orta",
-        sourceTab: "yillik-planlar",
-        category: "Plan",
-      });
-    });
-
-    accidentReports.forEach(report => {
-      if (report.status === "Kapandı") return;
-      items.push({
-        id: `accident-${report.id}`,
-        companyId: report.companyId,
-        title: "İş kazası / ramak kala takibi",
-        detail: `${report.incidentType} · ${employeeName(report.employeeId) || report.location || "Detay bekliyor"}`,
-        owner: report.responsible || "Sorumlu girilmedi",
-        dueDate: report.dueDate || report.accidentDate,
-        priority: report.severity === "Ağır" ? "Kritik" : report.severity === "Orta" ? "Yüksek" : "Orta",
-        sourceTab: "is-kazasi-raporu",
-        category: "Olay",
-      });
-    });
-
-    companyVisits.forEach(visit => {
-      if (visit.status === "Tamamlandı" && !isSoon(visit.nextVisitDate)) return;
-      if (visit.status === "Planlandı" || visit.status === "Takip Gerekli" || isSoon(visit.nextVisitDate)) {
-        items.push({
-          id: `visit-${visit.id}`,
-          companyId: visit.companyId,
-          title: visit.status === "Takip Gerekli" ? "Ziyaret sonrası takip" : "Firma ziyareti",
-          detail: `${visit.purpose} · ${visit.findings || visit.actions || "Plan detayı bekliyor"}`,
-          owner: visit.visitor || "Ziyaretçi girilmedi",
-          dueDate: visit.nextVisitDate || visit.visitDate,
-          priority: visit.status === "Takip Gerekli" ? "Yüksek" : isPast(visit.visitDate) && visit.status !== "Tamamlandı" ? "Kritik" : "Düşük",
-          sourceTab: "firma-ziyaretleri",
-          category: "Ziyaret",
-        });
-      }
-    });
-
-    return items.sort((a, b) => {
-      const priorityWeight: Record<TaskPriority, number> = { Kritik: 0, Yüksek: 1, Orta: 2, Düşük: 3 };
-      const byPriority = priorityWeight[a.priority] - priorityWeight[b.priority];
-      if (byPriority !== 0) return byPriority;
-      return (a.dueDate || "9999-12-31").localeCompare(b.dueDate || "9999-12-31");
-    });
-  }, [activeRole, annualPlans, accidentReports, companies, companyVisits, documents, dofs, employees, risks, trainings]);
-  const filteredTaskItems = useMemo(() => taskItems.filter(task => {
-    const company = companies.find(c => c.id === task.companyId);
-    const matchesCompany = selectedCompanyId === "all" || task.companyId === selectedCompanyId;
-    return matchesCompany && `${task.category} ${task.title} ${task.detail} ${task.owner} ${task.priority} ${company?.nickName || ""} ${company?.officialName || ""}`.toLowerCase().includes(search.toLowerCase());
-  }), [taskItems, companies, selectedCompanyId, search]);
+  const taskItems = useMemo<TaskItem[]>(() => buildTaskItems({ documents, employees, dofs, risks, trainings, annualPlans, accidentReports, companyVisits, companies, activeRole }), [activeRole, annualPlans, accidentReports, companies, companyVisits, documents, dofs, employees, risks, trainings]);
+  const filteredTaskItems = useMemo(() => filterTaskItems(taskItems, companies, selectedCompanyId, search), [taskItems, companies, selectedCompanyId, search]);
 
   async function addCompany() {
     if (!isAdmin) return;

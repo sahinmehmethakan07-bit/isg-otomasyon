@@ -43,6 +43,16 @@ import {
   validateNewEmployee,
 } from "./lib/employeeService";
 import {
+  createDocumentRecord,
+  createObserverRecord,
+  createSignerRecord,
+  deleteDocumentRecord,
+  deleteObserverRecord,
+  deleteSignerRecord,
+  emptyDocumentDraft,
+  emptyObserverDraft,
+} from "./lib/recordService";
+import {
   buildArchiveItems,
   buildTaskItems,
   filterAccidentReports,
@@ -314,8 +324,8 @@ export default function Page() {
 
   const [newCompany, setNewCompany] = useState(emptyCompanyDraft);
   const [newEmployee, setNewEmployee] = useState<NewEmployeeForm>(emptyNewEmployee);
-  const [newDocument, setNewDocument] = useState({ companyId: "", employeeId: "", type: "Risk Değerlendirme Raporu", issueDate: "", expiryDate: "" });
-  const [newObserver, setNewObserver] = useState({ fullName: "", title: "", certificateNo: "", phone: "" });
+  const [newDocument, setNewDocument] = useState(emptyDocumentDraft);
+  const [newObserver, setNewObserver] = useState(emptyObserverDraft);
   const [newDof, setNewDof] = useState({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta" as "Düşük" | "Orta" | "Yüksek", responsible: "", dueDate: "", status: "Açık" as "Açık" | "Bildirildi" | "Önlem Alındı" | "Çözüldü" | "Riske Aktarıldı", location: "", beforePhoto: "", afterPhoto: "", affectedPersons: "" });
   const [newRisk, setNewRisk] = useState({
     companyId: "", section: "", hazard: "", risk: "", currentMeasure: "", actionToTake: "",
@@ -641,28 +651,26 @@ export default function Page() {
   }
 
   async function addDocument() {
-    if (!newDocument.companyId || !newDocument.type || !newDocument.issueDate) return;
-    const data = { companyId: newDocument.companyId, employeeId: newDocument.employeeId || null, type: newDocument.type, issueDate: newDocument.issueDate, expiryDate: newDocument.expiryDate };
-    const ref = await addDoc(collection(db, "documents"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-    setDocuments(prev => [...prev, { id: ref.id, ...data }]);
-    setNewDocument({ companyId: "", employeeId: "", type: "Risk Değerlendirme Raporu", issueDate: "", expiryDate: "" });
+    const document = await createDocumentRecord(db, newDocument, userProfile!);
+    if (!document) return;
+    setDocuments(prev => [...prev, document]);
+    setNewDocument(emptyDocumentDraft);
   }
 
   async function deleteDocument(id: string) {
-    await deleteDoc(doc(db, "documents", id));
+    await deleteDocumentRecord(db, id);
     setDocuments(prev => prev.filter(d => d.id !== id));
   }
 
   async function addObserver() {
-    if (!newObserver.fullName) return;
-    const data = { fullName: newObserver.fullName, title: newObserver.title, certificateNo: newObserver.certificateNo, phone: newObserver.phone };
-    const ref = await addDoc(collection(db, "observers"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-    setObservers(prev => [...prev, { id: ref.id, ...data }]);
-    setNewObserver({ fullName: "", title: "", certificateNo: "", phone: "" });
+    const observer = await createObserverRecord(db, newObserver, userProfile!);
+    if (!observer) return;
+    setObservers(prev => [...prev, observer]);
+    setNewObserver(emptyObserverDraft);
   }
 
   async function deleteObserver(id: string) {
-    await deleteDoc(doc(db, "observers", id));
+    await deleteObserverRecord(db, id);
     setObservers(prev => prev.filter(o => o.id !== id));
   }
 
@@ -802,13 +810,13 @@ export default function Page() {
   }
 
   async function addSigner(companyId: string, role: SignerRole, fullName: string) {
-    const data = { companyId, role, fullName };
-    const ref = await addDoc(collection(db, "signers"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-    setSigners(prev => [...prev, { id: ref.id, ...data }]);
+    const signer = await createSignerRecord(db, companyId, role, fullName, userProfile!);
+    if (!signer) return;
+    setSigners(prev => [...prev, signer]);
   }
 
   async function deleteSigner(id: string) {
-    await deleteDoc(doc(db, "signers", id));
+    await deleteSignerRecord(db, id);
     setSigners(prev => prev.filter(s => s.id !== id));
   }
 

@@ -52,6 +52,78 @@ function normalizeRoles(user: Pick<UserProfile, "role" | "roles">) {
   return user.roles?.length ? user.roles : [user.role];
 }
 
+function PermissionToggle({
+  checked,
+  disabled,
+  icon,
+  title,
+  subtitle,
+  accent = "var(--isg-accent)",
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  icon: string;
+  title: string;
+  subtitle?: string;
+  accent?: string;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label
+      style={{
+        minHeight: 44,
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "10px 12px",
+        borderRadius: 10,
+        border: checked ? `1px solid ${accent}88` : "1px solid var(--isg-border)",
+        background: checked ? `linear-gradient(135deg, ${accent}24, rgba(255,255,255,0.035))` : "rgba(255,255,255,0.035)",
+        color: checked ? "var(--isg-text)" : "var(--isg-text-muted)",
+        boxShadow: checked ? `0 0 0 1px ${accent}22 inset, 0 10px 24px ${accent}12` : "none",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.55 : 1,
+        transition: "border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease",
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
+      />
+      <span
+        style={{
+          width: 26,
+          height: 26,
+          flex: "0 0 26px",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 8,
+          backgroundColor: checked ? `${accent}2b` : "rgba(255,255,255,0.06)",
+          border: checked ? `1px solid ${accent}66` : "1px solid var(--isg-border)",
+          fontSize: 14,
+        }}
+      >
+        {checked ? "✓" : icon}
+      </span>
+      <span style={{ minWidth: 0, display: "grid", gap: 2 }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: checked ? accent : "var(--isg-text)", lineHeight: 1.15 }}>
+          {icon} {title}
+        </span>
+        {subtitle && (
+          <span style={{ fontSize: 11, color: "var(--isg-text-muted)", lineHeight: 1.25, whiteSpace: "normal" }}>
+            {subtitle}
+          </span>
+        )}
+      </span>
+    </label>
+  );
+}
+
 function ModernDatePicker({
   value,
   onChange,
@@ -635,38 +707,39 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
               </div>
               <div>
                 <label style={styles.label}>Roller</label>
-                <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 }}>
                   {ALL_ROLES.map((role) => (
-                    <label key={role} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--isg-text)", cursor: "pointer" }}>
-                      <input
-                        type="checkbox"
-                        checked={newUser.roles.includes(role)}
-                        onChange={() => toggleNewUserRole(role)}
-                      />
-                      <span>{ROLE_CONFIG[role].icon} {ROLE_CONFIG[role].label}</span>
-                    </label>
+                    <PermissionToggle
+                      key={role}
+                      checked={newUser.roles.includes(role)}
+                      icon={ROLE_CONFIG[role].icon}
+                      title={ROLE_CONFIG[role].label}
+                      subtitle={role === "admin" ? "Tam yetki" : "Firma bazlı erişim"}
+                      accent={ROLE_CONFIG[role].color}
+                      onChange={() => toggleNewUserRole(role)}
+                    />
                   ))}
                 </div>
               </div>
               <div>
                 <label style={styles.label}>Firma Yetkileri</label>
-                <div style={{ display: "grid", gap: 8, maxHeight: 180, overflow: "auto", border: "1px solid var(--isg-border)", borderRadius: 8, padding: 10, backgroundColor: "var(--isg-input-bg)" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10, maxHeight: 240, overflow: "auto", border: "1px solid var(--isg-border)", borderRadius: 12, padding: 12, backgroundColor: "rgba(255,255,255,0.035)" }}>
                   {newUser.roles.includes("admin") && (
-                    <div style={{ fontSize: 12, color: "var(--isg-text-muted)", lineHeight: 1.4 }}>
-                      Admin tüm firmaları görür. Firma seçimi gerekli değildir.
+                    <div style={{ gridColumn: "1 / -1", fontSize: 12, color: "var(--isg-text-muted)", lineHeight: 1.4 }}>
+                      Admin rolü tüm firmaları görür. Seçili firmalar, aynı kullanıcının doktor/hemşire/İSG/İK rolüne geçtiğinde hangi firmaları göreceğini belirler.
                     </div>
                   )}
-                  {!newUser.roles.includes("admin") && localCompanies.map((company) => (
-                    <label key={company.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--isg-text)", cursor: "pointer" }}>
-                      <input
-                        type="checkbox"
-                        checked={newUser.companyIds.includes(company.id)}
-                        onChange={() => toggleNewUserCompany(company.id)}
-                      />
-                      <span>{company.nickName || company.officialName}</span>
-                    </label>
+                  {localCompanies.map((company) => (
+                    <PermissionToggle
+                      key={company.id}
+                      checked={newUser.companyIds.includes(company.id)}
+                      icon="🏢"
+                      title={company.nickName || company.officialName}
+                      subtitle={company.officialName && company.officialName !== company.nickName ? company.officialName : "Firma yetkisi"}
+                      onChange={() => toggleNewUserCompany(company.id)}
+                    />
                   ))}
-                  {!newUser.roles.includes("admin") && localCompanies.length === 0 && (
+                  {localCompanies.length === 0 && (
                     <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Önce Firma sekmesinden firma ekleyin.</div>
                   )}
                 </div>
@@ -741,33 +814,34 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
                       <span style={{ color: "#f59e0b", fontSize: 12 }}>Firma atanmamış</span>
                     )}
                   </td>
-                  <td style={styles.td}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(150px, 1fr))", gap: 8 }}>
+                  <td style={{ ...styles.td, minWidth: 390 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(170px, 1fr))", gap: 10 }}>
                       {ALL_ROLES.map((role) => (
-                        <label key={role} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--isg-text)", cursor: "pointer" }}>
-                          <input
-                            type="checkbox"
-                            checked={userRoles.includes(role)}
-                            disabled={roleUpdatingUid === user.uid || (isCurrentUser && role === "admin")}
-                            onChange={(e) => updateRoles(user.uid, user, role, e.target.checked)}
-                          />
-                          <span>{ROLE_CONFIG[role].icon} {ROLE_CONFIG[role].label}</span>
-                        </label>
+                        <PermissionToggle
+                          key={role}
+                          checked={userRoles.includes(role)}
+                          disabled={roleUpdatingUid === user.uid || (isCurrentUser && role === "admin")}
+                          icon={ROLE_CONFIG[role].icon}
+                          title={ROLE_CONFIG[role].label}
+                          subtitle={role === "admin" ? "Tam yönetim" : "Firma bazlı"}
+                          accent={ROLE_CONFIG[role].color}
+                          onChange={(checked) => updateRoles(user.uid, user, role, checked)}
+                        />
                       ))}
                     </div>
                   </td>
-                  <td style={styles.td}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(150px, 1fr))", gap: 8, maxHeight: 160, overflow: "auto" }}>
+                  <td style={{ ...styles.td, minWidth: 360 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(165px, 1fr))", gap: 10, maxHeight: 250, overflow: "auto", paddingRight: 4 }}>
                       {localCompanies.map((company) => (
-                        <label key={company.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--isg-text)", cursor: "pointer" }}>
-                          <input
-                            type="checkbox"
-                            checked={(user.companyIds || []).includes(company.id)}
-                            disabled={roleUpdatingUid === user.uid}
-                            onChange={(e) => updateUserCompanies(user.uid, user, company.id, e.target.checked)}
-                          />
-                          <span>{company.nickName || company.officialName}</span>
-                        </label>
+                        <PermissionToggle
+                          key={company.id}
+                          checked={(user.companyIds || []).includes(company.id)}
+                          disabled={roleUpdatingUid === user.uid}
+                          icon="🏢"
+                          title={company.nickName || company.officialName}
+                          subtitle="Yetki ver"
+                          onChange={(checked) => updateUserCompanies(user.uid, user, company.id, checked)}
+                        />
                       ))}
                     </div>
                   </td>

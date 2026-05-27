@@ -43,6 +43,18 @@ import {
   validateNewEmployee,
 } from "./lib/employeeService";
 import {
+  createDofRecord,
+  createRiskFromDofRecord,
+  createRiskRecord,
+  deleteDofRecord,
+  deleteRiskRecord,
+  emptyDofDraft,
+  emptyRiskDraft,
+  removeDofPhotoRecord,
+  updateDofPhotoRecord,
+  updateDofStatusRecord,
+} from "./lib/dofRiskService";
+import {
   createDocumentRecord,
   createObserverRecord,
   createSignerRecord,
@@ -326,13 +338,8 @@ export default function Page() {
   const [newEmployee, setNewEmployee] = useState<NewEmployeeForm>(emptyNewEmployee);
   const [newDocument, setNewDocument] = useState(emptyDocumentDraft);
   const [newObserver, setNewObserver] = useState(emptyObserverDraft);
-  const [newDof, setNewDof] = useState({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta" as "Düşük" | "Orta" | "Yüksek", responsible: "", dueDate: "", status: "Açık" as "Açık" | "Bildirildi" | "Önlem Alındı" | "Çözüldü" | "Riske Aktarıldı", location: "", beforePhoto: "", afterPhoto: "", affectedPersons: "" });
-  const [newRisk, setNewRisk] = useState({
-    companyId: "", section: "", hazard: "", risk: "", currentMeasure: "", actionToTake: "",
-    probability: "1", severity: "1", residualProbability: "1", residualSeverity: "1",
-    responsible: "", dueDate: "", status: "Açık" as "Açık" | "Kontrol Altında" | "Kapandı",
-    affectedPersons: "", lawReference: "", controlDate: "",
-  });
+  const [newDof, setNewDof] = useState(emptyDofDraft);
+  const [newRisk, setNewRisk] = useState(emptyRiskDraft);
   const [newAnnualPlan, setNewAnnualPlan] = useState({
     companyId: "",
     year: String(new Date().getFullYear()),
@@ -683,24 +690,21 @@ export default function Page() {
     setDofAdding(true);
     setDofAddStatus(null);
     try {
-      const data: Omit<DofRecord, "id"> = { companyId: newDof.companyId, observerId: newDof.observerId, title: newDof.title, description: newDof.description, lawReference: newDof.lawReference, priority: newDof.priority, responsible: newDof.responsible, dueDate: newDof.dueDate, status: newDof.status, location: newDof.location, affectedPersons: newDof.affectedPersons || "" };
-      if (newDof.beforePhoto) (data as any).beforePhoto = newDof.beforePhoto;
-      if (newDof.afterPhoto) (data as any).afterPhoto = newDof.afterPhoto;
-      const ref = await addDoc(collection(db, "dofs"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-      setDofs(prev => [...prev, { id: ref.id, ...data }]);
+      const dof = await createDofRecord(db, newDof, userProfile!);
+      if (!dof) return;
+      setDofs(prev => [...prev, dof]);
 
       // E-mail bildirimi — sadece email aktifse gönder
       if (emailSettings.enabled && emailSettings.toEmail) {
         try {
-          const dofWithId = { id: ref.id, ...data };
-          const pdfBase64 = await generateDofPDF(dofWithId, true);
+          const pdfBase64 = await generateDofPDF(dof, true);
           const res = await fetch("/api/send-dof-email", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ dofId: ref.id, pdfBase64 }),
+            body: JSON.stringify({ dofId: dof.id, pdfBase64 }),
           });
           if (res.ok) {
-            setDofs(prev => prev.map(d => d.id === ref.id ? { ...d, status: "Bildirildi" } : d));
+            setDofs(prev => prev.map(d => d.id === dof.id ? { ...d, status: "Bildirildi" } : d));
             setDofAddStatus("✅ DÖF kaydedildi ve e-posta gönderildi");
           } else {
             const errData = await res.json();
@@ -713,7 +717,7 @@ export default function Page() {
         setDofAddStatus("✅ DÖF kaydedildi (e-posta bildirimi pasif)");
       }
 
-      setNewDof({ companyId: "", observerId: "", title: "", description: "", lawReference: "", priority: "Orta", responsible: "", dueDate: "", status: "Açık", location: "", beforePhoto: "", afterPhoto: "", affectedPersons: "" });
+      setNewDof(emptyDofDraft);
     } catch (e: any) {
       setDofAddStatus(`❌ DÖF kaydedilemedi: ${e.message}`);
     } finally {
@@ -723,22 +727,22 @@ export default function Page() {
   }
 
   async function deleteDof(id: string) {
-    await deleteDoc(doc(db, "dofs", id));
+    await deleteDofRecord(db, id);
     setDofs(prev => prev.filter(d => d.id !== id));
   }
 
   async function updateDofStatus(id: string, status: DofRecord["status"]) {
-    await updateDoc(doc(db, "dofs", id), { status });
+    await updateDofStatusRecord(db, id, status);
     setDofs(prev => prev.map(d => d.id === id ? { ...d, status } : d));
   }
 
   async function updateDofPhoto(id: string, field: "beforePhoto" | "afterPhoto", base64: string) {
-    await updateDoc(doc(db, "dofs", id), { [field]: base64 });
+    await updateDofPhotoRecord(db, id, field, base64);
     setDofs(prev => prev.map(d => d.id === id ? { ...d, [field]: base64 } : d));
   }
 
   async function removeDofPhoto(id: string, field: "beforePhoto" | "afterPhoto") {
-    await updateDoc(doc(db, "dofs", id), { [field]: "" });
+    await removeDofPhotoRecord(db, id, field);
     setDofs(prev => prev.map(d => d.id === id ? { ...d, [field]: "" } : d));
   }
 
@@ -752,60 +756,22 @@ export default function Page() {
     if (dof.status !== "Önlem Alındı") {
       return;
     }
-    const probMap: Record<string, number> = { "Yüksek": 5, "Orta": 3, "Düşük": 1 };
-    const prob = probMap[dof.priority] || 3;
-    const sev = dof.priority === "Yüksek" ? 4 : dof.priority === "Orta" ? 3 : 2;
-    const data = {
-      companyId: dof.companyId,
-      sourceDofId: dof.id,
-      section: dof.location || "",
-      hazard: dof.title,
-      risk: dof.description || "",
-      currentMeasure: "",
-      actionToTake: "",
-      probability: prob,
-      severity: sev,
-      score: prob * sev,
-      residualProbability: 1,
-      residualSeverity: 1,
-      residualScore: 1,
-      responsible: dof.responsible || "",
-      dueDate: dof.dueDate || "",
-      status: "Açık" as const,
-      affectedPersons: dof.affectedPersons || "",
-      lawReference: dof.lawReference || "",
-      controlDate: "",
-    };
-    const ref = await addDoc(collection(db, "risks"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-    setRisks(prev => [...prev, { id: ref.id, ...data }]);
+    const risk = await createRiskFromDofRecord(db, dof, userProfile!);
+    setRisks(prev => [...prev, risk]);
     // DÖF durumunu güncelle
-    await updateDoc(doc(db, "dofs", dof.id), { status: "Riske Aktarıldı" });
     setDofs(prev => prev.map(d => d.id === dof.id ? { ...d, status: "Riske Aktarıldı" } : d));
     setActiveTab("risk");
   }
 
   async function addRisk() {
-    if (!newRisk.companyId || !newRisk.hazard) return;
-    const prob = parseInt(newRisk.probability);
-    const sev = parseInt(newRisk.severity);
-    const rProb = parseInt(newRisk.residualProbability);
-    const rSev = parseInt(newRisk.residualSeverity);
-    const data = {
-      companyId: newRisk.companyId, sourceDofId: null,
-      section: newRisk.section, hazard: newRisk.hazard, risk: newRisk.risk,
-      currentMeasure: newRisk.currentMeasure, actionToTake: newRisk.actionToTake,
-      probability: prob, severity: sev, score: prob * sev,
-      residualProbability: rProb, residualSeverity: rSev, residualScore: rProb * rSev,
-      responsible: newRisk.responsible, dueDate: newRisk.dueDate, status: newRisk.status,
-      affectedPersons: newRisk.affectedPersons, lawReference: newRisk.lawReference, controlDate: newRisk.controlDate,
-    };
-    const ref = await addDoc(collection(db, "risks"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-    setRisks(prev => [...prev, { id: ref.id, ...data }]);
-    setNewRisk({ companyId: "", section: "", hazard: "", risk: "", currentMeasure: "", actionToTake: "", probability: "1", severity: "1", residualProbability: "1", residualSeverity: "1", responsible: "", dueDate: "", status: "Açık", affectedPersons: "", lawReference: "", controlDate: "" });
+    const risk = await createRiskRecord(db, newRisk, userProfile!);
+    if (!risk) return;
+    setRisks(prev => [...prev, risk]);
+    setNewRisk(emptyRiskDraft);
   }
 
   async function deleteRisk(id: string) {
-    await deleteDoc(doc(db, "risks", id));
+    await deleteRiskRecord(db, id);
     setRisks(prev => prev.filter(r => r.id !== id));
   }
 

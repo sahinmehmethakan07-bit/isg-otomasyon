@@ -59,6 +59,7 @@ function PermissionToggle({
   title,
   subtitle,
   accent = "var(--isg-accent)",
+  compact = false,
   onChange,
 }: {
   checked: boolean;
@@ -67,24 +68,26 @@ function PermissionToggle({
   title: string;
   subtitle?: string;
   accent?: string;
+  compact?: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
     <label
       style={{
-        minHeight: 44,
+        minHeight: compact ? 34 : 44,
         display: "flex",
         alignItems: "center",
-        gap: 10,
-        padding: "10px 12px",
-        borderRadius: 10,
+        gap: compact ? 7 : 10,
+        padding: compact ? "7px 9px" : "10px 12px",
+        borderRadius: compact ? 8 : 10,
         border: checked ? `1px solid ${accent}88` : "1px solid var(--isg-border)",
-        background: checked ? `linear-gradient(135deg, ${accent}24, rgba(255,255,255,0.035))` : "rgba(255,255,255,0.035)",
+        backgroundColor: checked ? `${accent}1f` : "rgba(255,255,255,0.035)",
         color: checked ? "var(--isg-text)" : "var(--isg-text-muted)",
-        boxShadow: checked ? `0 0 0 1px ${accent}22 inset, 0 10px 24px ${accent}12` : "none",
+        boxShadow: checked ? `0 0 0 1px ${accent}18 inset` : "none",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.55 : 1,
-        transition: "border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease",
+        transition: "border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease",
+        minWidth: 0,
       }}
     >
       <input
@@ -96,25 +99,25 @@ function PermissionToggle({
       />
       <span
         style={{
-          width: 26,
-          height: 26,
-          flex: "0 0 26px",
+          width: compact ? 22 : 26,
+          height: compact ? 22 : 26,
+          flex: `0 0 ${compact ? 22 : 26}px`,
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: 8,
+          borderRadius: compact ? 7 : 8,
           backgroundColor: checked ? `${accent}2b` : "rgba(255,255,255,0.06)",
           border: checked ? `1px solid ${accent}66` : "1px solid var(--isg-border)",
-          fontSize: 14,
+          fontSize: compact ? 12 : 14,
         }}
       >
         {checked ? "✓" : icon}
       </span>
       <span style={{ minWidth: 0, display: "grid", gap: 2 }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: checked ? accent : "var(--isg-text)", lineHeight: 1.15 }}>
+        <span style={{ fontSize: compact ? 12 : 13, fontWeight: 800, color: checked ? accent : "var(--isg-text)", lineHeight: 1.15, overflowWrap: "anywhere" }}>
           {icon} {title}
         </span>
-        {subtitle && (
+        {subtitle && !compact && (
           <span style={{ fontSize: 11, color: "var(--isg-text-muted)", lineHeight: 1.25, whiteSpace: "normal" }}>
             {subtitle}
           </span>
@@ -382,20 +385,22 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
       const currentRoles = normalizeRoles(user);
       const nextRoles = checked ? Array.from(new Set([...currentRoles, role])) : currentRoles.filter(item => item !== role);
       const roles = nextRoles.length > 0 ? nextRoles : [role];
+      const activeRole = user.activeRole && roles.includes(user.activeRole) ? user.activeRole : roles[0];
+      setUsers(prev => prev.map(item => item.uid === uid ? { ...item, roles, role: roles[0], activeRole } : item));
       await setUserProfile(uid, {
         email: user.email,
         displayName: user.displayName,
         role: roles[0],
         roles,
-        activeRole: user.activeRole && roles.includes(user.activeRole) ? user.activeRole : roles[0],
+        activeRole,
         companyIds: user.companyIds || [],
         activeCompanyId: user.activeCompanyId,
       });
       setStatus(`✅ ${user.displayName || user.email} rolleri güncellendi: ${roles.map(item => ROLE_CONFIG[item].label).join(", ")}`);
-      await loadUsers();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Bilinmeyen hata";
       setStatus(`❌ Rol güncellenemedi: ${message}`);
+      await loadUsers();
     } finally {
       setRoleUpdatingUid(null);
     }
@@ -467,6 +472,8 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
         ? Array.from(new Set([...currentCompanyIds, companyId]))
         : currentCompanyIds.filter(id => id !== companyId);
       const roles = normalizeRoles(user);
+      const activeCompanyId = user.activeCompanyId && companyIds.includes(user.activeCompanyId) ? user.activeCompanyId : companyIds[0] || "";
+      setUsers(prev => prev.map(item => item.uid === uid ? { ...item, companyIds, activeCompanyId } : item));
       await setUserProfile(uid, {
         email: user.email,
         displayName: user.displayName,
@@ -474,13 +481,13 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
         roles,
         activeRole: user.activeRole && roles.includes(user.activeRole) ? user.activeRole : roles[0],
         companyIds,
-        activeCompanyId: user.activeCompanyId && companyIds.includes(user.activeCompanyId) ? user.activeCompanyId : companyIds[0] || "",
+        activeCompanyId,
       });
       setStatus(`✅ ${user.displayName || user.email} firma yetkileri güncellendi`);
-      await loadUsers();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Bilinmeyen hata";
       setStatus(`❌ Firma yetkisi güncellenemedi: ${message}`);
+      await loadUsers();
     } finally {
       setRoleUpdatingUid(null);
     }
@@ -814,8 +821,8 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
                       <span style={{ color: "#f59e0b", fontSize: 12 }}>Firma atanmamış</span>
                     )}
                   </td>
-                  <td style={{ ...styles.td, minWidth: 390 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(170px, 1fr))", gap: 10 }}>
+                  <td style={{ ...styles.td, minWidth: 280, width: 300 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(122px, 1fr))", gap: 7 }}>
                       {ALL_ROLES.map((role) => (
                         <PermissionToggle
                           key={role}
@@ -825,13 +832,14 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
                           title={ROLE_CONFIG[role].label}
                           subtitle={role === "admin" ? "Tam yönetim" : "Firma bazlı"}
                           accent={ROLE_CONFIG[role].color}
+                          compact
                           onChange={(checked) => updateRoles(user.uid, user, role, checked)}
                         />
                       ))}
                     </div>
                   </td>
-                  <td style={{ ...styles.td, minWidth: 360 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(165px, 1fr))", gap: 10, maxHeight: 250, overflow: "auto", paddingRight: 4 }}>
+                  <td style={{ ...styles.td, minWidth: 210, width: 230 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 7, maxHeight: 180, overflow: "auto", paddingRight: 4 }}>
                       {localCompanies.map((company) => (
                         <PermissionToggle
                           key={company.id}
@@ -840,6 +848,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
                           icon="🏢"
                           title={company.nickName || company.officialName}
                           subtitle="Yetki ver"
+                          compact
                           onChange={(checked) => updateUserCompanies(user.uid, user, company.id, checked)}
                         />
                       ))}

@@ -2,7 +2,7 @@
 // SessionGuard devre disi
 // destroySession devre disi
 import { useUserRole } from "./lib/useUserRole";
-import { getUserProfile, UserProfile, UserRole, ROLE_CONFIG, withCreatedBy } from "./lib/roleManager";
+import { getUserProfile, UserProfile, UserRole, ROLE_CONFIG } from "./lib/roleManager";
 import { AccidentReportsTab } from "./lib/AccidentReportsTab";
 import { AdminUserPanel } from "./lib/AdminUserPanel";
 import { AnnualPlansTab } from "./lib/AnnualPlansTab";
@@ -65,6 +65,24 @@ import {
   emptyObserverDraft,
 } from "./lib/recordService";
 import {
+  createAccidentReportRecord,
+  createAnnualPlanRecord,
+  createCommitteeMeetingRecord,
+  createCompanyVisitRecord,
+  createEmergencyPlanRecord,
+  createPpeRecord,
+  createTrainingRecord,
+  deleteModuleRecord,
+  emptyAccidentReportDraft,
+  emptyAnnualPlanDraft,
+  emptyCommitteeMeetingDraft,
+  emptyCompanyVisitDraft,
+  emptyEmergencyPlanDraft,
+  emptyPpeDraft,
+  emptyTrainingDraft,
+  updateModuleRecordStatus,
+} from "./lib/moduleRecordService";
+import {
   buildArchiveItems,
   buildTaskItems,
   filterAccidentReports,
@@ -101,15 +119,12 @@ import {
 import type {
   AccidentReportRecord,
   AccidentReportStatus,
-  AccidentSeverity,
   AnnualPlanRecord,
   AnnualPlanStatus,
-  AnnualPlanType,
   ArchiveItem,
   CommitteeMeetingRecord,
   CommitteeMeetingStatus,
   Company,
-  CompanyVisitPurpose,
   CompanyVisitRecord,
   CompanyVisitStatus,
   DocumentRecord,
@@ -130,7 +145,6 @@ import type {
   TaskPriority,
   TrainingRecord,
   TrainingStatus,
-  TrainingType,
 } from "./lib/types";
 
 import React, { ChangeEvent, useEffect, useMemo, useState } from "react";
@@ -140,12 +154,8 @@ import { useRouter } from "next/navigation";
 import {
   collection,
   getDocs,
-  addDoc,
-  deleteDoc,
   doc,
-  updateDoc,
   getDoc,
-  setDoc,
   query,
   where,
   documentId,
@@ -340,90 +350,13 @@ export default function Page() {
   const [newObserver, setNewObserver] = useState(emptyObserverDraft);
   const [newDof, setNewDof] = useState(emptyDofDraft);
   const [newRisk, setNewRisk] = useState(emptyRiskDraft);
-  const [newAnnualPlan, setNewAnnualPlan] = useState({
-    companyId: "",
-    year: String(new Date().getFullYear()),
-    type: "Eğitim" as AnnualPlanType,
-    title: "",
-    plannedDate: "",
-    responsible: "",
-    status: "Planlandı" as AnnualPlanStatus,
-    notes: "",
-  });
-  const [newTraining, setNewTraining] = useState({
-    companyId: "",
-    title: "",
-    type: "Temel İSG Eğitimi" as TrainingType,
-    trainingDate: "",
-    durationHours: "",
-    location: "",
-    trainer: "",
-    participantIds: [] as string[],
-    status: "Planlandı" as TrainingStatus,
-    notes: "",
-  });
-  const [newPpe, setNewPpe] = useState({
-    companyId: "",
-    employeeId: "",
-    equipment: "Baret",
-    quantity: "1",
-    issueDate: "",
-    returnDate: "",
-    status: "Teslim Edildi" as PpeStatus,
-    serialNo: "",
-    notes: "",
-  });
-  const [newEmergencyPlan, setNewEmergencyPlan] = useState({
-    companyId: "",
-    title: "Acil Durum Planı",
-    scenario: "Yangın",
-    assemblyArea: "",
-    emergencyTeam: "",
-    responsible: "",
-    planDate: "",
-    drillDate: "",
-    status: "Taslak" as EmergencyPlanStatus,
-    notes: "",
-  });
-  const [newCommitteeMeeting, setNewCommitteeMeeting] = useState({
-    companyId: "",
-    meetingNo: "",
-    meetingDate: "",
-    location: "",
-    chairperson: "",
-    agenda: "",
-    decisions: "",
-    participantIds: [] as string[],
-    status: "Planlandı" as CommitteeMeetingStatus,
-    notes: "",
-  });
-  const [newAccidentReport, setNewAccidentReport] = useState({
-    companyId: "",
-    employeeId: "",
-    accidentDate: "",
-    location: "",
-    severity: "Hafif" as AccidentSeverity,
-    incidentType: "İş Kazası",
-    description: "",
-    rootCause: "",
-    actionPlan: "",
-    responsible: "",
-    dueDate: "",
-    status: "Açık" as AccidentReportStatus,
-    notes: "",
-  });
-  const [newCompanyVisit, setNewCompanyVisit] = useState({
-    companyId: "",
-    visitDate: "",
-    purpose: "Rutin Ziyaret" as CompanyVisitPurpose,
-    visitor: "",
-    contactedPerson: "",
-    findings: "",
-    actions: "",
-    nextVisitDate: "",
-    status: "Planlandı" as CompanyVisitStatus,
-    notes: "",
-  });
+  const [newAnnualPlan, setNewAnnualPlan] = useState(emptyAnnualPlanDraft);
+  const [newTraining, setNewTraining] = useState(emptyTrainingDraft);
+  const [newPpe, setNewPpe] = useState(emptyPpeDraft);
+  const [newEmergencyPlan, setNewEmergencyPlan] = useState(emptyEmergencyPlanDraft);
+  const [newCommitteeMeeting, setNewCommitteeMeeting] = useState(emptyCommitteeMeetingDraft);
+  const [newAccidentReport, setNewAccidentReport] = useState(emptyAccidentReportDraft);
+  const [newCompanyVisit, setNewCompanyVisit] = useState(emptyCompanyVisitDraft);
 
   const [signers, setSigners] = useState<Signer[]>([]);
   const [emailSettings, setEmailSettings] = useState<EmailSettings>({ enabled: true, toEmail: "", ccEmail: "", subject: "[İSG] Yeni DÖF Bildirimi: {dofTitle}", message: "" });
@@ -787,29 +720,19 @@ export default function Page() {
   }
 
   async function addAnnualPlan() {
-    if (!newAnnualPlan.companyId || !newAnnualPlan.title || !newAnnualPlan.plannedDate) return;
-    const data = {
-      companyId: newAnnualPlan.companyId,
-      year: parseInt(newAnnualPlan.year) || new Date().getFullYear(),
-      type: newAnnualPlan.type,
-      title: newAnnualPlan.title,
-      plannedDate: newAnnualPlan.plannedDate,
-      responsible: newAnnualPlan.responsible,
-      status: newAnnualPlan.status,
-      notes: newAnnualPlan.notes,
-    };
-    const ref = await addDoc(collection(db, "annualPlans"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-    setAnnualPlans(prev => [...prev, { id: ref.id, ...data }]);
-    setNewAnnualPlan({ companyId: "", year: String(new Date().getFullYear()), type: "Eğitim", title: "", plannedDate: "", responsible: "", status: "Planlandı", notes: "" });
+    const annualPlan = await createAnnualPlanRecord(db, newAnnualPlan, userProfile!);
+    if (!annualPlan) return;
+    setAnnualPlans(prev => [...prev, annualPlan]);
+    setNewAnnualPlan(emptyAnnualPlanDraft);
   }
 
   async function updateAnnualPlanStatus(id: string, status: AnnualPlanStatus) {
-    await updateDoc(doc(db, "annualPlans", id), { status });
+    await updateModuleRecordStatus(db, "annualPlans", id, status);
     setAnnualPlans(prev => prev.map(plan => plan.id === id ? { ...plan, status } : plan));
   }
 
   async function deleteAnnualPlan(id: string) {
-    await deleteDoc(doc(db, "annualPlans", id));
+    await deleteModuleRecord(db, "annualPlans", id);
     setAnnualPlans(prev => prev.filter(plan => plan.id !== id));
   }
 
@@ -823,88 +746,53 @@ export default function Page() {
   }
 
   async function addTraining() {
-    if (!newTraining.companyId || !newTraining.title || !newTraining.trainingDate) return;
-    const data = {
-      companyId: newTraining.companyId,
-      title: newTraining.title,
-      type: newTraining.type,
-      trainingDate: newTraining.trainingDate,
-      durationHours: newTraining.durationHours,
-      location: newTraining.location,
-      trainer: newTraining.trainer,
-      participantIds: newTraining.participantIds,
-      status: newTraining.status,
-      notes: newTraining.notes,
-    };
-    const ref = await addDoc(collection(db, "trainings"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-    setTrainings(prev => [...prev, { id: ref.id, ...data }]);
-    setNewTraining({ companyId: "", title: "", type: "Temel İSG Eğitimi", trainingDate: "", durationHours: "", location: "", trainer: "", participantIds: [], status: "Planlandı", notes: "" });
+    const training = await createTrainingRecord(db, newTraining, userProfile!);
+    if (!training) return;
+    setTrainings(prev => [...prev, training]);
+    setNewTraining(emptyTrainingDraft);
   }
 
   async function updateTrainingStatus(id: string, status: TrainingStatus) {
-    await updateDoc(doc(db, "trainings", id), { status });
+    await updateModuleRecordStatus(db, "trainings", id, status);
     setTrainings(prev => prev.map(training => training.id === id ? { ...training, status } : training));
   }
 
   async function deleteTraining(id: string) {
-    await deleteDoc(doc(db, "trainings", id));
+    await deleteModuleRecord(db, "trainings", id);
     setTrainings(prev => prev.filter(training => training.id !== id));
   }
 
   async function addPpeRecord() {
-    if (!newPpe.companyId || !newPpe.employeeId || !newPpe.equipment || !newPpe.issueDate) return;
-    const data = {
-      companyId: newPpe.companyId,
-      employeeId: newPpe.employeeId,
-      equipment: newPpe.equipment,
-      quantity: parseInt(newPpe.quantity) || 1,
-      issueDate: newPpe.issueDate,
-      returnDate: newPpe.returnDate,
-      status: newPpe.status,
-      serialNo: newPpe.serialNo,
-      notes: newPpe.notes,
-    };
-    const ref = await addDoc(collection(db, "ppeRecords"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-    setPpeRecords(prev => [...prev, { id: ref.id, ...data }]);
-    setNewPpe({ companyId: "", employeeId: "", equipment: "Baret", quantity: "1", issueDate: "", returnDate: "", status: "Teslim Edildi", serialNo: "", notes: "" });
+    const ppeRecord = await createPpeRecord(db, newPpe, userProfile!);
+    if (!ppeRecord) return;
+    setPpeRecords(prev => [...prev, ppeRecord]);
+    setNewPpe(emptyPpeDraft);
   }
 
   async function updatePpeStatus(id: string, status: PpeStatus) {
-    await updateDoc(doc(db, "ppeRecords", id), { status });
+    await updateModuleRecordStatus(db, "ppeRecords", id, status);
     setPpeRecords(prev => prev.map(record => record.id === id ? { ...record, status } : record));
   }
 
   async function deletePpeRecord(id: string) {
-    await deleteDoc(doc(db, "ppeRecords", id));
+    await deleteModuleRecord(db, "ppeRecords", id);
     setPpeRecords(prev => prev.filter(record => record.id !== id));
   }
 
   async function addEmergencyPlan() {
-    if (!newEmergencyPlan.companyId || !newEmergencyPlan.title || !newEmergencyPlan.planDate) return;
-    const data = {
-      companyId: newEmergencyPlan.companyId,
-      title: newEmergencyPlan.title,
-      scenario: newEmergencyPlan.scenario,
-      assemblyArea: newEmergencyPlan.assemblyArea,
-      emergencyTeam: newEmergencyPlan.emergencyTeam,
-      responsible: newEmergencyPlan.responsible,
-      planDate: newEmergencyPlan.planDate,
-      drillDate: newEmergencyPlan.drillDate,
-      status: newEmergencyPlan.status,
-      notes: newEmergencyPlan.notes,
-    };
-    const ref = await addDoc(collection(db, "emergencyPlans"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-    setEmergencyPlans(prev => [...prev, { id: ref.id, ...data }]);
-    setNewEmergencyPlan({ companyId: "", title: "Acil Durum Planı", scenario: "Yangın", assemblyArea: "", emergencyTeam: "", responsible: "", planDate: "", drillDate: "", status: "Taslak", notes: "" });
+    const emergencyPlan = await createEmergencyPlanRecord(db, newEmergencyPlan, userProfile!);
+    if (!emergencyPlan) return;
+    setEmergencyPlans(prev => [...prev, emergencyPlan]);
+    setNewEmergencyPlan(emptyEmergencyPlanDraft);
   }
 
   async function updateEmergencyPlanStatus(id: string, status: EmergencyPlanStatus) {
-    await updateDoc(doc(db, "emergencyPlans", id), { status });
+    await updateModuleRecordStatus(db, "emergencyPlans", id, status);
     setEmergencyPlans(prev => prev.map(plan => plan.id === id ? { ...plan, status } : plan));
   }
 
   async function deleteEmergencyPlan(id: string) {
-    await deleteDoc(doc(db, "emergencyPlans", id));
+    await deleteModuleRecord(db, "emergencyPlans", id);
     setEmergencyPlans(prev => prev.filter(plan => plan.id !== id));
   }
 
@@ -918,92 +806,53 @@ export default function Page() {
   }
 
   async function addCommitteeMeeting() {
-    if (!newCommitteeMeeting.companyId || !newCommitteeMeeting.meetingDate) return;
-    const data = {
-      companyId: newCommitteeMeeting.companyId,
-      meetingNo: newCommitteeMeeting.meetingNo,
-      meetingDate: newCommitteeMeeting.meetingDate,
-      location: newCommitteeMeeting.location,
-      chairperson: newCommitteeMeeting.chairperson,
-      agenda: newCommitteeMeeting.agenda,
-      decisions: newCommitteeMeeting.decisions,
-      participantIds: newCommitteeMeeting.participantIds,
-      status: newCommitteeMeeting.status,
-      notes: newCommitteeMeeting.notes,
-    };
-    const ref = await addDoc(collection(db, "committeeMeetings"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-    setCommitteeMeetings(prev => [...prev, { id: ref.id, ...data }]);
-    setNewCommitteeMeeting({ companyId: "", meetingNo: "", meetingDate: "", location: "", chairperson: "", agenda: "", decisions: "", participantIds: [], status: "Planlandı", notes: "" });
+    const committeeMeeting = await createCommitteeMeetingRecord(db, newCommitteeMeeting, userProfile!);
+    if (!committeeMeeting) return;
+    setCommitteeMeetings(prev => [...prev, committeeMeeting]);
+    setNewCommitteeMeeting(emptyCommitteeMeetingDraft);
   }
 
   async function updateCommitteeMeetingStatus(id: string, status: CommitteeMeetingStatus) {
-    await updateDoc(doc(db, "committeeMeetings", id), { status });
+    await updateModuleRecordStatus(db, "committeeMeetings", id, status);
     setCommitteeMeetings(prev => prev.map(meeting => meeting.id === id ? { ...meeting, status } : meeting));
   }
 
   async function deleteCommitteeMeeting(id: string) {
-    await deleteDoc(doc(db, "committeeMeetings", id));
+    await deleteModuleRecord(db, "committeeMeetings", id);
     setCommitteeMeetings(prev => prev.filter(meeting => meeting.id !== id));
   }
 
   async function addAccidentReport() {
-    if (!newAccidentReport.companyId || !newAccidentReport.accidentDate || !newAccidentReport.description) return;
-    const data = {
-      companyId: newAccidentReport.companyId,
-      employeeId: newAccidentReport.employeeId,
-      accidentDate: newAccidentReport.accidentDate,
-      location: newAccidentReport.location,
-      severity: newAccidentReport.severity,
-      incidentType: newAccidentReport.incidentType,
-      description: newAccidentReport.description,
-      rootCause: newAccidentReport.rootCause,
-      actionPlan: newAccidentReport.actionPlan,
-      responsible: newAccidentReport.responsible,
-      dueDate: newAccidentReport.dueDate,
-      status: newAccidentReport.status,
-      notes: newAccidentReport.notes,
-    };
-    const ref = await addDoc(collection(db, "accidentReports"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-    setAccidentReports(prev => [...prev, { id: ref.id, ...data }]);
-    setNewAccidentReport({ companyId: "", employeeId: "", accidentDate: "", location: "", severity: "Hafif", incidentType: "İş Kazası", description: "", rootCause: "", actionPlan: "", responsible: "", dueDate: "", status: "Açık", notes: "" });
+    const accidentReport = await createAccidentReportRecord(db, newAccidentReport, userProfile!);
+    if (!accidentReport) return;
+    setAccidentReports(prev => [...prev, accidentReport]);
+    setNewAccidentReport(emptyAccidentReportDraft);
   }
 
   async function updateAccidentReportStatus(id: string, status: AccidentReportStatus) {
-    await updateDoc(doc(db, "accidentReports", id), { status });
+    await updateModuleRecordStatus(db, "accidentReports", id, status);
     setAccidentReports(prev => prev.map(report => report.id === id ? { ...report, status } : report));
   }
 
   async function deleteAccidentReport(id: string) {
-    await deleteDoc(doc(db, "accidentReports", id));
+    await deleteModuleRecord(db, "accidentReports", id);
     setAccidentReports(prev => prev.filter(report => report.id !== id));
   }
 
   async function addCompanyVisit() {
-    if (!newCompanyVisit.companyId || !newCompanyVisit.visitDate || !newCompanyVisit.visitor) return;
-    const data = {
-      companyId: newCompanyVisit.companyId,
-      visitDate: newCompanyVisit.visitDate,
-      purpose: newCompanyVisit.purpose,
-      visitor: newCompanyVisit.visitor,
-      contactedPerson: newCompanyVisit.contactedPerson,
-      findings: newCompanyVisit.findings,
-      actions: newCompanyVisit.actions,
-      nextVisitDate: newCompanyVisit.nextVisitDate,
-      status: newCompanyVisit.status,
-      notes: newCompanyVisit.notes,
-    };
-    const ref = await addDoc(collection(db, "companyVisits"), withCreatedBy(data, userProfile!.uid, userProfile!.activeRole || userProfile!.role));
-    setCompanyVisits(prev => [...prev, { id: ref.id, ...data }]);
-    setNewCompanyVisit({ companyId: "", visitDate: "", purpose: "Rutin Ziyaret", visitor: "", contactedPerson: "", findings: "", actions: "", nextVisitDate: "", status: "Planlandı", notes: "" });
+    const companyVisit = await createCompanyVisitRecord(db, newCompanyVisit, userProfile!);
+    if (!companyVisit) return;
+    setCompanyVisits(prev => [...prev, companyVisit]);
+    setNewCompanyVisit(emptyCompanyVisitDraft);
   }
 
   async function updateCompanyVisitStatus(id: string, status: CompanyVisitStatus) {
-    await updateDoc(doc(db, "companyVisits", id), { status });
+    await updateModuleRecordStatus(db, "companyVisits", id, status);
     setCompanyVisits(prev => prev.map(visit => visit.id === id ? { ...visit, status } : visit));
   }
 
   async function deleteCompanyVisit(id: string) {
-    await deleteDoc(doc(db, "companyVisits", id));
+    await deleteModuleRecord(db, "companyVisits", id);
     setCompanyVisits(prev => prev.filter(visit => visit.id !== id));
   }
 

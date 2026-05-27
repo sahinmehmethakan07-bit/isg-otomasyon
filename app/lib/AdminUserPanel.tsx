@@ -762,38 +762,55 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
       )}
 
       {/* Kullanıcı listesi */}
-      <div style={styles.card}>
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.th}>Ad Soyad</th>
-              <th style={styles.th}>E-posta</th>
-              <th style={styles.th}>Roller</th>
-              <th style={styles.th}>Firma Yetkileri</th>
-              <th style={styles.th}>Rol Ekle / Kaldır</th>
-              <th style={styles.th}>Firma Ekle / Kaldır</th>
-              <th style={styles.th}>İşlem</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => {
-              const userRoles = normalizeRoles(user);
-              const isCurrentUser = user.uid === auth.currentUser?.uid;
-              return (
-                <tr key={user.uid}>
-                  <td style={styles.td}>{user.displayName || "—"}</td>
-                  <td style={styles.td}>{user.email}</td>
-                  <td style={styles.td}>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      <div style={{ display: "grid", gap: 14 }}>
+        {users.map((user) => {
+          const userRoles = normalizeRoles(user);
+          const isCurrentUser = user.uid === auth.currentUser?.uid;
+          return (
+            <article
+              key={user.uid}
+              style={{
+                ...styles.card,
+                display: "grid",
+                gap: 18,
+                padding: 20,
+                overflow: "hidden",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                <div style={{ display: "grid", gap: 6, minWidth: 220 }}>
+                  <div style={{ color: "var(--isg-text)", fontSize: 16, fontWeight: 850 }}>
+                    {user.displayName || "İsimsiz kullanıcı"}
+                  </div>
+                  <div style={{ color: "var(--isg-text-muted)", fontSize: 13, overflowWrap: "anywhere" }}>
+                    {user.email}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  style={{ ...styles.btnDanger, opacity: deletingUid === user.uid || isCurrentUser ? 0.55 : 1 }}
+                  disabled={deletingUid === user.uid || isCurrentUser}
+                  onClick={() => deleteUserProfile(user)}
+                  title={isCurrentUser ? "Kendi hesabınızı buradan silemezsiniz" : "Kullanıcıyı tamamen sil"}
+                >
+                  {deletingUid === user.uid ? "Siliniyor..." : "Kaydı Sil"}
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 0.9fr) minmax(260px, 1fr) minmax(260px, 1fr)", gap: 18, alignItems: "start" }}>
+                <section style={{ display: "grid", gap: 12, minWidth: 0 }}>
+                  <div>
+                    <div style={{ ...styles.sectionTitle, marginBottom: 8 }}>Aktif Roller</div>
+                    <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                       {userRoles.map((role) => (
                         <span key={role} style={{
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: 4,
-                          padding: "2px 10px",
-                          borderRadius: 6,
+                          gap: 5,
+                          padding: "5px 10px",
+                          borderRadius: 8,
                           fontSize: 12,
-                          fontWeight: 600,
+                          fontWeight: 750,
                           backgroundColor: ROLE_CONFIG[role]?.color + "22" || "#33333322",
                           color: ROLE_CONFIG[role]?.color || "#999",
                           border: `1px solid ${ROLE_CONFIG[role]?.color || "#333"}44`,
@@ -802,10 +819,12 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
                         </span>
                       ))}
                     </div>
-                  </td>
-                  <td style={styles.td}>
+                  </div>
+
+                  <div>
+                    <div style={{ ...styles.sectionTitle, marginBottom: 8 }}>Firma Yetkileri</div>
                     {(user.companyIds || []).length > 0 ? (
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                         {(user.companyIds || []).map(companyId => {
                           const company = localCompanies.find(c => c.id === companyId);
                           return (
@@ -816,67 +835,63 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
                         })}
                       </div>
                     ) : userRoles.includes("admin") ? (
-                      <span style={{ color: "var(--isg-text-muted)", fontSize: 12 }}>Admin olarak tüm firmalar, diğer roller için firma seçin</span>
+                      <div style={{ color: "var(--isg-text-muted)", fontSize: 12, lineHeight: 1.4 }}>
+                        Admin olarak tüm firmalar görünür. Diğer roller için firma seçin.
+                      </div>
                     ) : (
                       <span style={{ color: "#f59e0b", fontSize: 12 }}>Firma atanmamış</span>
                     )}
-                  </td>
-                  <td style={{ ...styles.td, minWidth: 280, width: 300 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(122px, 1fr))", gap: 7 }}>
-                      {ALL_ROLES.map((role) => (
-                        <PermissionToggle
-                          key={role}
-                          checked={userRoles.includes(role)}
-                          disabled={roleUpdatingUid === user.uid || (isCurrentUser && role === "admin")}
-                          icon={ROLE_CONFIG[role].icon}
-                          title={ROLE_CONFIG[role].label}
-                          subtitle={role === "admin" ? "Tam yönetim" : "Firma bazlı"}
-                          accent={ROLE_CONFIG[role].color}
-                          compact
-                          onChange={(checked) => updateRoles(user.uid, user, role, checked)}
-                        />
-                      ))}
-                    </div>
-                  </td>
-                  <td style={{ ...styles.td, minWidth: 210, width: 230 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 7, maxHeight: 180, overflow: "auto", paddingRight: 4 }}>
-                      {localCompanies.map((company) => (
-                        <PermissionToggle
-                          key={company.id}
-                          checked={(user.companyIds || []).includes(company.id)}
-                          disabled={roleUpdatingUid === user.uid}
-                          icon="🏢"
-                          title={company.nickName || company.officialName}
-                          subtitle="Yetki ver"
-                          compact
-                          onChange={(checked) => updateUserCompanies(user.uid, user, company.id, checked)}
-                        />
-                      ))}
-                    </div>
-                  </td>
-                  <td style={styles.td}>
-                    <button
-                      type="button"
-                      style={{ ...styles.btnDanger, opacity: deletingUid === user.uid || isCurrentUser ? 0.55 : 1 }}
-                      disabled={deletingUid === user.uid || isCurrentUser}
-                      onClick={() => deleteUserProfile(user)}
-                      title={isCurrentUser ? "Kendi hesabınızı buradan silemezsiniz" : "Kullanıcıyı tamamen sil"}
-                    >
-                      {deletingUid === user.uid ? "Siliniyor..." : "Kaydı Sil"}
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-            {users.length === 0 && (
-              <tr>
-                <td colSpan={7} style={{ ...styles.td, textAlign: "center", color: "var(--isg-text-muted)" }}>
-                  Henüz kayıtlı kullanıcı yok
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                  </div>
+                </section>
+
+                <section style={{ display: "grid", gap: 9, minWidth: 0 }}>
+                  <div style={styles.sectionTitle}>Rol Ekle / Kaldır</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
+                    {ALL_ROLES.map((role) => (
+                      <PermissionToggle
+                        key={role}
+                        checked={userRoles.includes(role)}
+                        disabled={roleUpdatingUid === user.uid || (isCurrentUser && role === "admin")}
+                        icon={ROLE_CONFIG[role].icon}
+                        title={ROLE_CONFIG[role].label}
+                        subtitle={role === "admin" ? "Tam yönetim" : "Firma bazlı"}
+                        accent={ROLE_CONFIG[role].color}
+                        compact
+                        onChange={(checked) => updateRoles(user.uid, user, role, checked)}
+                      />
+                    ))}
+                  </div>
+                </section>
+
+                <section style={{ display: "grid", gap: 9, minWidth: 0 }}>
+                  <div style={styles.sectionTitle}>Firma Ekle / Kaldır</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))", gap: 8, maxHeight: 190, overflow: "auto", paddingRight: 4 }}>
+                    {localCompanies.map((company) => (
+                      <PermissionToggle
+                        key={company.id}
+                        checked={(user.companyIds || []).includes(company.id)}
+                        disabled={roleUpdatingUid === user.uid}
+                        icon="🏢"
+                        title={company.nickName || company.officialName}
+                        subtitle="Yetki ver"
+                        compact
+                        onChange={(checked) => updateUserCompanies(user.uid, user, company.id, checked)}
+                      />
+                    ))}
+                    {localCompanies.length === 0 && (
+                      <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Henüz firma yok.</div>
+                    )}
+                  </div>
+                </section>
+              </div>
+            </article>
+          );
+        })}
+        {users.length === 0 && (
+          <div style={{ ...styles.card, textAlign: "center", color: "var(--isg-text-muted)" }}>
+            Henüz kayıtlı kullanıcı yok
+          </div>
+        )}
       </div>
 
       <div style={{ fontSize: 11, color: "#475569", marginTop: 12 }}>

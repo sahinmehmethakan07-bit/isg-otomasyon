@@ -212,8 +212,9 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
     let secondaryApp: ReturnType<typeof initializeApp> | null = null;
 
     try {
-      if (!newUser.roles.includes("admin") && newUser.companyIds.length === 0) {
-        setStatus("❌ Admin olmayan kullanıcı için en az bir firma yetkisi seçmelisiniz.");
+      const hasCompanyScopedRole = newUser.roles.some(role => role !== "admin");
+      if (hasCompanyScopedRole && newUser.companyIds.length === 0) {
+        setStatus("❌ Doktor, hemşire, İSG uzmanı veya İK rolü için en az bir firma yetkisi seçmelisiniz.");
         setCreating(false);
         return;
       }
@@ -232,7 +233,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
         displayName: newUser.displayName,
         role: newUser.roles[0],
         roles: newUser.roles,
-        companyIds: newUser.roles.includes("admin") ? [] : newUser.companyIds,
+        companyIds: newUser.companyIds,
       });
 
       await signOut(secondaryAuth);
@@ -292,7 +293,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
       const exists = prev.roles.includes(role);
       const roles = exists ? prev.roles.filter(item => item !== role) : [...prev.roles, role];
       const normalizedRoles = roles.length > 0 ? roles : [role];
-      return { ...prev, roles: normalizedRoles, companyIds: normalizedRoles.includes("admin") ? [] : prev.companyIds };
+      return { ...prev, roles: normalizedRoles };
     });
   }
 
@@ -723,9 +724,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
                     </div>
                   </td>
                   <td style={styles.td}>
-                    {userRoles.includes("admin") ? (
-                      <span style={{ color: "var(--isg-text-muted)", fontSize: 12 }}>Tüm firmalar</span>
-                    ) : (user.companyIds || []).length > 0 ? (
+                    {(user.companyIds || []).length > 0 ? (
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         {(user.companyIds || []).map(companyId => {
                           const company = localCompanies.find(c => c.id === companyId);
@@ -736,6 +735,8 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
                           );
                         })}
                       </div>
+                    ) : userRoles.includes("admin") ? (
+                      <span style={{ color: "var(--isg-text-muted)", fontSize: 12 }}>Admin olarak tüm firmalar, diğer roller için firma seçin</span>
                     ) : (
                       <span style={{ color: "#f59e0b", fontSize: 12 }}>Firma atanmamış</span>
                     )}
@@ -757,9 +758,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
                   </td>
                   <td style={styles.td}>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(150px, 1fr))", gap: 8, maxHeight: 160, overflow: "auto" }}>
-                      {userRoles.includes("admin") ? (
-                        <span style={{ color: "var(--isg-text-muted)", fontSize: 12 }}>Admin için firma kısıtı yok</span>
-                      ) : localCompanies.map((company) => (
+                      {localCompanies.map((company) => (
                         <label key={company.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--isg-text)", cursor: "pointer" }}>
                           <input
                             type="checkbox"

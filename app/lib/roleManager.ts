@@ -106,8 +106,8 @@ export function normalizeUserProfile(uid: string, data: Record<string, any>): Us
     role: roles[0],
     roles,
     activeRole,
-    companyIds: roles.includes("admin") ? [] : companyIds,
-    activeCompanyId: roles.includes("admin") ? "" : activeCompanyId,
+    companyIds,
+    activeCompanyId,
     createdAt: data.createdAt || null,
   };
 }

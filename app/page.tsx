@@ -23,6 +23,7 @@ import { PpeTab } from "./lib/PpeTab";
 import { RiskTab } from "./lib/RiskTab";
 import { SignersTab } from "./lib/SignersTab";
 import { TrainingsTab } from "./lib/TrainingsTab";
+import WorkInstructionsTab from "./lib/WorkInstructionsTab";
 import { useLanguage } from "./lib/i18n";
 import {
   generateRiskPDF,
@@ -872,6 +873,7 @@ export default function Page() {
       { id: "yillik-planlar", label: "📅 Yıllık Planlar" },
       { id: "egitimler", label: "🎓 Eğitimler" },
       { id: "kkd-formu", label: "🧤 KKD Formu" },
+      { id: "talimatlar", label: "📋 Talimatlar" },
       { id: "acil-durum-plani", label: "⚠️ Acil Durum Planı" },
       { id: "kurul-toplantisi", label: "👥 Kurul Toplantısı" },
       { id: "firma-ziyaretleri", label: "📍 Firma Ziyaretleri" },
@@ -886,7 +888,7 @@ export default function Page() {
     : [
       { title: "Yönetim", items: tabs.filter(tab => ["ozet", "gorevler", "firmalar", "personel", "kullanicilar"].includes(tab.id)) },
       { title: "Risk Yönetimi", items: tabs.filter(tab => ["gozlemciler", "dof", "risk"].includes(tab.id)) },
-      { title: "Formlar & Belgeler", items: tabs.filter(tab => ["belgeler", "imzacilar", "ek2muayene", "kkd-formu", "is-kazasi-raporu"].includes(tab.id)) },
+      { title: "Formlar & Belgeler", items: tabs.filter(tab => ["belgeler", "imzacilar", "ek2muayene", "kkd-formu", "talimatlar", "is-kazasi-raporu"].includes(tab.id)) },
       {
         title: "Planlama & Arşiv",
         items: [
@@ -1377,6 +1379,10 @@ export default function Page() {
             updatePpeStatus={updatePpeStatus}
             deletePpeRecord={deletePpeRecord}
           />
+        )}
+
+        {activeTab === "talimatlar" && (
+          <WorkInstructionsTab styles={styles} />
         )}
 
         {activeTab === "acil-durum-plani" && (

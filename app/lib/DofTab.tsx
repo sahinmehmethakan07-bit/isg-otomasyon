@@ -204,28 +204,38 @@ export function DofTab({
           <input style={{ ...styles.input, fontSize: 12 }} className="isg-input" value={newDof.affectedPersons} onChange={e => setField("affectedPersons", e.target.value)} placeholder="Tüm çalışanlar veya isimleri seçin/yazın" />
         </div>
         <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))", gap: 16 }}>
-          <div>
-            <label style={styles.label} className="isg-label">Öncesi Fotoğraf (Uygunsuzluk)</label>
-            {newDof.beforePhoto ? (
-              <div style={{ position: "relative", display: "inline-block" }}>
-                <img src={newDof.beforePhoto} alt="önce" style={{ width: 120, height: 90, objectFit: "cover", borderRadius: 6, border: "1px solid var(--isg-border, #334155)" }} />
-                <button type="button" onClick={() => setField("beforePhoto", "")} style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          {(["beforePhoto", "afterPhoto"] as const).map(field => {
+            const label = field === "beforePhoto" ? "📷 Öncesi Fotoğraf (Uygunsuzluk)" : "📷 Sonrası Fotoğraf (Düzeltme)";
+            const value = newDof[field];
+            const inputId = `dof-new-${field}`;
+            return (
+              <div key={field}>
+                <label style={styles.label} className="isg-label">{label}</label>
+                {value ? (
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                    <div style={{ position: "relative" as const, display: "inline-block" }}>
+                      <img src={value} alt={field} style={{ width: 120, height: 90, objectFit: "cover" as const, borderRadius: 8, border: "1px solid var(--isg-border)" }} />
+                      <button type="button" onClick={() => setField(field, "")} style={{ position: "absolute" as const, top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                    </div>
+                    <label htmlFor={inputId} style={{ ...styles.btnSecondary, cursor: "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                      🔄 Değiştir
+                      <input id={inputId} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleImageToBase64(e, b64 => setField(field, b64))} />
+                    </label>
+                  </div>
+                ) : (
+                  <label htmlFor={inputId} style={{
+                    display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+                    height: 38, padding: "0 14px", borderRadius: 8, fontSize: 13, fontWeight: 700,
+                    border: "1px dashed var(--isg-border)", backgroundColor: "var(--isg-input-bg)",
+                    color: "var(--isg-text-muted)", transition: "border-color 0.15s",
+                  }}>
+                    📎 Fotoğraf Seç
+                    <input id={inputId} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleImageToBase64(e, b64 => setField(field, b64))} />
+                  </label>
+                )}
               </div>
-            ) : (
-              <input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => setField("beforePhoto", b64))} />
-            )}
-          </div>
-          <div>
-            <label style={styles.label} className="isg-label">Sonrası Fotoğraf (Düzeltme)</label>
-            {newDof.afterPhoto ? (
-              <div style={{ position: "relative", display: "inline-block" }}>
-                <img src={newDof.afterPhoto} alt="sonra" style={{ width: 120, height: 90, objectFit: "cover", borderRadius: 6, border: "1px solid var(--isg-border, #334155)" }} />
-                <button type="button" onClick={() => setField("afterPhoto", "")} style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-              </div>
-            ) : (
-              <input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => setField("afterPhoto", b64))} />
-            )}
-          </div>
+            );
+          })}
         </div>
         <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <button style={{ ...styles.btnPrimary, opacity: dofAdding ? 0.6 : 1 }} disabled={dofAdding} onClick={addDof}>{dofAdding ? "Kaydediliyor..." : "DÖF Ekle"}</button>
@@ -274,28 +284,33 @@ export function DofTab({
                     <option>Açık</option><option>Bildirildi</option><option>Önlem Alındı</option><option>Çözüldü</option>
                   </select>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))", gap: 16 }}>
-                    <div>
-                      <label style={{ fontSize: 11, color: "var(--isg-text-muted)", display: "block", marginBottom: 4 }}>Öncesi Fotoğraf (Uygunsuzluk)</label>
-                      {dof.beforePhoto ? (
-                        <div style={{ position: "relative", display: "inline-block" }}>
-                          <img src={dof.beforePhoto} alt="önce" style={{ width: 140, height: 100, objectFit: "cover", borderRadius: 6, border: "1px solid var(--isg-border)" }} />
-                          <button type="button" onClick={() => removeDofPhoto(dof.id, "beforePhoto")} style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                    {(["beforePhoto", "afterPhoto"] as const).map(field => {
+                      const lbl = field === "beforePhoto" ? "📷 Öncesi Fotoğraf (Uygunsuzluk)" : "📷 Sonrası Fotoğraf (Düzeltme)";
+                      const val = dof[field];
+                      const inputId = `dof-edit-${dof.id}-${field}`;
+                      return (
+                        <div key={field}>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: "var(--isg-text-muted)", display: "block", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{lbl}</label>
+                          {val ? (
+                            <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                              <div style={{ position: "relative" as const, display: "inline-block" }}>
+                                <img src={val} alt={field} style={{ width: 140, height: 100, objectFit: "cover" as const, borderRadius: 8, border: "1px solid var(--isg-border)" }} />
+                                <button type="button" onClick={() => removeDofPhoto(dof.id, field)} style={{ position: "absolute" as const, top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                              </div>
+                              <label htmlFor={inputId} style={{ ...styles.btnSecondary, cursor: "pointer", fontSize: 11, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                🔄 Değiştir
+                                <input id={inputId} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleImageToBase64(e, b64 => updateDofPhoto(dof.id, field, b64))} />
+                              </label>
+                            </div>
+                          ) : (
+                            <label htmlFor={inputId} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", height: 38, padding: "0 14px", borderRadius: 8, fontSize: 13, fontWeight: 700, border: "1px dashed var(--isg-border)", backgroundColor: "var(--isg-input-bg)", color: "var(--isg-text-muted)" }}>
+                              📎 Fotoğraf Seç
+                              <input id={inputId} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleImageToBase64(e, b64 => updateDofPhoto(dof.id, field, b64))} />
+                            </label>
+                          )}
                         </div>
-                      ) : (
-                        <input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => updateDofPhoto(dof.id, "beforePhoto", b64))} />
-                      )}
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 11, color: "var(--isg-text-muted)", display: "block", marginBottom: 4 }}>Sonrası Fotoğraf (Düzeltme)</label>
-                      {dof.afterPhoto ? (
-                        <div style={{ position: "relative", display: "inline-block" }}>
-                          <img src={dof.afterPhoto} alt="sonra" style={{ width: 140, height: 100, objectFit: "cover", borderRadius: 6, border: "1px solid var(--isg-border)" }} />
-                          <button type="button" onClick={() => removeDofPhoto(dof.id, "afterPhoto")} style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-                        </div>
-                      ) : (
-                        <input type="file" accept="image/*" style={{ fontSize: 12, color: "var(--isg-text-muted)" }} onChange={e => handleImageToBase64(e, b64 => updateDofPhoto(dof.id, "afterPhoto", b64))} />
-                      )}
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

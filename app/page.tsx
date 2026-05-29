@@ -268,7 +268,23 @@ export default function Page() {
       </header>
 
       <div style={{ ...styles.shell, flexDirection: compactLayout ? "column" : "row" }} className="isg-shell">
-        <aside style={{ ...styles.sidebar, width: compactLayout ? "100%" : 252, position: compactLayout ? "relative" : "sticky", top: compactLayout ? 0 : 58, height: compactLayout ? "auto" : "calc(100vh - 58px)" }} className="isg-sidebar">
+        {/* Sidebar wrapper: arka planı sayfa boyunca uzatır */}
+        <div style={{
+          flexShrink: 0,
+          width: compactLayout ? "100%" : 252,
+          backgroundColor: "var(--isg-nav)",
+          borderRight: "1px solid var(--isg-border)",
+          alignSelf: compactLayout ? "auto" : "stretch",
+        }}>
+        <aside style={{
+          ...styles.sidebar,
+          width: "100%",
+          borderRight: "none",
+          position: compactLayout ? "relative" : "sticky",
+          top: compactLayout ? 0 : 58,
+          height: compactLayout ? "auto" : "calc(100vh - 58px)",
+          boxSizing: "border-box" as const,
+        }} className="isg-sidebar">
           <div style={styles.sidebarSearch}>
             <span style={{ color: "var(--isg-text-subtle)", fontSize: 14 }}>⌕</span>
             <input
@@ -324,6 +340,7 @@ export default function Page() {
             ))}
           </div>
         </aside>
+        </div>
 
       <main style={{ ...styles.content, maxWidth: "100%" }} className="isg-app">
         {loadError && (

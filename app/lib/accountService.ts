@@ -1,20 +1,11 @@
 /**
  * accountService.ts — Müşteri Hesap Yönetimi
  *
- * Her müşteri bir "account" — adı, paketi ve bağlı firmaları var.
- * Kullanıcılar accountId ile hesaba bağlanır.
+ * Firestore rules'ı bypass etmek için tüm işlemler
+ * Firebase Admin SDK kullanan API route'ları üzerinden yapılır.
  */
 
-import { db } from "../../lib/firebase";
-import {
-  collection,
-  doc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+import { auth } from "../../lib/firebase";
 import type { PlanId } from "./plans";
 
 export type Account = {
@@ -25,34 +16,58 @@ export type Account = {
   createdAt: any;
 };
 
-export async function getAllAccounts(): Promise<Account[]> {
-  const snap = await getDocs(collection(db, "accounts"));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as Account));
+async function getToken(): Promise<string> {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("Oturum doğrulaması gerekli.");
+  return token;
 }
 
-export async function createAccount(data: {
+export async function getAllAccounts(): Promise<Account[]> {
+  const token = await getToken();
+  const res = await fetch("/api/admin/accounts", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Hesaplar yüklenemedi.");
+  return data.accounts as Account[];
+}
+
+export async function createAccount(payload: {
   name: string;
   plan: PlanId;
   companyIds: string[];
 }): Promise<Account> {
-  const ref = doc(collection(db, "accounts"));
-  const payload = {
-    name: data.name,
-    plan: data.plan,
-    companyIds: data.companyIds,
-    createdAt: serverTimestamp(),
-  };
-  await setDoc(ref, payload);
-  return { id: ref.id, ...payload };
+  const token = await getToken();
+  const res = await fetch("/api/admin/accounts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Hesap oluşturulamadı.");
+  return data.account as Account;
 }
 
 export async function updateAccount(
   id: string,
-  data: Partial<Pick<Account, "name" | "plan" | "companyIds">>
+  patch: Partial<Pick<Account, "name" | "plan" | "companyIds">>
 ): Promise<void> {
-  await updateDoc(doc(db, "accounts", id), data as any);
+  const token = await getToken();
+  const res = await fetch(`/api/admin/accounts/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(patch),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Hesap güncellenemedi.");
 }
 
 export async function deleteAccount(id: string): Promise<void> {
-  await deleteDoc(doc(db, "accounts", id));
+  const token = await getToken();
+  const res = await fetch(`/api/admin/accounts/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Hesap silinemedi.");
 }

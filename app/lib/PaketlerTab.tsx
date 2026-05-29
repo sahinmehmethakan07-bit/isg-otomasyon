@@ -96,23 +96,8 @@ function PlanCard({
         </div>
       </div>
 
-      {/* Fiyat */}
-      <div style={{ borderBottom: "1px solid var(--isg-border)", paddingBottom: 16 }}>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 4 }}>
-          <span style={{ fontSize: 40, fontWeight: 900, color: plan.price === 0 ? "var(--isg-text)" : plan.color, lineHeight: 1 }}>
-            {plan.price === 0 ? "0" : plan.price}
-          </span>
-          {plan.price > 0 && (
-            <span style={{ fontSize: 16, fontWeight: 700, color: plan.color, marginBottom: 4 }}>₺</span>
-          )}
-          {plan.price === 0 && (
-            <span style={{ fontSize: 16, fontWeight: 700, color: "var(--isg-text-muted)", marginBottom: 4 }}>₺</span>
-          )}
-        </div>
-        <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginTop: 2 }}>
-          {plan.priceSuffix}
-        </div>
-      </div>
+      {/* Ayırıcı */}
+      <div style={{ borderBottom: "1px solid var(--isg-border)" }} />
 
       {/* Özellik listesi */}
       <div style={{ display: "grid", gap: 9 }}>

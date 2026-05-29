@@ -796,58 +796,61 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
               }}
             >
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-                <div style={{ display: "grid", gap: 6, minWidth: 220 }}>
+                {/* Sol: ad, email, paket */}
+                <div style={{ display: "grid", gap: 8, minWidth: 220 }}>
                   <div style={{ color: "var(--isg-text)", fontSize: 16, fontWeight: 850 }}>
                     {user.displayName || "İsimsiz kullanıcı"}
                   </div>
                   <div style={{ color: "var(--isg-text-muted)", fontSize: 13, overflowWrap: "anywhere" }}>
                     {user.email}
                   </div>
-                </div>
-
-                {/* Paket seçici */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    {(() => {
-                      const plan = getPlan(user.plan);
-                      return (
-                        <span style={{
-                          display: "inline-flex", alignItems: "center", gap: 5,
-                          padding: "4px 10px", borderRadius: 8, fontSize: 12, fontWeight: 750,
-                          backgroundColor: plan.color + "22", color: plan.color,
-                          border: `1px solid ${plan.color}44`,
-                        }}>
-                          {plan.emoji} {plan.label}
-                        </span>
-                      );
-                    })()}
+                  {/* Paket satırı */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "var(--isg-text-subtle)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Paket:</span>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                      padding: "3px 8px", borderRadius: 7, fontSize: 12, fontWeight: 750,
+                      backgroundColor: getPlan(user.plan).color + "22",
+                      color: getPlan(user.plan).color,
+                      border: `1px solid ${getPlan(user.plan).color}44`,
+                    }}>
+                      {getPlan(user.plan).emoji} {getPlan(user.plan).label}
+                    </span>
                     <select
                       value={user.plan || "free"}
                       disabled={planUpdatingUid === user.uid}
                       onChange={e => handlePlanChange(user.uid, e.target.value as PlanId)}
                       style={{
-                        ...styles.select, width: "auto", padding: "4px 8px", fontSize: 12,
+                        height: 28, border: "1px solid var(--isg-border)", borderRadius: 7,
+                        backgroundColor: "var(--isg-input-bg)", color: "var(--isg-text)",
+                        padding: "0 8px", fontSize: 12, outline: "none",
                         opacity: planUpdatingUid === user.uid ? 0.6 : 1,
+                        cursor: planUpdatingUid === user.uid ? "not-allowed" : "pointer",
                       }}
                       title="Paketi değiştir"
                     >
-                      {Object.values(PLANS).map(plan => (
-                        <option key={plan.id} value={plan.id}>
-                          {plan.emoji} {plan.label} — Firma: {limitLabel(plan.maxCompanies)} / Personel: {limitLabel(plan.maxEmployees)}
+                      {Object.values(PLANS).map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.emoji} {p.label} — Firma: {limitLabel(p.maxCompanies)} / Personel: {limitLabel(p.maxEmployees)}
                         </option>
                       ))}
                     </select>
+                    {planUpdatingUid === user.uid && (
+                      <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>Kaydediliyor...</span>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    style={{ ...styles.btnDanger, opacity: deletingUid === user.uid || isCurrentUser ? 0.55 : 1 }}
-                    disabled={deletingUid === user.uid || isCurrentUser}
-                    onClick={() => deleteUserProfile(user)}
-                    title={isCurrentUser ? "Kendi hesabınızı buradan silemezsiniz" : "Kullanıcıyı tamamen sil"}
-                  >
-                    {deletingUid === user.uid ? "Siliniyor..." : "Kaydı Sil"}
-                  </button>
                 </div>
+
+                {/* Sağ: Kaydı Sil */}
+                <button
+                  type="button"
+                  style={{ ...styles.btnDanger, opacity: deletingUid === user.uid || isCurrentUser ? 0.55 : 1 }}
+                  disabled={deletingUid === user.uid || isCurrentUser}
+                  onClick={() => deleteUserProfile(user)}
+                  title={isCurrentUser ? "Kendi hesabınızı buradan silemezsiniz" : "Kullanıcıyı tamamen sil"}
+                >
+                  {deletingUid === user.uid ? "Siliniyor..." : "Kaydı Sil"}
+                </button>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 0.9fr) minmax(260px, 1fr) minmax(260px, 1fr)", gap: 18, alignItems: "start" }}>

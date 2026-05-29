@@ -41,6 +41,7 @@ export type UserProfile = {
   companyIds: string[];
   activeCompanyId?: string;
   plan?: PlanId;
+  accountId?: string;
   createdAt: any;
 };
 
@@ -116,6 +117,7 @@ export function normalizeUserProfile(uid: string, data: Record<string, any>): Us
     companyIds,
     activeCompanyId,
     plan,
+    accountId: typeof data.accountId === "string" ? data.accountId : undefined,
     createdAt: data.createdAt || null,
   };
 }

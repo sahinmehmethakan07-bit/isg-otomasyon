@@ -441,15 +441,16 @@ export function AdminUserPanel({ styles, companies }: Props) {
 
   async function loadAll() {
     setLoading(true);
-    try {
-      const [allAccounts, allUsers] = await Promise.all([getAllAccounts(), getAllUsers()]);
-      setAccounts(allAccounts);
-      setUsers(allUsers);
-    } catch (e: any) {
-      setStatus(`❌ Yüklenemedi: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
+    // allSettled: biri hata verse bile diğeri yüklenir
+    const [accountsResult, usersResult] = await Promise.allSettled([
+      getAllAccounts(),
+      getAllUsers(),
+    ]);
+    if (accountsResult.status === "fulfilled") setAccounts(accountsResult.value);
+    else setStatus(`⚠️ Hesaplar yüklenemedi: ${accountsResult.reason?.message}`);
+    if (usersResult.status === "fulfilled") setUsers(usersResult.value);
+    else setStatus(s => s ? s + ` | Kullanıcılar: ${usersResult.reason?.message}` : `⚠️ Kullanıcılar yüklenemedi: ${usersResult.reason?.message}`);
+    setLoading(false);
   }
 
   async function handleCreateAccount(e: React.FormEvent) {
@@ -511,10 +512,8 @@ export function AdminUserPanel({ styles, companies }: Props) {
     }
   }
 
-  // Admin kullanıcılar (hesapsız) — ayrı göster
-  const adminUsers = users.filter(u =>
-    normalizeRoles(u).includes("admin") && !u.accountId
-  );
+  // Admin kullanıcılar — accountId olsa da olmasa da hepsini göster
+  const adminUsers = users.filter(u => normalizeRoles(u).includes("admin"));
   // Hesapsız, admin olmayan kullanıcılar
   const unassignedUsers = users.filter(u =>
     !u.accountId && !normalizeRoles(u).includes("admin")

@@ -69,6 +69,11 @@ export default function Page() {
     activeRole, activeRoleLabel,
     handleSignOut,
 
+    // Plan
+    currentPlan,
+    planError,
+    pdfTodayCount,
+
     // UI
     mounted, loading, loadError,
     pdfLoading, setPdfLoading,
@@ -247,6 +252,15 @@ export default function Page() {
           <button style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: "var(--isg-btn-secondary)", border: "1px solid var(--isg-border)", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setDarkMode(!darkMode)}>
             {darkMode ? "☀️" : "🌙"}
           </button>
+          {!isAdmin && (
+            <span style={{
+              fontSize: 11, fontWeight: 750, padding: "4px 9px", borderRadius: 7, whiteSpace: "nowrap",
+              backgroundColor: currentPlan.color + "22", color: currentPlan.color,
+              border: `1px solid ${currentPlan.color}44`,
+            }}>
+              {currentPlan.emoji} {currentPlan.label}
+            </span>
+          )}
           <button style={{ ...styles.btnSecondary, fontSize: 12, padding: "6px 12px" }} onClick={loadAll}>Yenile</button>
           <button style={{ backgroundColor: "rgba(255,107,107,0.11)", color: "var(--isg-danger)", border: "1px solid rgba(255,107,107,0.22)", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 650, cursor: "pointer" }} onClick={handleSignOut}>Çıkış</button>
         </div>
@@ -298,6 +312,9 @@ export default function Page() {
                       >
                         <span>{tab.label}</span>
                         {tab.disabled && <span style={styles.soonBadge}>Yakında</span>}
+                        {tab.locked && !tab.disabled && (
+                          <span style={{ fontSize: 12, opacity: 0.7 }} title="Bu modül için paket yükseltmesi gerekiyor">🔒</span>
+                        )}
                       </button>
                     );
                   })}
@@ -309,16 +326,31 @@ export default function Page() {
 
       <main style={{ ...styles.content, maxWidth: "100%" }} className="isg-app">
         {loadError && (
-          <div style={{
-            backgroundColor: "#dc262615",
-            border: "1px solid #dc262633",
-            borderRadius: 8,
-            color: "#fca5a5",
-            fontSize: 13,
-            marginBottom: 16,
-            padding: "10px 12px",
-          }}>
+          <div style={{ backgroundColor: "#dc262615", border: "1px solid #dc262633", borderRadius: 8, color: "#fca5a5", fontSize: 13, marginBottom: 16, padding: "10px 12px" }}>
             {loadError}
+          </div>
+        )}
+
+        {planError && (
+          <div style={{ backgroundColor: "#d9770615", border: "1px solid #d9770633", borderRadius: 8, color: "#fcd34d", fontSize: 13, marginBottom: 16, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+            <span>{planError}</span>
+          </div>
+        )}
+
+        {/* Kilitli modül banner'ı */}
+        {currentPlan.lockedModules.includes(activeTab) && (
+          <div style={{ backgroundColor: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: 12, padding: "28px 24px", textAlign: "center", marginBottom: 20 }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8 }}>Bu modül paket yükseltmesi gerektiriyor</div>
+            <div style={{ color: "var(--isg-text-muted)", fontSize: 13, marginBottom: 16, lineHeight: 1.6 }}>
+              <strong style={{ color: "var(--isg-text)" }}>{tabs.find(t => t.id === activeTab)?.label}</strong> modülü{" "}
+              <strong style={{ color: "#0ea5e9" }}>⭐ Uzman</strong> veya{" "}
+              <strong style={{ color: "#a78bfa" }}>🏆 OSGB</strong> paketinde mevcuttur.
+              <br />Mevcut paketiniz: <strong style={{ color: currentPlan.color }}>{currentPlan.emoji} {currentPlan.label}</strong>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--isg-text-subtle)" }}>
+              Paketi yükseltmek için yöneticinizle iletişime geçin.
+            </div>
           </div>
         )}
 

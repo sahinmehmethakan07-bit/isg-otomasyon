@@ -13,6 +13,7 @@ import {
 import { db, auth } from "../../lib/firebase";
 import { useUserRole } from "./useUserRole";
 import { useLanguage } from "./i18n";
+import { getPlan, withinLimit, type Plan } from "./plans";
 import { emptyNewEmployee } from "./constants";
 import { getDashboardOverview } from "./dashboardOverview";
 import { generateDofPDF as generateDofPDFDocument } from "./dofPdf";
@@ -195,6 +196,18 @@ export function usePageState() {
   const [newAccidentReport, setNewAccidentReport] = useState(emptyAccidentReportDraft);
   const [newCompanyVisit, setNewCompanyVisit] = useState(emptyCompanyVisitDraft);
 
+  // ── Plan / limit state ────────────────────────────────────────────────────
+  const [planError, setPlanError] = useState<string | null>(null);
+  const [pdfTodayCount, setPdfTodayCount] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    const saved = localStorage.getItem("isg-pdf-count");
+    if (!saved) return 0;
+    try {
+      const { date, count } = JSON.parse(saved);
+      return date === new Date().toDateString() ? count : 0;
+    } catch { return 0; }
+  });
+
   // ── Status state ──────────────────────────────────────────────────────────
   const [dofAdding, setDofAdding] = useState(false);
   const [dofAddStatus, setDofAddStatus] = useState<string | null>(null);
@@ -333,6 +346,21 @@ export function usePageState() {
   const activeRoleLabel = activeRole ? t(`role.${activeRole}`) : "";
   const compactLayout = isMobileScreen();
 
+  // ── Plan ──────────────────────────────────────────────────────────────────
+  // Admin her zaman sınırsız erişime sahiptir
+  const currentPlan: Plan = isAdmin ? getPlan("osgb") : getPlan(userProfile?.plan);
+
+  function showPlanError(msg: string) {
+    setPlanError(msg);
+    setTimeout(() => setPlanError(null), 6000);
+  }
+
+  function incrementPdfCount() {
+    const next = pdfTodayCount + 1;
+    setPdfTodayCount(next);
+    localStorage.setItem("isg-pdf-count", JSON.stringify({ date: new Date().toDateString(), count: next }));
+  }
+
   // ── Helper functions ──────────────────────────────────────────────────────
   function getCompanyDocuments(companyId: string) {
     return selectCompanyDocuments(documents, companyId);
@@ -452,6 +480,10 @@ export function usePageState() {
   // ── Company handlers ──────────────────────────────────────────────────────
   async function addCompany() {
     if (!isAdmin) return;
+    if (!withinLimit(companies.length, currentPlan.maxCompanies)) {
+      showPlanError(`❌ Firma limitine ulaştınız (${currentPlan.maxCompanies} firma). Daha fazla firma eklemek için paketinizi yükseltin.`);
+      return;
+    }
     const company = await createCompanyRecord(db, newCompany, userProfile!);
     if (!company) return;
     setCompanies(prev => [...prev, company]);
@@ -474,6 +506,10 @@ export function usePageState() {
   // ── Employee handlers ─────────────────────────────────────────────────────
   async function addEmployee() {
     setEmployeeAddStatus(null);
+    if (!withinLimit(employees.length, currentPlan.maxEmployees)) {
+      setEmployeeAddStatus(`❌ Personel limitine ulaştınız (${currentPlan.maxEmployees} personel). Daha fazla personel eklemek için paketinizi yükseltin.`);
+      return;
+    }
     const validationMessage = validateNewEmployee(newEmployee);
     if (validationMessage) {
       setEmployeeAddStatus(validationMessage);
@@ -538,6 +574,14 @@ export function usePageState() {
 
   // ── DÖF handlers ──────────────────────────────────────────────────────────
   async function generateDofPDF(dof: DofRecord, returnBase64?: boolean): Promise<string | void> {
+    if (!returnBase64) {
+      // Yalnızca kullanıcıya sunulan PDF'ler sayılır (base64 = e-posta için, sayılmaz)
+      if (!withinLimit(pdfTodayCount, currentPlan.maxPdfPerDay)) {
+        showPlanError(`❌ Günlük PDF limitine ulaştınız (${currentPlan.maxPdfPerDay}/gün). Sınırsız PDF için paketinizi yükseltin.`);
+        return;
+      }
+      incrementPdfCount();
+    }
     return generateDofPDFDocument(dof, { companies, observers, signers }, returnBase64);
   }
 
@@ -789,34 +833,40 @@ export function usePageState() {
   }
 
   // ── Tabs & menu groups ────────────────────────────────────────────────────
-  const tabs = isHumanResources && !isAdmin
-    ? [{ id: "personel", label: "👥 İnsan Kaynakları" }]
-    : [
-      { id: "ozet", label: "📊 Özet" },
-      { id: "gorevler", label: "✅ Görevler" },
-      { id: "firmalar", label: "🏢 Firmalar" },
-      { id: "personel", label: "👤 Personel" },
-      { id: "belgeler", label: "📄 Belgeler" },
-      { id: "gozlemciler", label: "🔍 Gözlemciler" },
-      { id: "dof", label: "⚠️ DÖF" },
-      { id: "risk", label: "🛡 Risk" },
-      { id: "imzacilar", label: "✍️ İmzacılar" },
-      { id: "ek2muayene", label: "🏥 EK-2 Muayene" },
-      { id: "yillik-planlar", label: "📅 Yıllık Planlar" },
-      { id: "egitimler", label: "🎓 Eğitimler" },
-      { id: "kkd-formu", label: "🧤 KKD Formu" },
-      { id: "talimatlar", label: "📋 Talimatlar" },
-      { id: "acil-durum-plani", label: "⚠️ Acil Durum Planı" },
-      { id: "kurul-toplantisi", label: "👥 Kurul Toplantısı" },
-      { id: "firma-ziyaretleri", label: "📍 Firma Ziyaretleri" },
-      { id: "arsiv", label: "🗂 Arşiv" },
-      { id: "is-kazasi-raporu", label: "🚑 İş Kazası Raporu" },
-      { id: "nace-sorgula", label: "🔎 NACE Sorgula" },
-      { id: "myk-sorgula", label: "🪪 MYK Sorgula" },
-      ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
-    ];
+  const allTabDefs = [
+    { id: "ozet", label: "📊 Özet" },
+    { id: "gorevler", label: "✅ Görevler" },
+    { id: "firmalar", label: "🏢 Firmalar" },
+    { id: "personel", label: "👤 Personel" },
+    { id: "belgeler", label: "📄 Belgeler" },
+    { id: "gozlemciler", label: "🔍 Gözlemciler" },
+    { id: "dof", label: "⚠️ DÖF" },
+    { id: "risk", label: "🛡 Risk" },
+    { id: "imzacilar", label: "✍️ İmzacılar" },
+    { id: "ek2muayene", label: "🏥 EK-2 Muayene" },
+    { id: "yillik-planlar", label: "📅 Yıllık Planlar" },
+    { id: "egitimler", label: "🎓 Eğitimler" },
+    { id: "kkd-formu", label: "🧤 KKD Formu" },
+    { id: "talimatlar", label: "📋 Talimatlar" },
+    { id: "acil-durum-plani", label: "⚠️ Acil Durum Planı" },
+    { id: "kurul-toplantisi", label: "👥 Kurul Toplantısı" },
+    { id: "firma-ziyaretleri", label: "📍 Firma Ziyaretleri" },
+    { id: "arsiv", label: "🗂 Arşiv" },
+    { id: "is-kazasi-raporu", label: "🚑 İş Kazası Raporu" },
+    { id: "nace-sorgula", label: "🔎 NACE Sorgula" },
+    { id: "myk-sorgula", label: "🪪 MYK Sorgula" },
+    ...(isAdmin ? [{ id: "kullanicilar", label: "👥 Kullanıcılar" }] : []),
+  ];
 
-  const menuGroups: Array<{ title: string; items: Array<{ id: string; label: string; disabled?: boolean }> }> =
+  const tabs = (isHumanResources && !isAdmin
+    ? [{ id: "personel", label: "👥 İnsan Kaynakları" }]
+    : allTabDefs
+  ).map(tab => ({
+    ...tab,
+    locked: currentPlan.lockedModules.includes(tab.id),
+  }));
+
+  const menuGroups: Array<{ title: string; items: Array<{ id: string; label: string; disabled?: boolean; locked?: boolean }> }> =
     isHumanResources && !isAdmin
       ? [{ title: "Yönetim", items: tabs }]
       : [
@@ -836,6 +886,11 @@ export function usePageState() {
     userProfile, isAdmin, isHumanResources, roleLoading,
     activeRole, activeRoleLabel,
     handleSignOut,
+
+    // Plan
+    currentPlan,
+    planError, setPlanError,
+    pdfTodayCount,
 
     // UI
     mounted, loading, loadError,

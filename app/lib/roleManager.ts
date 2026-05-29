@@ -18,12 +18,14 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
   collection,
   query,
   where,
   getDocs,
   serverTimestamp,
 } from "firebase/firestore";
+import { type PlanId, DEFAULT_PLAN } from "./plans";
 
 // ── Tipler ───────────────────────────────────────────────────────────────────
 
@@ -38,6 +40,7 @@ export type UserProfile = {
   activeRole?: UserRole;
   companyIds: string[];
   activeCompanyId?: string;
+  plan?: PlanId;
   createdAt: any;
 };
 
@@ -99,6 +102,10 @@ export function normalizeUserProfile(uid: string, data: Record<string, any>): Us
     ? data.activeCompanyId
     : companyIds[0] || "";
 
+  const plan: PlanId = (data.plan && data.plan in { free: 1, uzman: 1, osgb: 1 })
+    ? data.plan as PlanId
+    : DEFAULT_PLAN;
+
   return {
     uid,
     email: typeof data.email === "string" ? data.email : "",
@@ -108,6 +115,7 @@ export function normalizeUserProfile(uid: string, data: Record<string, any>): Us
     activeRole,
     companyIds,
     activeCompanyId,
+    plan,
     createdAt: data.createdAt || null,
   };
 }
@@ -154,6 +162,13 @@ export async function setUserProfile(
     },
     { merge: true }
   );
+}
+
+/**
+ * Kullanıcının paketini günceller.
+ */
+export async function updateUserPlan(uid: string, plan: PlanId): Promise<void> {
+  await updateDoc(doc(db, "users", uid), { plan });
 }
 
 /**

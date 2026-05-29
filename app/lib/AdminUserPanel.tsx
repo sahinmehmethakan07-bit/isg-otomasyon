@@ -22,10 +22,12 @@ import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import {
   getAllUsers,
   setUserProfile,
+  updateUserPlan,
   UserProfile,
   UserRole,
   ROLE_CONFIG,
 } from "./roleManager";
+import { PLANS, getPlan, limitLabel, type PlanId } from "./plans";
 
 type Props = {
   styles: Record<string, React.CSSProperties>;
@@ -255,6 +257,7 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [roleUpdatingUid, setRoleUpdatingUid] = useState<string | null>(null);
   const [deletingUid, setDeletingUid] = useState<string | null>(null);
+  const [planUpdatingUid, setPlanUpdatingUid] = useState<string | null>(null);
   const [showNewUserPassword, setShowNewUserPassword] = useState(false);
 
   useEffect(() => {
@@ -460,6 +463,21 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
       setStatus(`❌ Kullanıcı silinemedi: ${message}`);
     } finally {
       setDeletingUid(null);
+    }
+  }
+
+  async function handlePlanChange(uid: string, plan: PlanId) {
+    setPlanUpdatingUid(uid);
+    setStatus(null);
+    try {
+      await updateUserPlan(uid, plan);
+      setUsers(prev => prev.map(u => u.uid === uid ? { ...u, plan } : u));
+      setStatus(`✅ Paket güncellendi: ${PLANS[plan].emoji} ${PLANS[plan].label}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Bilinmeyen hata";
+      setStatus(`❌ Paket güncellenemedi: ${message}`);
+    } finally {
+      setPlanUpdatingUid(null);
     }
   }
 
@@ -786,15 +804,50 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
                     {user.email}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  style={{ ...styles.btnDanger, opacity: deletingUid === user.uid || isCurrentUser ? 0.55 : 1 }}
-                  disabled={deletingUid === user.uid || isCurrentUser}
-                  onClick={() => deleteUserProfile(user)}
-                  title={isCurrentUser ? "Kendi hesabınızı buradan silemezsiniz" : "Kullanıcıyı tamamen sil"}
-                >
-                  {deletingUid === user.uid ? "Siliniyor..." : "Kaydı Sil"}
-                </button>
+
+                {/* Paket seçici */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {(() => {
+                      const plan = getPlan(user.plan);
+                      return (
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", gap: 5,
+                          padding: "4px 10px", borderRadius: 8, fontSize: 12, fontWeight: 750,
+                          backgroundColor: plan.color + "22", color: plan.color,
+                          border: `1px solid ${plan.color}44`,
+                        }}>
+                          {plan.emoji} {plan.label}
+                        </span>
+                      );
+                    })()}
+                    <select
+                      value={user.plan || "free"}
+                      disabled={planUpdatingUid === user.uid}
+                      onChange={e => handlePlanChange(user.uid, e.target.value as PlanId)}
+                      style={{
+                        ...styles.select, width: "auto", padding: "4px 8px", fontSize: 12,
+                        opacity: planUpdatingUid === user.uid ? 0.6 : 1,
+                      }}
+                      title="Paketi değiştir"
+                    >
+                      {Object.values(PLANS).map(plan => (
+                        <option key={plan.id} value={plan.id}>
+                          {plan.emoji} {plan.label} — Firma: {limitLabel(plan.maxCompanies)} / Personel: {limitLabel(plan.maxEmployees)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    style={{ ...styles.btnDanger, opacity: deletingUid === user.uid || isCurrentUser ? 0.55 : 1 }}
+                    disabled={deletingUid === user.uid || isCurrentUser}
+                    onClick={() => deleteUserProfile(user)}
+                    title={isCurrentUser ? "Kendi hesabınızı buradan silemezsiniz" : "Kullanıcıyı tamamen sil"}
+                  >
+                    {deletingUid === user.uid ? "Siliniyor..." : "Kaydı Sil"}
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 0.9fr) minmax(260px, 1fr) minmax(260px, 1fr)", gap: 18, alignItems: "start" }}>

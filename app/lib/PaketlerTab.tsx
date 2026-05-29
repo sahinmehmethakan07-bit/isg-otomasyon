@@ -1,5 +1,5 @@
 import React from "react";
-import { PLANS, getPlan, limitLabel, type Plan, type PlanId } from "./plans";
+import { PLANS, getPlan, type Plan, type PlanId } from "./plans";
 
 type PaketlerTabProps = {
   styles: Record<string, React.CSSProperties>;
@@ -7,32 +7,21 @@ type PaketlerTabProps = {
   isAdmin: boolean;
 };
 
-const MODULE_LABELS: Record<string, string> = {
-  "ozet":              "📊 Özet & Dashboard",
-  "gorevler":          "✅ Görev / Takip Paneli",
-  "firmalar":          "🏢 Firma Yönetimi",
-  "personel":          "👤 Personel Yönetimi",
-  "belgeler":          "📄 Belge Takibi",
-  "gozlemciler":       "🔍 Gözlemciler",
-  "dof":               "⚠️ DÖF Yönetimi",
-  "risk":              "🛡 Risk Değerlendirme",
-  "imzacilar":         "✍️ İmzacı Yönetimi",
-  "egitimler":         "🎓 Eğitim Takibi",
-  "kkd-formu":         "🧤 KKD Formu",
-  "talimatlar":        "📋 İş Talimatları",
-  "acil-durum-plani":  "⚠️ Acil Durum Planı",
-  "nace-sorgula":      "🔎 NACE Sorgulama",
-  "ek2muayene":        "🏥 EK-2 Muayene Formu",
-  "myk-sorgula":       "🪪 MYK Sorgulama",
-  "arsiv":             "🗂 Arşiv",
-  "yillik-planlar":    "📅 Yıllık Planlar",
-  "kurul-toplantisi":  "👥 Kurul Toplantısı",
-  "is-kazasi-raporu":  "🚑 İş Kazası Raporu",
-  "firma-ziyaretleri": "📍 Firma Ziyaretleri",
-};
-
-const ALL_MODULES = Object.keys(MODULE_LABELS);
-const LOCKED_MODULES_FREE = PLANS.free.lockedModules;
+function FeatureRow({ text, type }: { text: string; type: "check" | "limit" | "cross" }) {
+  const icon  = type === "check" ? "✓" : type === "limit" ? "⚠" : "✕";
+  const color = type === "check" ? "#22c55e" : type === "limit" ? "#f59e0b" : "#ef4444";
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, lineHeight: 1.45 }}>
+      <span style={{ color, fontWeight: 900, fontSize: 15, flexShrink: 0, marginTop: 1 }}>{icon}</span>
+      <span style={{
+        color: type === "cross" ? "var(--isg-text-subtle)" : "var(--isg-text-muted)",
+        textDecoration: type === "cross" ? "line-through" : "none",
+      }}>
+        {text}
+      </span>
+    </div>
+  );
+}
 
 function PlanCard({
   plan,
@@ -43,105 +32,117 @@ function PlanCard({
   isCurrent: boolean;
   isAdmin: boolean;
 }) {
-  const freeModules = ALL_MODULES.filter(m => !LOCKED_MODULES_FREE.includes(m));
-  const premiumModules = ALL_MODULES.filter(m => LOCKED_MODULES_FREE.includes(m));
-  const hasAll = plan.lockedModules.length === 0;
-
   return (
     <div style={{
-      border: isCurrent ? `2px solid ${plan.color}` : "1px solid var(--isg-border)",
+      position: "relative" as const,
+      border: plan.popular
+        ? `2px solid ${plan.color}`
+        : isCurrent
+          ? `2px solid ${plan.color}88`
+          : "1px solid var(--isg-border)",
       borderRadius: 16,
-      padding: "24px 22px",
-      backgroundColor: isCurrent ? plan.color + "0d" : "var(--isg-card)",
+      padding: plan.popular ? "28px 22px 24px" : "24px 22px",
+      backgroundColor: plan.popular
+        ? plan.color + "0e"
+        : isCurrent
+          ? plan.color + "08"
+          : "var(--isg-card)",
       display: "grid",
       gap: 20,
-      position: "relative" as const,
-      boxShadow: isCurrent ? `0 0 0 4px ${plan.color}18` : "none",
-      transition: "box-shadow 0.2s",
+      alignContent: "start" as const,
     }}>
+
+      {/* EN POPÜLER rozeti */}
+      {plan.popular && (
+        <div style={{
+          position: "absolute" as const,
+          top: -14, left: "50%", transform: "translateX(-50%)",
+          background: `linear-gradient(135deg, ${plan.color}, #818cf8)`,
+          color: "#fff", padding: "4px 16px", borderRadius: 20,
+          fontSize: 11, fontWeight: 900, letterSpacing: "0.06em",
+          whiteSpace: "nowrap" as const, boxShadow: `0 4px 12px ${plan.color}44`,
+        }}>
+          ⭐ EN POPÜLER
+        </div>
+      )}
+
       {/* Mevcut paket rozeti */}
       {isCurrent && !isAdmin && (
         <div style={{
-          position: "absolute" as const, top: -12, left: "50%", transform: "translateX(-50%)",
+          position: "absolute" as const,
+          top: -12, right: 16,
           backgroundColor: plan.color, color: "#fff",
-          padding: "3px 14px", borderRadius: 20, fontSize: 11, fontWeight: 800,
-          whiteSpace: "nowrap" as const,
+          padding: "3px 10px", borderRadius: 20,
+          fontSize: 10, fontWeight: 800,
         }}>
-          Mevcut Paketiniz
+          Mevcut Paket
         </div>
       )}
 
       {/* Başlık */}
-      <div style={{ textAlign: "center" as const }}>
-        <div style={{ fontSize: 36, marginBottom: 8 }}>{plan.emoji}</div>
-        <div style={{ fontSize: 22, fontWeight: 900, color: plan.color, marginBottom: 4 }}>
-          {plan.label}
-        </div>
-        <div style={{ fontSize: 12, color: "var(--isg-text-muted)", lineHeight: 1.5 }}>
-          {plan.id === "free" && "Başlangıç için temel İSG araçları"}
-          {plan.id === "uzman" && "İSG profesyonelleri için tam donanım"}
-          {plan.id === "osgb" && "OSGB'ler ve büyük işletmeler için"}
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10, fontSize: 18,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            backgroundColor: plan.color + "22", border: `1px solid ${plan.color}44`,
+          }}>
+            {plan.emoji}
+          </div>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: 16, color: "var(--isg-text)" }}>{plan.label}</div>
+            <div style={{ fontSize: 11, color: "var(--isg-text-subtle)" }}>{plan.subtitle}</div>
+          </div>
         </div>
       </div>
 
-      {/* Limitler */}
-      <div style={{
-        display: "grid", gap: 10,
-        backgroundColor: "var(--isg-input-bg)",
-        border: "1px solid var(--isg-border)",
-        borderRadius: 10, padding: "14px 16px",
-      }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: "var(--isg-text-subtle)", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>
-          Kullanım Limitleri
+      {/* Fiyat */}
+      <div style={{ borderBottom: "1px solid var(--isg-border)", paddingBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 4 }}>
+          <span style={{ fontSize: 40, fontWeight: 900, color: plan.price === 0 ? "var(--isg-text)" : plan.color, lineHeight: 1 }}>
+            {plan.price === 0 ? "0" : plan.price}
+          </span>
+          {plan.price > 0 && (
+            <span style={{ fontSize: 16, fontWeight: 700, color: plan.color, marginBottom: 4 }}>₺</span>
+          )}
+          {plan.price === 0 && (
+            <span style={{ fontSize: 16, fontWeight: 700, color: "var(--isg-text-muted)", marginBottom: 4 }}>₺</span>
+          )}
         </div>
-        {[
-          { icon: "🏢", label: "Firma",         value: limitLabel(plan.maxCompanies) },
-          { icon: "👤", label: "Personel",      value: limitLabel(plan.maxEmployees) },
-          { icon: "📄", label: "PDF / gün",     value: limitLabel(plan.maxPdfPerDay) },
-        ].map(({ icon, label, value }) => (
-          <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
-            <span style={{ color: "var(--isg-text-muted)" }}>{icon} {label}</span>
-            <span style={{ fontWeight: 800, color: value === "Sınırsız" ? plan.color : "var(--isg-text)" }}>
-              {value}
-            </span>
-          </div>
+        <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginTop: 2 }}>
+          {plan.priceSuffix}
+        </div>
+      </div>
+
+      {/* Özellik listesi */}
+      <div style={{ display: "grid", gap: 9 }}>
+        {plan.features.map((f, i) => (
+          <FeatureRow key={i} text={f.text} type={f.type} />
         ))}
       </div>
 
-      {/* Modüller */}
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 800, color: "var(--isg-text-subtle)", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 10 }}>
-          Dahil Modüller
-        </div>
-        <div style={{ display: "grid", gap: 6 }}>
-          {freeModules.map(m => (
-            <div key={m} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-              <span style={{ color: "#16a34a", fontWeight: 800, fontSize: 14 }}>✓</span>
-              <span style={{ color: "var(--isg-text-muted)" }}>{MODULE_LABELS[m]}</span>
-            </div>
-          ))}
-          {premiumModules.map(m => {
-            const included = hasAll;
-            return (
-              <div key={m} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, opacity: included ? 1 : 0.45 }}>
-                <span style={{ fontWeight: 800, fontSize: 14, color: included ? "#16a34a" : "var(--isg-text-subtle)" }}>
-                  {included ? "✓" : "✕"}
-                </span>
-                <span style={{ color: included ? "var(--isg-text-muted)" : "var(--isg-text-subtle)" }}>
-                  {MODULE_LABELS[m]}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+      {/* Alt buton */}
+      <div style={{ marginTop: 4 }}>
+        {isCurrent && !isAdmin ? (
+          <div style={{
+            height: 40, borderRadius: 10, border: `1px solid ${plan.color}44`,
+            backgroundColor: plan.color + "15", color: plan.color,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 13, fontWeight: 750,
+          }}>
+            ✓ Şu Anki Paketiniz
+          </div>
+        ) : (
+          <div style={{
+            height: 40, borderRadius: 10, border: "1px solid var(--isg-border)",
+            backgroundColor: "var(--isg-input-bg)", color: "var(--isg-text-muted)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 12, fontWeight: 600,
+          }}>
+            {isAdmin ? "Admin tarafından atanır" : "Yöneticinizle iletişime geçin"}
+          </div>
+        )}
       </div>
-
-      {/* Admin notu */}
-      {isAdmin && (
-        <div style={{ fontSize: 11, color: "var(--isg-text-subtle)", textAlign: "center" as const, borderTop: "1px solid var(--isg-border)", paddingTop: 12 }}>
-          Admin panelinden kullanıcılara atayabilirsiniz
-        </div>
-      )}
     </div>
   );
 }
@@ -152,13 +153,16 @@ export function PaketlerTab({ styles, currentPlanId, isAdmin }: PaketlerTabProps
   return (
     <div>
       {/* Başlık */}
-      <div style={{ ...styles.card, marginBottom: 24, textAlign: "center" as const }}>
-        <p style={{ ...styles.sectionTitle, marginBottom: 8 }} className="isg-text-muted">
-          Paket Planları
+      <div style={{ textAlign: "center" as const, marginBottom: 32 }}>
+        <p style={{ ...styles.sectionTitle, marginBottom: 10, fontSize: 13 }} className="isg-text-muted">
+          PAKET PLANLARI
         </p>
-        <div style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.6 }}>
+        <h2 style={{ fontSize: 24, fontWeight: 900, margin: "0 0 10px", color: "var(--isg-text)" }}>
+          İSG İşlerinizi Hızlandırın
+        </h2>
+        <p style={{ color: "var(--isg-text-muted)", fontSize: 14, lineHeight: 1.6, maxWidth: 480, margin: "0 auto" }}>
           {isAdmin
-            ? "Kullanıcı Yönetimi sekmesinden her kullanıcıya istediğiniz paketi atayabilirsiniz."
+            ? "Kullanıcı Yönetimi sekmesinden her kullanıcıya paket atayabilirsiniz."
             : (
               <>
                 Mevcut paketiniz:{" "}
@@ -169,15 +173,16 @@ export function PaketlerTab({ styles, currentPlanId, isAdmin }: PaketlerTabProps
               </>
             )
           }
-        </div>
+        </p>
       </div>
 
-      {/* Karşılaştırma tablosu */}
+      {/* Paket kartları */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(260px, 100%), 1fr))",
         gap: 20,
         marginBottom: 32,
+        alignItems: "start" as const,
       }}>
         {(Object.values(PLANS) as Plan[]).map(plan => (
           <PlanCard
@@ -189,23 +194,19 @@ export function PaketlerTab({ styles, currentPlanId, isAdmin }: PaketlerTabProps
         ))}
       </div>
 
-      {/* Kilitli modüller açıklaması */}
-      <div style={{ ...styles.card }}>
-        <p style={{ ...styles.sectionTitle, marginBottom: 12 }} className="isg-text-muted">
-          🔒 Kilitli Modüller Hakkında
-        </p>
-        <div style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.7 }}>
-          <p style={{ marginBottom: 10 }}>
-            <strong style={{ color: "var(--isg-text)" }}>Ücretsiz</strong> pakette 7 modül kilitlidir. Bu modüllerin sekmelerinde{" "}
-            <span style={{ fontSize: 14 }}>🔒</span> ikonu görünür; tıklandığında içerik yerine paket yükseltme bilgisi gösterilir.
-          </p>
-          <p style={{ marginBottom: 10 }}>
-            <strong style={{ color: "#0ea5e9" }}>⭐ Uzman</strong> ve{" "}
-            <strong style={{ color: "#a78bfa" }}>🏆 OSGB</strong> paketlerinde tüm modüller açıktır.
-          </p>
-          <p>
-            Firma, personel ve PDF limitleri aşıldığında işlem engellenir ve kullanıcıya bilgi mesajı gösterilir. Mevcut veriler silinmez, yalnızca yeni ekleme durdurulur.
-          </p>
+      {/* Alt not */}
+      <div style={{
+        ...styles.card,
+        display: "flex", alignItems: "flex-start", gap: 14, fontSize: 13,
+        color: "var(--isg-text-muted)", lineHeight: 1.65,
+      }}>
+        <span style={{ fontSize: 20, flexShrink: 0 }}>ℹ️</span>
+        <div>
+          <strong style={{ color: "var(--isg-text)" }}>Limit aşıldığında ne olur?</strong>
+          <br />
+          Firma, personel veya PDF limitleri aşıldığında yeni kayıt eklenmesi engellenir ve
+          kullanıcıya bilgi mesajı gösterilir. <strong style={{ color: "var(--isg-text)" }}>Mevcut veriler silinmez.</strong>{" "}
+          Ücretsiz paketteki kilitli modüllere tıklandığında içerik yerine paket yükseltme bilgisi görüntülenir.
         </div>
       </div>
     </div>

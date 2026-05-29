@@ -297,6 +297,23 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
         return;
       }
 
+      // ── Rol başına kullanıcı limiti kontrolü ────────────────────────────
+      const adminUser = users.find(u => u.uid === auth.currentUser?.uid);
+      const accountPlan = getPlan(adminUser?.plan);
+      if (accountPlan.maxUsersPerRole !== -1) {
+        for (const role of newUser.roles) {
+          if (role === "admin") continue;
+          const existingCount = users.filter(u =>
+            (u.roles?.length ? u.roles : [u.role]).includes(role)
+          ).length;
+          if (existingCount >= accountPlan.maxUsersPerRole) {
+            setStatus(`❌ ${accountPlan.label} pakette "${ROLE_CONFIG[role].label}" rolünde en fazla ${accountPlan.maxUsersPerRole} kullanıcı ekleyebilirsiniz. (Mevcut: ${existingCount})`);
+            setCreating(false);
+            return;
+          }
+        }
+      }
+
       const secondaryAppName = `admin-user-create-${Date.now()}`;
       secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
       const secondaryAuth = getAuth(secondaryApp);
@@ -751,19 +768,37 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
               </div>
               <div>
                 <label style={styles.label}>Roller</label>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 }}>
-                  {ALL_ROLES.map((role) => (
-                    <PermissionToggle
-                      key={role}
-                      checked={newUser.roles.includes(role)}
-                      icon={ROLE_CONFIG[role].icon}
-                      title={ROLE_CONFIG[role].label}
-                      subtitle={role === "admin" ? "Tam yetki" : "Firma bazlı erişim"}
-                      accent={ROLE_CONFIG[role].color}
-                      onChange={() => toggleNewUserRole(role)}
-                    />
-                  ))}
-                </div>
+                {(() => {
+                  const adminUser = users.find(u => u.uid === auth.currentUser?.uid);
+                  const accountPlan = getPlan(adminUser?.plan);
+                  return (
+                    <>
+                      {accountPlan.maxUsersPerRole !== -1 && (
+                        <div style={{ fontSize: 11, color: "var(--isg-text-muted)", marginBottom: 8, padding: "6px 10px", backgroundColor: "var(--isg-input-bg)", borderRadius: 7, border: "1px solid var(--isg-border)" }}>
+                          {accountPlan.emoji} <strong>{accountPlan.label}</strong> paket — her rolden en fazla <strong>{accountPlan.maxUsersPerRole}</strong> kullanıcı ekleyebilirsiniz.
+                        </div>
+                      )}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 }}>
+                        {ALL_ROLES.map((role) => {
+                          const count = users.filter(u => (u.roles?.length ? u.roles : [u.role]).includes(role)).length;
+                          const atLimit = role !== "admin" && accountPlan.maxUsersPerRole !== -1 && count >= accountPlan.maxUsersPerRole;
+                          return (
+                            <PermissionToggle
+                              key={role}
+                              checked={newUser.roles.includes(role)}
+                              disabled={atLimit && !newUser.roles.includes(role)}
+                              icon={ROLE_CONFIG[role].icon}
+                              title={ROLE_CONFIG[role].label}
+                              subtitle={role === "admin" ? "Tam yetki" : atLimit ? `Limit doldu (${count}/${accountPlan.maxUsersPerRole})` : `Mevcut: ${count} kullanıcı`}
+                              accent={atLimit ? "#ef4444" : ROLE_CONFIG[role].color}
+                              onChange={() => toggleNewUserRole(role)}
+                            />
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
               <div>
                 <label style={styles.label}>Firma Yetkileri</label>

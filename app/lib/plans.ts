@@ -35,6 +35,8 @@ export type Plan = {
   maxPdfPerDay: number;
   /** Kart özellik listesi */
   features: PlanFeature[];
+  /** Rol başına maksimum kullanıcı sayısı (admin hariç). -1 = sınırsız */
+  maxUsersPerRole: number;
   /** Bu pakette erişilemeyen sekme id'leri */
   lockedModules: string[];
 };
@@ -52,6 +54,7 @@ export const PLANS: Record<PlanId, Plan> = {
     maxCompanies: 3,
     maxEmployees: 30,
     maxPdfPerDay: 5,
+    maxUsersPerRole: 1,
     features: [
       { text: "Temel İSG araçları",          type: "check" },
       { text: "Risk değerlendirme",           type: "check" },
@@ -60,6 +63,7 @@ export const PLANS: Record<PlanId, Plan> = {
       { text: "Günde sadece 5 PDF",           type: "limit" },
       { text: "Maksimum 30 personel",         type: "limit" },
       { text: "Maksimum 3 firma",             type: "limit" },
+      { text: "Her rolden 1 kullanıcı",       type: "limit" },
       { text: "EK-2 Muayene & MYK Sorgu",    type: "cross" },
       { text: "Arşiv & Yıllık Planlar",       type: "cross" },
       { text: "Kurul, Kaza & Ziyaret",        type: "cross" },
@@ -86,6 +90,7 @@ export const PLANS: Record<PlanId, Plan> = {
     maxCompanies: 20,
     maxEmployees: 1200,
     maxPdfPerDay: -1,
+    maxUsersPerRole: 3,
     features: [
       { text: "Sınırsız PDF oluşturma",       type: "check" },
       { text: "1200 personele kadar",         type: "check" },
@@ -94,6 +99,7 @@ export const PLANS: Record<PlanId, Plan> = {
       { text: "EK-2 Muayene & MYK Sorgu",    type: "check" },
       { text: "Arşiv & Yıllık Planlar",       type: "check" },
       { text: "Kurul, Kaza & Ziyaret",        type: "check" },
+      { text: "Her rolden 3 kullanıcı",        type: "limit" },
       { text: "Çoklu Atama — Max 3 Firma",    type: "limit" },
       { text: "Toplu Atama — Max 3 Firma",    type: "limit" },
     ],
@@ -111,9 +117,11 @@ export const PLANS: Record<PlanId, Plan> = {
     maxCompanies: -1,
     maxEmployees: -1,
     maxPdfPerDay: -1,
+    maxUsersPerRole: -1,
     features: [
       { text: "Tüm Uzman özellikleri",        type: "check" },
       { text: "Sınırsız firma & personel",    type: "check" },
+      { text: "Sınırsız kullanıcı (her rol)", type: "check" },
       { text: "Tam kapsamlı İSG yönetimi",    type: "check" },
       { text: "Çoklu Atama Sınırsız",         type: "check" },
       { text: "Toplu Atama İndir Sınırsız",   type: "check" },

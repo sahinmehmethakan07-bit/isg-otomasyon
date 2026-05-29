@@ -17,11 +17,12 @@ async function verifyAdmin(req: NextRequest) {
 }
 
 // PATCH /api/admin/accounts/[id] — hesabı güncelle
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const db = await verifyAdmin(req);
     const data = await req.json();
-    await db.collection("accounts").doc(params.id).update(data);
+    await db.collection("accounts").doc(id).update(data);
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -29,10 +30,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 // DELETE /api/admin/accounts/[id] — hesabı sil
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
     const db = await verifyAdmin(req);
-    await db.collection("accounts").doc(params.id).delete();
+    await db.collection("accounts").doc(id).delete();
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

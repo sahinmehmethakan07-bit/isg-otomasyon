@@ -95,6 +95,11 @@ function AddUserForm({
     e.preventDefault();
     setError(null);
 
+    if (!form.role) {
+      setError("❌ Lütfen bir rol seçin.");
+      return;
+    }
+
     // Rol limit kontrolü
     if (accountPlan.maxUsersPerRole !== -1) {
       const count = existingUsers.filter(u =>

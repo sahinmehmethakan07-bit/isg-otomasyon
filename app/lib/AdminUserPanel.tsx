@@ -685,19 +685,58 @@ export function AdminUserPanel({ styles, companies }: Props) {
         <div style={{ ...styles.card, marginTop: 16 }}>
           <p style={{ ...styles.sectionTitle, marginBottom: 12 }}>🛡️ Sistem Yöneticileri</p>
           <div style={{ display: "grid", gap: 8 }}>
-            {adminUsers.map(user => (
-              <div key={user.uid} style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "10px 12px",
-                backgroundColor: "rgba(139,92,246,0.08)",
-                border: "1px solid rgba(139,92,246,0.25)", borderRadius: 9,
-              }}>
-                <div style={{ fontSize: 20 }}>🛡️</div>
-                <div>
-                  <div style={{ fontWeight: 750, fontSize: 13 }}>{user.displayName || "—"}</div>
-                  <div style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{user.email}</div>
+            {adminUsers.map(user => {
+              const isCurrentUser = user.uid === auth.currentUser?.uid;
+              return (
+                <div key={user.uid} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  gap: 12, padding: "10px 12px",
+                  backgroundColor: "rgba(139,92,246,0.08)",
+                  border: "1px solid rgba(139,92,246,0.25)", borderRadius: 9,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ fontSize: 20 }}>🛡️</div>
+                    <div>
+                      <div style={{ fontWeight: 750, fontSize: 13 }}>
+                        {user.displayName || "—"}
+                        {isCurrentUser && (
+                          <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: "#a78bfa", backgroundColor: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)", borderRadius: 5, padding: "2px 6px" }}>
+                            Sen
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{user.email}</div>
+                    </div>
+                  </div>
+                  {isCurrentUser ? (
+                    <span style={{ fontSize: 11, color: "var(--isg-text-subtle)" }}>Silinemez</span>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`${user.displayName || user.email} admin hesabını silmek istediğinizden emin misiniz?`)) return;
+                        try {
+                          const token = await auth.currentUser?.getIdToken();
+                          const res = await fetch("/api/admin/delete-user", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ uid: user.uid }),
+                          });
+                          const result = await res.json();
+                          if (!res.ok) throw new Error(result.error || "Silinemedi");
+                          setUsers(prev => prev.filter(u => u.uid !== user.uid));
+                          setStatus(`✅ ${user.displayName || user.email} silindi.`);
+                        } catch (e: any) {
+                          setStatus(`❌ ${e.message}`);
+                        }
+                      }}
+                      style={{ ...styles.btnDanger, height: 28, padding: "0 10px", fontSize: 12 }}
+                    >
+                      Sil
+                    </button>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

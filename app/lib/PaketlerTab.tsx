@@ -1,5 +1,8 @@
 import React from "react";
-import { PLANS, getPlan, type Plan, type PlanId } from "./plans";
+import { PLANS, getPlan, limitLabel, type Plan, type PlanId } from "./plans";
+import { ROLE_CONFIG, type UserRole } from "./roleManager";
+
+const SCOPED_ROLES: UserRole[] = ["doctor", "nurse", "safety_expert", "human_resources"];
 
 type PaketlerTabProps = {
   styles: Record<string, React.CSSProperties>;
@@ -98,6 +101,41 @@ function PlanCard({
 
       {/* Ayırıcı */}
       <div style={{ borderBottom: "1px solid var(--isg-border)" }} />
+
+      {/* Kullanıcı limitleri (rol bazlı) */}
+      <div style={{
+        backgroundColor: "var(--isg-input-bg)",
+        border: "1px solid var(--isg-border)",
+        borderRadius: 10, padding: "12px 14px",
+      }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: "var(--isg-text-subtle)", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 10 }}>
+          👥 Rol Başına Kullanıcı
+        </div>
+        <div style={{ display: "grid", gap: 7 }}>
+          {SCOPED_ROLES.map(role => {
+            const cfg = ROLE_CONFIG[role];
+            const limit = limitLabel(plan.maxUsersPerRole);
+            const isUnlimited = plan.maxUsersPerRole === -1;
+            return (
+              <div key={role} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12 }}>
+                <span style={{ color: "var(--isg-text-muted)" }}>
+                  {cfg.icon} {cfg.label}
+                </span>
+                <span style={{
+                  fontWeight: 800,
+                  color: isUnlimited ? plan.color : "var(--isg-text)",
+                  backgroundColor: isUnlimited ? plan.color + "18" : "transparent",
+                  padding: isUnlimited ? "1px 7px" : "0",
+                  borderRadius: 6,
+                  border: isUnlimited ? `1px solid ${plan.color}33` : "none",
+                }}>
+                  {isUnlimited ? "Sınırsız" : `${limit} kişi`}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Özellik listesi */}
       <div style={{ display: "grid", gap: 9 }}>

@@ -48,7 +48,7 @@ export const PLANS: Record<PlanId, Plan> = {
     emoji: "⭐",
     color: "#0ea5e9",
     maxCompanies: 20,
-    maxEmployees: -1,
+    maxEmployees: 1200,
     maxPdfPerDay: -1,
     lockedModules: [],
   },

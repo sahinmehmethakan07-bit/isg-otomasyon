@@ -82,7 +82,7 @@ function AddUserForm({
     displayName: "",
     email: "",
     password: "",
-    roles: ["doctor"] as UserRole[],
+    role: "doctor" as UserRole,
     companyIds: account.companyIds,
   });
   const [creating, setCreating] = useState(false);
@@ -91,32 +91,19 @@ function AddUserForm({
 
   const accountPlan = getPlan(account.plan);
 
-  function toggleRole(role: UserRole) {
-    setForm(prev => {
-      const exists = prev.roles.includes(role);
-      const roles = exists
-        ? prev.roles.filter(r => r !== role)
-        : [...prev.roles, role];
-      return { ...prev, roles: roles.length > 0 ? roles : [role] };
-    });
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
     // Rol limit kontrolü
     if (accountPlan.maxUsersPerRole !== -1) {
-      for (const role of form.roles) {
-        if (role === "admin") continue;
-        const count = existingUsers.filter(u =>
-          (u.roles?.length ? u.roles : [u.role]).includes(role) &&
-          u.accountId === account.id
-        ).length;
-        if (count >= accountPlan.maxUsersPerRole) {
-          setError(`❌ "${ROLE_CONFIG[role].label}" rolünde en fazla ${accountPlan.maxUsersPerRole} kullanıcı ekleyebilirsiniz (${accountPlan.label} paket).`);
-          return;
-        }
+      const count = existingUsers.filter(u =>
+        (u.roles?.length ? u.roles : [u.role]).includes(form.role) &&
+        u.accountId === account.id
+      ).length;
+      if (count >= accountPlan.maxUsersPerRole) {
+        setError(`❌ "${ROLE_CONFIG[form.role].label}" rolünde en fazla ${accountPlan.maxUsersPerRole} kullanıcı ekleyebilirsiniz (${accountPlan.label} paket).`);
+        return;
       }
     }
 
@@ -130,8 +117,8 @@ function AddUserForm({
       await setUserProfile(cred.user.uid, {
         email: form.email,
         displayName: form.displayName,
-        role: form.roles[0],
-        roles: form.roles,
+        role: form.role,
+        roles: [form.role],
         companyIds: form.companyIds,
       });
 
@@ -149,9 +136,9 @@ function AddUserForm({
         uid: cred.user.uid,
         email: form.email,
         displayName: form.displayName,
-        role: form.roles[0],
-        roles: form.roles,
-        activeRole: form.roles[0],
+        role: form.role,
+        roles: [form.role],
+        activeRole: form.role,
         companyIds: form.companyIds,
         accountId: account.id,
         plan: account.plan,
@@ -213,27 +200,38 @@ function AddUserForm({
       </div>
 
       <div>
-        <label style={styles.label}>Rol</label>
+        <label style={styles.label}>Rol — sadece 1 seçin</label>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
           {ALL_ROLES.filter(r => r !== "admin").map(role => {
             const cfg = ROLE_CONFIG[role];
-            const checked = form.roles.includes(role);
+            const selected = form.role === role;
             const count = existingUsers.filter(u =>
               (u.roles?.length ? u.roles : [u.role]).includes(role) && u.accountId === account.id
             ).length;
             const atLimit = accountPlan.maxUsersPerRole !== -1 && count >= accountPlan.maxUsersPerRole;
             return (
               <label key={role} style={{
-                display: "flex", alignItems: "center", gap: 6, cursor: atLimit && !checked ? "not-allowed" : "pointer",
-                padding: "5px 10px", borderRadius: 8, fontSize: 12, fontWeight: 700,
-                border: checked ? `1px solid ${cfg.color}88` : "1px solid var(--isg-border)",
-                backgroundColor: checked ? cfg.color + "22" : "var(--isg-input-bg)",
-                color: checked ? cfg.color : atLimit ? "var(--isg-text-subtle)" : "var(--isg-text-muted)",
-                opacity: atLimit && !checked ? 0.5 : 1,
+                display: "flex", alignItems: "center", gap: 6,
+                cursor: atLimit && !selected ? "not-allowed" : "pointer",
+                padding: "7px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700,
+                border: selected ? `2px solid ${cfg.color}` : "1px solid var(--isg-border)",
+                backgroundColor: selected ? cfg.color + "22" : "var(--isg-input-bg)",
+                color: selected ? cfg.color : atLimit ? "var(--isg-text-subtle)" : "var(--isg-text-muted)",
+                opacity: atLimit && !selected ? 0.45 : 1,
+                transition: "all 0.15s",
               }}>
-                <input type="checkbox" checked={checked} disabled={atLimit && !checked} onChange={() => toggleRole(role)} style={{ display: "none" }} />
+                <input
+                  type="radio"
+                  name="userRole"
+                  value={role}
+                  checked={selected}
+                  disabled={atLimit}
+                  onChange={() => setForm(p => ({ ...p, role }))}
+                  style={{ display: "none" }}
+                />
+                {selected && <span style={{ fontSize: 10 }}>●</span>}
                 {cfg.icon} {cfg.label}
-                {atLimit && !checked && <span style={{ fontSize: 10 }}> (dolu)</span>}
+                {atLimit && !selected && <span style={{ fontSize: 10 }}>(dolu)</span>}
               </label>
             );
           })}

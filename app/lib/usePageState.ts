@@ -838,6 +838,7 @@ export function usePageState() {
     { id: "gorevler", label: "✅ Görevler" },
     { id: "firmalar", label: "🏢 Firmalar" },
     { id: "personel", label: "👤 Personel" },
+    { id: "paketler", label: "📦 Paketler" },
     { id: "belgeler", label: "📄 Belgeler" },
     { id: "gozlemciler", label: "🔍 Gözlemciler" },
     { id: "dof", label: "⚠️ DÖF" },
@@ -870,7 +871,7 @@ export function usePageState() {
     isHumanResources && !isAdmin
       ? [{ title: "Yönetim", items: tabs }]
       : [
-        { title: "Yönetim", items: tabs.filter(tab => ["ozet", "gorevler", "firmalar", "personel", "kullanicilar"].includes(tab.id)) },
+        { title: "Yönetim", items: tabs.filter(tab => ["ozet", "gorevler", "firmalar", "personel", "paketler", "kullanicilar"].includes(tab.id)) },
         { title: "Risk Yönetimi", items: tabs.filter(tab => ["gozlemciler", "dof", "risk"].includes(tab.id)) },
         { title: "Formlar & Belgeler", items: tabs.filter(tab => ["belgeler", "imzacilar", "ek2muayene", "kkd-formu", "talimatlar", "is-kazasi-raporu"].includes(tab.id)) },
         {

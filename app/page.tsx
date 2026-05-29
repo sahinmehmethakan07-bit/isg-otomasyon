@@ -25,6 +25,7 @@ import WorkInstructionsTab from "./lib/WorkInstructionsTab";
 import { usePageState } from "./lib/usePageState";
 import { OzetTab } from "./lib/OzetTab";
 import { GorevlerTab } from "./lib/GorevlerTab";
+import { PaketlerTab } from "./lib/PaketlerTab";
 
 import React from "react";
 
@@ -385,6 +386,14 @@ export default function Page() {
             selectedCompanyId={selectedCompanyId}
             setSelectedCompanyId={setSelectedCompanyId}
             setActiveTab={setActiveTab}
+          />
+        )}
+
+        {activeTab === "paketler" && (
+          <PaketlerTab
+            styles={styles}
+            currentPlanId={userProfile?.plan}
+            isAdmin={isAdmin}
           />
         )}
 

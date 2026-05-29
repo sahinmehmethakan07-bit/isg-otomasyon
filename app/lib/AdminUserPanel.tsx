@@ -664,7 +664,26 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
               </div>
             </div>
             <div style={{ marginTop: 12 }}>
-              <button type="submit" style={styles.btnSuccess}>Firma Oluştur</button>
+              <button
+                type="submit"
+                style={{
+                  height: 42,
+                  backgroundColor: "var(--isg-accent)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "0 28px",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  boxShadow: "0 4px 14px var(--isg-accent-glow)",
+                }}
+              >
+                ✅ Firma Oluştur
+              </button>
             </div>
           </form>
         </div>
@@ -771,8 +790,27 @@ export function AdminUserPanel({ styles, companies, onCompanyCreated }: Props) {
               </div>
             </div>
             <div style={{ marginTop: 12 }}>
-              <button type="submit" style={styles.btnSuccess} disabled={creating}>
-                {creating ? "Oluşturuluyor..." : "Kullanıcı Oluştur"}
+              <button
+                type="submit"
+                disabled={creating}
+                style={{
+                  height: 42,
+                  backgroundColor: "var(--isg-accent)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "0 28px",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  cursor: creating ? "not-allowed" : "pointer",
+                  opacity: creating ? 0.65 : 1,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  boxShadow: "0 4px 14px var(--isg-accent-glow)",
+                }}
+              >
+                {creating ? "⏳ Oluşturuluyor..." : "✅ Kullanıcı Oluştur"}
               </button>
             </div>
           </form>

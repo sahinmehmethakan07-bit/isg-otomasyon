@@ -268,13 +268,15 @@ export default function Page() {
       </header>
 
       <div style={{ ...styles.shell, flexDirection: compactLayout ? "column" : "row" }} className="isg-shell">
-        {/* Sidebar wrapper: arka planı sayfa boyunca uzatır */}
+        {/* Sidebar wrapper: paddingBottom trick ile arka planı sonsuza uzatır,
+            shell'deki overflow:hidden sayfanın gerçek yüksekliğinde keser */}
         <div style={{
           flexShrink: 0,
           width: compactLayout ? "100%" : 252,
           backgroundColor: "var(--isg-nav)",
           borderRight: "1px solid var(--isg-border)",
-          alignSelf: compactLayout ? "auto" : "stretch",
+          marginBottom: compactLayout ? 0 : -9999,
+          paddingBottom: compactLayout ? 0 : 9999,
         }}>
         <aside style={{
           ...styles.sidebar,

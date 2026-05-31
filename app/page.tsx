@@ -357,24 +357,25 @@ export default function Page() {
           </div>
         )}
 
-        {/* Kilitli modül banner'ı */}
+        {/* Kilitli modül — sadece banner göster, içerik gizlenir */}
         {currentPlan.lockedModules.includes(activeTab) && (
-          <div style={{ backgroundColor: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: 12, padding: "28px 24px", textAlign: "center", marginBottom: 20 }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
-            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8 }}>Bu modül paket yükseltmesi gerektiriyor</div>
-            <div style={{ color: "var(--isg-text-muted)", fontSize: 13, marginBottom: 16, lineHeight: 1.6 }}>
+          <div style={{ backgroundColor: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: 12, padding: "40px 24px", textAlign: "center" as const }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+            <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 10 }}>Bu modül paket yükseltmesi gerektiriyor</div>
+            <div style={{ color: "var(--isg-text-muted)", fontSize: 14, marginBottom: 16, lineHeight: 1.7 }}>
               <strong style={{ color: "var(--isg-text)" }}>{tabs.find(t => t.id === activeTab)?.label}</strong> modülü{" "}
               <strong style={{ color: "#0ea5e9" }}>⭐ Uzman</strong> veya{" "}
               <strong style={{ color: "#a78bfa" }}>🏆 OSGB</strong> paketinde mevcuttur.
               <br />Mevcut paketiniz: <strong style={{ color: currentPlan.color }}>{currentPlan.emoji} {currentPlan.label}</strong>
             </div>
-            <div style={{ fontSize: 12, color: "var(--isg-text-subtle)" }}>
+            <div style={{ fontSize: 13, color: "var(--isg-text-subtle)" }}>
               Paketi yükseltmek için yöneticinizle iletişime geçin.
             </div>
           </div>
         )}
 
-        {activeTab === "ozet" && (
+        {/* Tüm tab içerikleri — kilitliyse render edilmez */}
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "ozet" && (
           <OzetTab
             styles={styles}
             roleDashboardTitle={roleDashboardTitle}
@@ -394,7 +395,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "gorevler" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "gorevler" && (
           <GorevlerTab
             styles={styles}
             taskItems={taskItems}
@@ -408,7 +409,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "paketler" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "paketler" && (
           <PaketlerTab
             styles={styles}
             currentPlanId={userProfile?.plan}
@@ -416,7 +417,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "firmalar" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "firmalar" && (
           <CompaniesTab
             styles={styles}
             isAdmin={isAdmin}
@@ -432,7 +433,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "personel" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "personel" && (
           <div style={{ display: "grid", gridTemplateColumns: selectedEmployee && !compactLayout ? "minmax(0, 1fr) minmax(380px, 420px)" : "minmax(0, 1fr)", gap: 20, minWidth: 0, alignItems: "start" }}>
             <EmployeeForm
               styles={styles}
@@ -469,7 +470,7 @@ export default function Page() {
           </div>
         )}
 
-        {activeTab === "belgeler" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "belgeler" && (
           <DocumentsTab
             styles={styles}
             companies={companies}
@@ -486,7 +487,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "gozlemciler" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "gozlemciler" && (
           <ObserversTab
             styles={styles}
             observers={observers}
@@ -497,7 +498,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "dof" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "dof" && (
           <DofTab
             styles={styles}
             companies={companies}
@@ -527,7 +528,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "risk" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "risk" && (
           <RiskTab
             styles={styles}
             companies={companies}
@@ -549,7 +550,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "imzacilar" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "imzacilar" && (
           <SignersTab
             styles={styles}
             companies={companies}
@@ -560,7 +561,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "yillik-planlar" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "yillik-planlar" && (
           <AnnualPlansTab
             styles={styles}
             companies={companies}
@@ -577,7 +578,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "egitimler" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "egitimler" && (
           <TrainingsTab
             styles={styles}
             companies={companies}
@@ -596,7 +597,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "kkd-formu" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "kkd-formu" && (
           <PpeTab
             styles={styles}
             companies={companies}
@@ -614,11 +615,11 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "talimatlar" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "talimatlar" && (
           <WorkInstructionsTab styles={styles} />
         )}
 
-        {activeTab === "acil-durum-plani" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "acil-durum-plani" && (
           <EmergencyPlansTab
             styles={styles}
             companies={companies}
@@ -636,7 +637,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "kurul-toplantisi" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "kurul-toplantisi" && (
           <CommitteeMeetingsTab
             styles={styles}
             companies={companies}
@@ -655,7 +656,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "is-kazasi-raporu" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "is-kazasi-raporu" && (
           <AccidentReportsTab
             styles={styles}
             companies={companies}
@@ -673,7 +674,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "firma-ziyaretleri" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "firma-ziyaretleri" && (
           <CompanyVisitsTab
             styles={styles}
             companies={companies}
@@ -690,7 +691,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "arsiv" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "arsiv" && (
           <ArchiveTab
             styles={styles}
             companies={companies}
@@ -717,7 +718,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "ek2muayene" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "ek2muayene" && (
           <Ek2MuayeneFormu
             styles={styles}
             companies={companies}
@@ -727,7 +728,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "nace-sorgula" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "nace-sorgula" && (
           <NaceLookupTab
             styles={styles}
             compactLayout={compactLayout}
@@ -739,7 +740,7 @@ export default function Page() {
           />
         )}
 
-        {activeTab === "myk-sorgula" && (
+        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "myk-sorgula" && (
           <MykLookupTab
             styles={styles}
             compactLayout={compactLayout}

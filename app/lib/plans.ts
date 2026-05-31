@@ -69,7 +69,6 @@ export const PLANS: Record<PlanId, Plan> = {
       { text: "Kurul, Kaza & Ziyaret",        type: "cross" },
     ],
     lockedModules: [
-      "ek2muayene",
       "myk-sorgula",
       "arsiv",
       "yillik-planlar",

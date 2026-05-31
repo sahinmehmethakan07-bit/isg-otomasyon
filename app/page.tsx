@@ -16,6 +16,7 @@ import { EmployeeForm } from "./lib/EmployeeForm";
 import { EmployeeTable } from "./lib/EmployeeTable";
 import { EmergencyPlansTab } from "./lib/EmergencyPlansTab";
 import { MykLookupTab, NaceLookupTab } from "./lib/LookupTabs";
+import { LockedModuleNotice } from "./lib/LockedModuleNotice";
 import { ObserversTab } from "./lib/ObserversTab";
 import { PpeTab } from "./lib/PpeTab";
 import { RiskTab } from "./lib/RiskTab";
@@ -204,6 +205,7 @@ export default function Page() {
 
   // Sidebar modül arama — yerel UI state'i
   const [sidebarSearch, setSidebarSearch] = React.useState("");
+  const [lockedModuleNotice, setLockedModuleNotice] = React.useState<string | null>(null);
 
   const visibleMenuGroups = sidebarSearch.trim()
     ? menuGroups
@@ -215,6 +217,22 @@ export default function Page() {
         }))
         .filter(group => group.items.length > 0)
     : menuGroups;
+
+  function handleSidebarTabClick(tab: { id: string; label: string; disabled?: boolean; locked?: boolean }) {
+    if (tab.disabled) return;
+    setActiveTab(tab.id);
+    setSearch("");
+
+    if (tab.locked) {
+      setLockedModuleNotice(
+        `Paketiniz ${currentPlan.label}. ${tab.label} modülünü kullanmak için paketinizi yükseltin.`
+      );
+      window.setTimeout(() => setLockedModuleNotice(null), 4500);
+      return;
+    }
+
+    setLockedModuleNotice(null);
+  }
 
   if (!mounted || loading) {
     return (
@@ -323,11 +341,7 @@ export default function Page() {
                           opacity: tab.disabled ? 0.58 : 1,
                           cursor: tab.disabled ? "not-allowed" : "pointer",
                         }}
-                        onClick={() => {
-                          if (tab.disabled) return;
-                          setActiveTab(tab.id);
-                          setSearch("");
-                        }}
+                        onClick={() => handleSidebarTabClick(tab)}
                       >
                         <span>{tab.label}</span>
                         {tab.disabled && <span style={styles.soonBadge}>Yakında</span>}
@@ -355,6 +369,13 @@ export default function Page() {
           <div style={{ backgroundColor: "#d9770615", border: "1px solid #d9770633", borderRadius: 8, color: "#fcd34d", fontSize: 13, marginBottom: 16, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <span>{planError}</span>
           </div>
+        )}
+
+        {lockedModuleNotice && (
+          <LockedModuleNotice
+            message={lockedModuleNotice}
+            onClose={() => setLockedModuleNotice(null)}
+          />
         )}
 
         {/* Kilitli modül — sadece banner göster, içerik gizlenir */}

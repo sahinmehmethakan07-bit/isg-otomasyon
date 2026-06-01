@@ -848,7 +848,6 @@ export function usePageState() {
     { id: "yillik-planlar", label: "📅 Yıllık Planlar" },
     { id: "egitimler", label: "🎓 Eğitimler" },
     { id: "kkd-formu", label: "🧤 KKD Formu" },
-    { id: "talimatlar", label: "📋 Talimatlar" },
     { id: "acil-durum-plani", label: "⚠️ Acil Durum Planı" },
     { id: "kurul-toplantisi", label: "👥 Kurul Toplantısı" },
     { id: "firma-ziyaretleri", label: "📍 Firma Ziyaretleri" },
@@ -873,7 +872,7 @@ export function usePageState() {
       : [
         { title: "Yönetim", items: tabs.filter(tab => ["ozet", "gorevler", "firmalar", "personel", "paketler", "kullanicilar"].includes(tab.id)) },
         { title: "Risk Yönetimi", items: tabs.filter(tab => ["gozlemciler", "dof", "risk"].includes(tab.id)) },
-        { title: "Formlar & Belgeler", items: tabs.filter(tab => ["belgeler", "imzacilar", "ek2muayene", "kkd-formu", "talimatlar", "is-kazasi-raporu"].includes(tab.id)) },
+        { title: "Formlar & Belgeler", items: tabs.filter(tab => ["belgeler", "imzacilar", "ek2muayene", "kkd-formu", "is-kazasi-raporu"].includes(tab.id)) },
         {
           title: "Planlama & Arşiv",
           items: tabs.filter(tab => ["yillik-planlar", "egitimler", "acil-durum-plani", "kurul-toplantisi", "firma-ziyaretleri", "arsiv"].includes(tab.id)),

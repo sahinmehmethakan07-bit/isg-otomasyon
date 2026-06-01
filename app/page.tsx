@@ -22,7 +22,6 @@ import { PpeTab } from "./lib/PpeTab";
 import { RiskTab } from "./lib/RiskTab";
 import { SignersTab } from "./lib/SignersTab";
 import { TrainingsTab } from "./lib/TrainingsTab";
-import WorkInstructionsTab from "./lib/WorkInstructionsTab";
 import { usePageState } from "./lib/usePageState";
 import { OzetTab } from "./lib/OzetTab";
 import { GorevlerTab } from "./lib/GorevlerTab";
@@ -634,10 +633,6 @@ export default function Page() {
             updatePpeStatus={updatePpeStatus}
             deletePpeRecord={deletePpeRecord}
           />
-        )}
-
-        {!currentPlan.lockedModules.includes(activeTab) && activeTab === "talimatlar" && (
-          <WorkInstructionsTab styles={styles} />
         )}
 
         {!currentPlan.lockedModules.includes(activeTab) && activeTab === "acil-durum-plani" && (

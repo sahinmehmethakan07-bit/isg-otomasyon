@@ -165,3 +165,170 @@ main > div {
   background: var(--isg-accent-glow);
   color: #fff;
 }
+
+/* ── LOGIN ROLE BUTTON AUTH ANIMATION ─────────────────────── */
+.login-role-button {
+  --role-color: var(--isg-accent);
+  --role-glow: var(--isg-accent-glow);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  background: rgba(22,24,31,0.9);
+  color: #f4f6fb;
+  cursor: pointer;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04);
+  transform: translateY(0) scale(1);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, width 500ms ease;
+}
+
+.login-role-button:hover {
+  opacity: 1;
+  border-color: var(--role-color);
+  box-shadow: 0 10px 28px var(--role-glow), inset 0 1px 0 rgba(255,255,255,0.06);
+  transform: translateY(-2px);
+}
+
+.login-role-button.active {
+  pointer-events: none;
+  animation: RoleContainer 1250ms ease forwards;
+}
+
+.login-role-content {
+  display: contents;
+}
+
+.login-role-button.active .login-role-content {
+  animation: RoleText 1250ms ease forwards;
+}
+
+.login-role-icon,
+.login-role-copy,
+.login-role-label,
+.login-role-desc {
+  display: block;
+}
+
+.login-role-label {
+  margin-bottom: 6px;
+  color: #f4f6fb;
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.login-role-desc {
+  color: rgba(244,246,251,0.48);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.login-role-underline {
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--role-color);
+  opacity: 0.62;
+}
+
+.login-role-scan {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 58px;
+  height: 58px;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.7);
+  pointer-events: none;
+}
+
+.login-role-button.active .login-role-scan {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  transition: opacity 150ms 160ms ease, transform 260ms 160ms ease;
+}
+
+.fingerprint,
+.login-role-ok {
+  position: absolute;
+  inset: 0;
+  width: 58px;
+  height: 58px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fingerprint {
+  stroke: rgba(244,246,251,0.22);
+  stroke-width: 2.2;
+}
+
+.fingerprint-active {
+  stroke: var(--role-color);
+}
+
+.fingerprint-active path {
+  stroke-dasharray: 0 120;
+  stroke-dashoffset: 35;
+}
+
+.login-role-button.active .fingerprint-active .odd {
+  stroke-dasharray: 120 120;
+  stroke-dashoffset: 0;
+  transition: stroke-dasharray 720ms 220ms ease, stroke-dashoffset 720ms 220ms ease;
+}
+
+.login-role-button.active .fingerprint-active .even {
+  stroke-dasharray: 120 120;
+  stroke-dashoffset: 0;
+  transition: stroke-dasharray 720ms 360ms ease, stroke-dashoffset 720ms 360ms ease;
+}
+
+.login-role-button.active .fingerprint-out {
+  opacity: 0;
+  transition: opacity 180ms 920ms ease;
+}
+
+.login-role-ok {
+  opacity: 0;
+  stroke: var(--role-color);
+  stroke-width: 5;
+}
+
+.login-role-button.active .login-role-ok {
+  animation: RoleOk 1250ms ease forwards;
+}
+
+@keyframes RoleContainer {
+  0% { transform: translateY(0) scale(1); }
+  18% { transform: translateY(0) scale(0.96); border-color: var(--role-color); }
+  68% { transform: translateY(0) scale(1); }
+  78% { transform: translateY(0) scale(1.06); box-shadow: 0 0 34px var(--role-glow); }
+  100% { transform: translateY(0) scale(1); border-color: var(--role-color); }
+}
+
+@keyframes RoleText {
+  0% { opacity: 1; transform: scale(1); }
+  18% { opacity: 0; transform: scale(0.72); }
+  100% { opacity: 0; transform: scale(0.72); }
+}
+
+@keyframes RoleOk {
+  0%, 58% { opacity: 0; transform: scale(0.4); }
+  72% { opacity: 1; transform: scale(1.16); }
+  84%, 100% { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 768px) {
+  .login-role-label {
+    margin-bottom: 2px;
+    font-size: 14px;
+  }
+
+  .login-role-underline {
+    left: 0;
+    right: 0;
+  }
+}

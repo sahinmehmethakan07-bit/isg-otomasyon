@@ -19,6 +19,7 @@ import {
 } from "../lib/roleManager";
 import { useLanguage } from "../lib/i18n";
 import { CookieConsent } from "../lib/CookieConsent";
+import { LoginRoleButton } from "../lib/LoginRoleButton";
 
 type LoginStep = "select_role" | "enter_credentials";
 
@@ -201,101 +202,30 @@ export default function LoginPage() {
               <p style={{ textAlign: "center", fontSize: isMobile ? 13 : 15, color: "rgba(244,246,251,0.62)", marginBottom: isMobile ? 16 : 24 }}>
                 {t("login.selectRole")}
               </p>
-              {/* Mobil: dikey layout (1 kolon), Desktop: 4 kolon */}
+              {/* Mobil: dikey layout, Desktop: role kartları */}
               <div style={{
                 display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)",
+                gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(160px, 1fr))",
                 gap: isMobile ? 10 : 16,
               }}>
                 {(Object.entries(ROLE_CONFIG) as [UserRole, typeof ROLE_CONFIG["admin"]][])
-                  .filter(([role]) => role !== "admin")
                   .map(([role, config]) => (
-                  <button
+                  <LoginRoleButton
                     key={role}
-                    onClick={() => selectRole(role)}
-                    style={{
-                      backgroundColor: "rgba(22,24,31,0.9)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: 8,
-                      /* Mobil: yatay layout, Desktop: dikey */
-                      padding: isMobile ? "16px 16px" : "32px 20px",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                      textAlign: isMobile ? "left" : "center",
-                      position: "relative",
-                      overflow: "hidden",
-                      display: isMobile ? "flex" : "block",
-                      alignItems: "center",
-                      gap: isMobile ? 12 : 0,
-                      boxShadow: "0 18px 50px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04)",
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = config.color;
-                      (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
-                      (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${config.color}22`;
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.1)";
-                      (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-                      (e.currentTarget as HTMLElement).style.boxShadow = "0 18px 50px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04)";
-                    }}
-                  >
-                    <div style={{ fontSize: isMobile ? 28 : 40, marginBottom: isMobile ? 0 : 12 }}>{config.icon}</div>
-                    <div>
-                      <div style={{ fontSize: isMobile ? 14 : 16, fontWeight: 750, color: "#f4f6fb", marginBottom: isMobile ? 2 : 6 }}>
-                        {roleLabels[role].label}
-                      </div>
-                      <div style={{ fontSize: 11, color: "rgba(244,246,251,0.48)", lineHeight: 1.4 }}>
-                        {roleLabels[role].desc}
-                      </div>
-                    </div>
-                    <div style={{
-                      position: "absolute",
-                      bottom: 0,
-                      left: isMobile ? 0 : "20%",
-                      right: isMobile ? 0 : "20%",
-                      height: 3,
-                      backgroundColor: config.color,
-                      borderRadius: "3px 3px 0 0",
-                      opacity: 0.6,
-                    }} />
-                  </button>
+                    role={role}
+                    icon={config.icon}
+                    label={roleLabels[role].label}
+                    description={roleLabels[role].desc}
+                    color={config.color}
+                    isMobile={isMobile}
+                    onSelect={selectRole}
+                  />
                 ))}
               </div>
-              <div style={{
-                display: "flex",
-                flexDirection: isMobile ? "column" : "row",
-                justifyContent: "space-between",
-                alignItems: isMobile ? "stretch" : "center",
-                gap: isMobile ? 10 : 0,
-                marginTop: isMobile ? 16 : 24,
-              }}>
+              <div style={{ marginTop: isMobile ? 16 : 24 }}>
                 <p style={{ fontSize: 11, color: "rgba(244,246,251,0.36)", textAlign: isMobile ? "center" : "left" }}>
                   🔒 {t("login.singleDevice")}
                 </p>
-                <button
-                  onClick={() => selectRole("admin")}
-                  style={{
-                    background: "none",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    borderRadius: 8,
-                    color: "rgba(244,246,251,0.58)",
-                    fontSize: 12,
-                    padding: isMobile ? "10px 14px" : "5px 14px",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = "#5aa9ff";
-                    (e.currentTarget as HTMLElement).style.color = "#9ccaff";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.12)";
-                    (e.currentTarget as HTMLElement).style.color = "rgba(244,246,251,0.58)";
-                  }}
-                >
-                  🛡️ Admin
-                </button>
               </div>
             </div>
           )}

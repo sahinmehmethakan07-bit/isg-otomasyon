@@ -1,5 +1,5 @@
 /**
- * login/page.tsx — Rol Tabanlı Login Sayfası (TR/EN Dil Destekli + Mobil Uyumlu)
+ * login/page.tsx — Rol Tabanlı Login Sayfası (Türkçe + Mobil Uyumlu)
  */
 
 "use client";
@@ -18,14 +18,13 @@ import {
   ROLE_CONFIG,
 } from "../lib/roleManager";
 import { useLanguage } from "../lib/i18n";
-import { LanguageSwitcher } from "../lib/LanguageSwitcher";
 import { CookieConsent } from "../lib/CookieConsent";
 
 type LoginStep = "select_role" | "enter_credentials";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { lang, setLang, t } = useLanguage();
+  const { t } = useLanguage();
   const [step, setStep] = useState<LoginStep>("select_role");
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [email, setEmail] = useState("");
@@ -146,10 +145,6 @@ export default function LoginPage() {
         /* Mobil: padding ayarı */
         padding: isMobile ? "20px 12px" : 0,
       }}>
-        {/* Dil değiştirici — sağ üst */}
-        <div style={{ position: "absolute", top: 16, right: isMobile ? 12 : 20, zIndex: 10 }}>
-          <LanguageSwitcher lang={lang} setLang={setLang} />
-        </div>
 
         {/* Arka plan dokusu */}
         <div style={{
@@ -177,7 +172,7 @@ export default function LoginPage() {
               marginTop: 8,
               letterSpacing: 0,
             }}>
-              {lang === "tr" ? "İSG" : "OHS"} <span style={{ color: "#4cc9a6" }}>{lang === "tr" ? "Otomasyon" : "Automation"}</span>
+              İSG <span style={{ color: "#4cc9a6" }}>Otomasyon</span>
             </h1>
             <p style={{ fontSize: isMobile ? 12 : 14, color: "rgba(244,246,251,0.54)", marginTop: 4 }}>
               {t("app.subtitle")}

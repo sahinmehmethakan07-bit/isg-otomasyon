@@ -54,6 +54,30 @@ type VisionDetection = {
   approved: boolean;
 };
 
+function compressImageForVision(base64: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxSide = 1280;
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const width = Math.max(1, Math.round(img.width * scale));
+      const height = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Fotoğraf işlenemedi"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", 0.75));
+    };
+    img.onerror = () => reject(new Error("Fotoğraf okunamadı"));
+    img.src = base64;
+  });
+}
+
 function FormField({ styles, label, children }: { styles: Record<string, React.CSSProperties>; label: string; children: React.ReactNode }) {
   return <div><label style={styles.label} className="isg-label">{label}</label>{children}</div>;
 }
@@ -176,13 +200,25 @@ export function DofTab({
     setVisionLoading(true);
     setVisionError(null);
     try {
+      const imageBase64 = await compressImageForVision(base64);
       const res = await fetch("/api/analyze-dof-photo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64 }),
+        body: JSON.stringify({ imageBase64 }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Fotoğraf analizi yapılamadı");
+      const rawText = await res.text();
+      let data: { detected?: unknown; error?: string } = {};
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch {
+        data = { error: rawText };
+      }
+      if (!res.ok) {
+        const fallback = rawText.includes("Request Entity")
+          ? "Fotoğraf boyutu çok büyük. Daha küçük bir fotoğrafla tekrar deneyin."
+          : "Fotoğraf analizi yapılamadı";
+        throw new Error(data?.error || fallback);
+      }
       const detected = Array.isArray(data.detected) ? data.detected : [];
       setVisionDetections(
         detected.map((item: { id: string; confidence: number; evidence: string }) => ({

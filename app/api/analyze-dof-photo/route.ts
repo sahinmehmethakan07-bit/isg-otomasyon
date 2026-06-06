@@ -48,10 +48,6 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env["OPENAI_API_KEY"]?.trim();
     if (!apiKey) {
-      console.error("OPENAI_API_KEY missing at runtime", {
-        openaiEnvKeys: Object.keys(process.env).filter(key => key.includes("OPENAI")),
-        vercelEnv: process.env["VERCEL_ENV"],
-      });
       return NextResponse.json({ error: "OPENAI_API_KEY tanımlı değil" }, { status: 500 });
     }
 

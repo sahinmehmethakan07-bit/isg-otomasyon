@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CHECKLIST } from "../../lib/dofVisionChecklist";
 
+export const runtime = "nodejs";
+
 type ModelDetection = {
   id: string;
   confidence: number;
@@ -44,7 +46,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Fotoğraf verisi gerekli" }, { status: 400 });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env["OPENAI_API_KEY"]?.trim();
     if (!apiKey) {
       return NextResponse.json({ error: "OPENAI_API_KEY tanımlı değil" }, { status: 500 });
     }
@@ -61,7 +63,7 @@ export async function POST(req: NextRequest) {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_VISION_MODEL || "gpt-4o-mini",
+        model: process.env["OPENAI_VISION_MODEL"] || "gpt-4o-mini",
         temperature: 0,
         response_format: { type: "json_object" },
         messages: [
@@ -113,4 +115,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

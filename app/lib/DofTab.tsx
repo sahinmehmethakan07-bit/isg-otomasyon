@@ -1,5 +1,6 @@
 import React, { ChangeEvent, useEffect, useState } from "react";
 import { priorityColor } from "./dashboardUtils";
+import { CHECKLIST, findChecklistItem } from "./dofVisionChecklist";
 import type { Company, DofRecord, Employee, Observer, RiskRecord } from "./types";
 
 type NewDofForm = {
@@ -44,6 +45,13 @@ type DofTabProps = {
   generateDofPDF: (dof: DofRecord) => void;
   deleteDof: (id: string) => void;
   handleImageToBase64: (event: ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => void;
+};
+
+type VisionDetection = {
+  id: string;
+  confidence: number;
+  evidence: string;
+  approved: boolean;
 };
 
 function FormField({ styles, label, children }: { styles: Record<string, React.CSSProperties>; label: string; children: React.ReactNode }) {
@@ -151,11 +159,118 @@ export function DofTab({
   deleteDof,
   handleImageToBase64,
 }: DofTabProps) {
+  const [visionDetections, setVisionDetections] = useState<VisionDetection[]>([]);
+  const [visionLoading, setVisionLoading] = useState(false);
+  const [visionError, setVisionError] = useState<string | null>(null);
+  const [manualChecklistId, setManualChecklistId] = useState("");
+
   const setField = (field: keyof NewDofForm, value: string) => {
     setNewDof(current => ({ ...current, [field]: value }));
   };
 
   const companyEmployees = employees.filter(emp => emp.companyId === newDof.companyId);
+  const approvedDetections = visionDetections.filter(item => item.approved);
+  const uncertainDetections = visionDetections.filter(item => item.confidence < 0.6);
+
+  async function analyzePhoto(base64: string) {
+    setVisionLoading(true);
+    setVisionError(null);
+    try {
+      const res = await fetch("/api/analyze-dof-photo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Fotoğraf analizi yapılamadı");
+      const detected = Array.isArray(data.detected) ? data.detected : [];
+      setVisionDetections(
+        detected.map((item: { id: string; confidence: number; evidence: string }) => ({
+          id: item.id,
+          confidence: item.confidence,
+          evidence: item.evidence,
+          approved: item.confidence >= 0.6,
+        }))
+      );
+      if (detected.length === 0) {
+        setVisionError("Fotoğrafta checklist ile eşleşen net bir uygunsuzluk bulunamadı.");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Bilinmeyen analiz hatası";
+      setVisionError(message);
+      setVisionDetections([]);
+    } finally {
+      setVisionLoading(false);
+    }
+  }
+
+  function handleNewPhoto(field: "beforePhoto" | "afterPhoto", event: ChangeEvent<HTMLInputElement>) {
+    handleImageToBase64(event, base64 => {
+      setField(field, base64);
+      if (field === "beforePhoto") analyzePhoto(base64);
+    });
+  }
+
+  function toggleDetection(id: string) {
+    setVisionDetections(current =>
+      current.map(item => item.id === id ? { ...item, approved: !item.approved } : item)
+    );
+  }
+
+  function removeDetection(id: string) {
+    setVisionDetections(current => current.filter(item => item.id !== id));
+  }
+
+  function addManualDetection() {
+    if (!manualChecklistId) return;
+    setVisionDetections(current => {
+      if (current.some(item => item.id === manualChecklistId)) return current;
+      return [
+        ...current,
+        {
+          id: manualChecklistId,
+          confidence: 1,
+          evidence: "Kullanıcı tarafından manuel eklendi",
+          approved: true,
+        },
+      ];
+    });
+    setManualChecklistId("");
+  }
+
+  function applyApprovedDetectionsToDof() {
+    const selectedItems = approvedDetections
+      .map(item => ({ detection: item, checklist: findChecklistItem(item.id) }))
+      .filter((item): item is { detection: VisionDetection; checklist: NonNullable<ReturnType<typeof findChecklistItem>> } => Boolean(item.checklist));
+
+    if (selectedItems.length === 0) {
+      setDofAddStatus("⚠️ DÖF metnine aktarılacak onaylı madde yok");
+      setTimeout(() => setDofAddStatus(null), 3500);
+      return;
+    }
+
+    const descriptionLines = selectedItems.map(({ detection, checklist }, index) =>
+      `${index + 1}. Tespit: ${checklist.label}\nKanıt: ${detection.evidence || "Fotoğraf analizinde checklist ile eşleşti."}`
+    );
+    const dofLines = selectedItems.map(({ checklist }, index) =>
+      `${index + 1}. ${checklist.regulation} gereği: ${checklist.requiredAction}`
+    );
+
+    setNewDof(current => ({
+      ...current,
+      title: current.title || (selectedItems.length === 1 ? selectedItems[0].checklist.label : "Fotoğraftan tespit edilen İSG uygunsuzlukları"),
+      description: descriptionLines.join("\n\n"),
+      lawReference: dofLines.join("\n"),
+      priority: selectedItems.some(({ checklist }) =>
+        checklist.id.includes("yuksekte") ||
+        checklist.id.includes("elektrik") ||
+        checklist.id.includes("yangin") ||
+        checklist.id.includes("acil")
+      ) ? "Yüksek" : current.priority,
+    }));
+    setDofAddStatus("✅ Onaylanan maddeler DÖF metnine aktarıldı");
+    setTimeout(() => setDofAddStatus(null), 3500);
+  }
 
   return (
     <div>
@@ -219,7 +334,7 @@ export function DofTab({
                     </div>
                     <label htmlFor={inputId} style={{ ...styles.btnSecondary, cursor: "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}>
                       🔄 Değiştir
-                      <input id={inputId} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleImageToBase64(e, b64 => setField(field, b64))} />
+                      <input id={inputId} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleNewPhoto(field, e)} />
                     </label>
                   </div>
                 ) : (
@@ -230,12 +345,63 @@ export function DofTab({
                     color: "var(--isg-text-muted)", transition: "border-color 0.15s",
                   }}>
                     📎 Fotoğraf Seç
-                    <input id={inputId} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleImageToBase64(e, b64 => setField(field, b64))} />
+                    <input id={inputId} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleNewPhoto(field, e)} />
                   </label>
                 )}
               </div>
             );
           })}
+        </div>
+        <div style={{ marginTop: 14, border: "1px solid var(--isg-border)", borderRadius: 10, padding: 14, backgroundColor: "rgba(255,255,255,0.025)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase" as const, letterSpacing: "0.07em", color: "var(--isg-text-muted)" }}>AI Fotoğraf Analizi</div>
+              <div style={{ fontSize: 12, color: "var(--isg-text-subtle)", marginTop: 3 }}>Model yalnızca sabit checklist id eşleşmesi yapar; mevzuat ve DÖF metni koddan üretilir.</div>
+            </div>
+            <button type="button" style={{ ...styles.btnSecondary, opacity: newDof.beforePhoto && !visionLoading ? 1 : 0.55 }} disabled={!newDof.beforePhoto || visionLoading} onClick={() => analyzePhoto(newDof.beforePhoto)}>
+              {visionLoading ? "Analiz ediliyor..." : "Fotoğrafı Analiz Et"}
+            </button>
+          </div>
+          {visionError && (
+            <div style={{ fontSize: 12, color: visionError.startsWith("Fotoğrafta") ? "var(--isg-warning)" : "var(--isg-danger)", marginBottom: 10 }}>{visionError}</div>
+          )}
+          {visionDetections.length > 0 && (
+            <div style={{ display: "grid", gap: 8 }}>
+              {visionDetections.map(item => {
+                const checklist = findChecklistItem(item.id);
+                if (!checklist) return null;
+                const uncertain = item.confidence < 0.6;
+                return (
+                  <div key={item.id} style={{ border: "1px solid var(--isg-border)", borderRadius: 8, padding: 10, backgroundColor: item.approved ? "rgba(76,201,166,0.08)" : "var(--isg-input-bg)" }}>
+                    <div style={{ display: "flex", gap: 10, justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 800 }}>{checklist.label}</div>
+                        <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginTop: 4 }}>{item.evidence}</div>
+                        <div style={{ fontSize: 11, color: uncertain ? "var(--isg-warning)" : "var(--isg-accent)", marginTop: 5 }}>
+                          Güven: {Math.round(item.confidence * 100)}%{uncertain ? " · Kesin değil, manuel kontrol edilmeli" : ""}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        <button type="button" style={{ ...styles.btnSecondary, height: 30, padding: "0 10px", fontSize: 11 }} onClick={() => toggleDetection(item.id)}>{item.approved ? "Onaylı" : "Onayla"}</button>
+                        <button type="button" style={{ ...styles.btnDanger, height: 30, padding: "0 10px", fontSize: 11 }} onClick={() => removeDetection(item.id)}>Sil</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {uncertainDetections.length > 0 && (
+            <div style={{ marginTop: 10, fontSize: 12, color: "var(--isg-warning)" }}>Manuel kontrol önerilir: {uncertainDetections.length} düşük güvenli madde otomatik DÖF'e eklenmedi.</div>
+          )}
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 12 }}>
+            <select style={{ ...styles.select, maxWidth: 360 }} value={manualChecklistId} onChange={e => setManualChecklistId(e.target.value)}>
+              <option value="">Checklist'ten manuel madde ekle...</option>
+              {CHECKLIST.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+            </select>
+            <button type="button" style={styles.btnSecondary} onClick={addManualDetection}>Manuel Ekle</button>
+            <button type="button" style={{ ...styles.btnPrimary, opacity: approvedDetections.length ? 1 : 0.55 }} disabled={!approvedDetections.length} onClick={applyApprovedDetectionsToDof}>Onaylananları DÖF Metnine Aktar</button>
+          </div>
         </div>
         <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <button style={{ ...styles.btnPrimary, opacity: dofAdding ? 0.6 : 1 }} disabled={dofAdding} onClick={addDof}>{dofAdding ? "Kaydediliyor..." : "DÖF Ekle"}</button>

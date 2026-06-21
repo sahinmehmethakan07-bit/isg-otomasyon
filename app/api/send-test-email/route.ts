@@ -1,10 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  assertRequestSize,
+  enforceRateLimit,
+  requireAuthenticatedUser,
+  securityErrorResponse,
+} from "../../lib/serverSecurity";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {
   try {
+    assertRequestSize(req, 16 * 1024);
+    enforceRateLimit(req, "send-test-email", 3, 60_000);
+    await requireAuthenticatedUser(req, ["admin"]);
+
     const { toEmail, ccEmail } = await req.json();
-    if (!toEmail) {
-      return NextResponse.json({ error: "Alıcı email adresi gerekli" }, { status: 400 });
+    if (typeof toEmail !== "string" || !EMAIL_PATTERN.test(toEmail) || toEmail.length > 254) {
+      return NextResponse.json({ error: "Geçerli bir alıcı e-posta adresi gerekli" }, { status: 400 });
+    }
+    if (ccEmail && (typeof ccEmail !== "string" || !EMAIL_PATTERN.test(ccEmail) || ccEmail.length > 254)) {
+      return NextResponse.json({ error: "Geçerli bir CC e-posta adresi gerekli" }, { status: 400 });
     }
 
     const apiKey = process.env.RESEND_API_KEY;
@@ -52,6 +67,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, id: result.id });
   } catch (error: any) {
+    const securityResponse = securityErrorResponse(error);
+    if (securityResponse) return securityResponse;
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

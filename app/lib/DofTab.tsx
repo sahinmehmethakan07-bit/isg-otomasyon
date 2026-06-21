@@ -2,6 +2,7 @@ import React, { ChangeEvent, useEffect, useState } from "react";
 import { priorityColor } from "./dashboardUtils";
 import { CHECKLIST, findChecklistItem } from "./dofVisionChecklist";
 import type { Company, DofRecord, Employee, Observer, RiskRecord } from "./types";
+import { auth } from "../../lib/firebase";
 
 type NewDofForm = {
   companyId: string;
@@ -201,9 +202,14 @@ export function DofTab({
     setVisionError(null);
     try {
       const imageBase64 = await compressImageForVision(base64);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error("Oturum doğrulaması gerekli");
       const res = await fetch("/api/analyze-dof-photo", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ imageBase64 }),
       });
       const rawText = await res.text();

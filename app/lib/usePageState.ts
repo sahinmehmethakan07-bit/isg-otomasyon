@@ -597,9 +597,14 @@ export function usePageState() {
       if (emailSettings.enabled && emailSettings.toEmail) {
         try {
           const pdfBase64 = await generateDofPDF(dof, true);
+          const token = await auth.currentUser?.getIdToken();
+          if (!token) throw new Error("Oturum doğrulaması gerekli");
           const res = await fetch("/api/send-dof-email", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
             body: JSON.stringify({ dofId: dof.id, pdfBase64 }),
           });
           if (res.ok) {

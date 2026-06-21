@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, doc, getDoc, updateDoc, collection, addDoc } from "firebase/firestore";
+import {
+  assertRequestSize,
+  enforceRateLimit,
+  escapeHtml,
+  requireAuthenticatedUser,
+  securityErrorResponse,
+} from "../../lib/serverSecurity";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDCCKqJLR7V_VN9n4NPM5_ZlPlc-O1alAk",
@@ -16,8 +23,17 @@ const db = getFirestore(app);
 
 export async function POST(req: NextRequest) {
   try {
+    assertRequestSize(req, 12 * 1024 * 1024);
+    enforceRateLimit(req, "send-dof-email", 10, 60_000);
+    await requireAuthenticatedUser(req);
+
     const { dofId, pdfBase64 } = await req.json();
-    if (!dofId) return NextResponse.json({ error: "dofId gerekli" }, { status: 400 });
+    if (typeof dofId !== "string" || !dofId || dofId.length > 128) {
+      return NextResponse.json({ error: "Geçerli bir dofId gerekli" }, { status: 400 });
+    }
+    if (pdfBase64 && (typeof pdfBase64 !== "string" || pdfBase64.length > 10 * 1024 * 1024)) {
+      return NextResponse.json({ error: "PDF boyutu izin verilen sınırı aşıyor" }, { status: 413 });
+    }
 
     // 1. Email ayarlarini oku
     const settingsSnap = await getDoc(doc(db, "settings", "emailNotifications"));
@@ -60,11 +76,11 @@ export async function POST(req: NextRequest) {
         </div>
         <div style="border:1px solid #e2e8f0;border-top:none;padding:24px;border-radius:0 0 8px 8px;">
           <p style="font-size:14px;color:#334155;margin:0 0 8px;">Sayin Yetkili,</p>
-          <p style="font-size:14px;color:#334155;margin:0 0 16px;"><strong>${companyName}</strong> firmasina ait yeni bir DOF kaydi olusturulmustur.</p>
-          <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Baslik:</strong> ${dof.title || ""}</p>
-          <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Oncelik:</strong> ${dof.priority || "Orta"}</p>
-          <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Termin:</strong> ${dof.dueDate || "—"}</p>
-          ${settings.message ? `<p style="font-size:14px;color:#334155;margin:16px 0 0;padding:12px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">${settings.message}</p>` : ""}
+          <p style="font-size:14px;color:#334155;margin:0 0 16px;"><strong>${escapeHtml(companyName)}</strong> firmasina ait yeni bir DOF kaydi olusturulmustur.</p>
+          <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Baslik:</strong> ${escapeHtml(dof.title)}</p>
+          <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Oncelik:</strong> ${escapeHtml(dof.priority || "Orta")}</p>
+          <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Termin:</strong> ${escapeHtml(dof.dueDate || "—")}</p>
+          ${settings.message ? `<p style="font-size:14px;color:#334155;margin:16px 0 0;padding:12px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">${escapeHtml(settings.message)}</p>` : ""}
           <p style="font-size:13px;color:#64748b;margin:20px 0 0;">Detayli bilgi icin ekteki PDF dosyasini inceleyiniz.</p>
           <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;">
             <p style="color:#94a3b8;font-size:12px;margin:0;">Bu bildirim ISG Otomasyon tarafindan otomatik gonderilmistir.</p>
@@ -117,6 +133,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, id: result.id });
   } catch (error: any) {
+    const securityResponse = securityErrorResponse(error);
+    if (securityResponse) return securityResponse;
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

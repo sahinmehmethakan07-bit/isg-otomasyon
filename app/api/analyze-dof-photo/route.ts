@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CHECKLIST } from "../../lib/dofVisionChecklist";
+import {
+  assertRequestSize,
+  enforceRateLimit,
+  requireAuthenticatedUser,
+  securityErrorResponse,
+} from "../../lib/serverSecurity";
 
 export const runtime = "nodejs";
 
@@ -41,9 +47,16 @@ function normalizeDetections(value: unknown): ModelDetection[] {
 
 export async function POST(req: NextRequest) {
   try {
+    assertRequestSize(req, 5 * 1024 * 1024);
+    enforceRateLimit(req, "analyze-dof-photo", 5, 60_000);
+    await requireAuthenticatedUser(req);
+
     const { imageBase64 } = await req.json();
     if (!imageBase64 || typeof imageBase64 !== "string") {
       return NextResponse.json({ error: "Fotoğraf verisi gerekli" }, { status: 400 });
+    }
+    if (imageBase64.length > 4 * 1024 * 1024) {
+      return NextResponse.json({ error: "Fotoğraf boyutu çok büyük" }, { status: 413 });
     }
 
     const apiKey = process.env["OPENAI_API_KEY"]?.trim();
@@ -111,6 +124,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ detected: normalizeDetections(parsed) });
   } catch (error: unknown) {
+    const securityResponse = securityErrorResponse(error);
+    if (securityResponse) return securityResponse;
     const message = error instanceof Error ? error.message : "Bilinmeyen hata";
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -705,6 +705,140 @@ button {
   width: max-content;
 }
 
+/* Mobil görünüm seçilince ekran geniş olsa bile içerik telefon akışına girer. */
+.isg-view-mobile .isg-content-scroll {
+  overflow-x: hidden;
+  padding: 14px 12px 112px;
+}
+
+.isg-view-mobile .isg-content-inner {
+  max-width: 430px;
+  width: 100%;
+}
+
+.isg-view-mobile .isg-card,
+.isg-view-mobile .isg-stat-card {
+  border-radius: 16px !important;
+  margin-bottom: 14px !important;
+  max-width: 100% !important;
+  overflow-x: clip !important;
+  padding: 16px !important;
+  width: 100% !important;
+}
+
+.isg-view-mobile .isg-input,
+.isg-view-mobile input,
+.isg-view-mobile select,
+.isg-view-mobile textarea {
+  font-size: 16px !important;
+  max-width: 100% !important;
+  min-height: 44px;
+  width: 100% !important;
+}
+
+.isg-view-mobile textarea {
+  min-height: 96px;
+}
+
+.isg-view-mobile div[style*="grid-template-columns"] {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.isg-view-mobile div[style*="display: flex"],
+.isg-view-mobile div[style*="display:flex"] {
+  max-width: 100%;
+}
+
+.isg-view-mobile .isg-card button,
+.isg-view-mobile .isg-content-scroll button,
+.isg-view-mobile .isg-card label[for],
+.isg-view-mobile .isg-content-scroll label[for] {
+  justify-content: center;
+  min-height: 44px !important;
+}
+
+.isg-view-mobile .isg-card label[for] {
+  width: 100%;
+}
+
+.isg-view-mobile .isg-card > div,
+.isg-view-mobile .isg-card section,
+.isg-view-mobile .isg-content-scroll > div,
+.isg-view-mobile .isg-content-scroll main,
+.isg-view-mobile .isg-content-scroll section {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.isg-view-mobile .isg-content-scroll [style*="min-width"],
+.isg-view-mobile .isg-content-scroll [style*="minWidth"] {
+  min-width: 0 !important;
+}
+
+.isg-view-mobile table,
+.isg-view-mobile thead,
+.isg-view-mobile tbody,
+.isg-view-mobile tr,
+.isg-view-mobile th,
+.isg-view-mobile td {
+  display: block;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+.isg-view-mobile table {
+  border-collapse: separate !important;
+  border-spacing: 0 10px !important;
+  font-size: 14px !important;
+}
+
+.isg-view-mobile thead {
+  display: none;
+}
+
+.isg-view-mobile tbody tr {
+  background: var(--isg-card-solid);
+  border: 1px solid var(--isg-border);
+  border-radius: 16px;
+  overflow: hidden;
+  padding: 8px 0;
+}
+
+.isg-view-mobile tbody tr + tr {
+  margin-top: 10px;
+}
+
+.isg-view-mobile tbody tr:hover td {
+  background-color: transparent;
+}
+
+.isg-view-mobile td {
+  border-bottom: 1px solid var(--isg-border) !important;
+  padding: 10px 12px !important;
+  white-space: normal !important;
+  word-break: break-word;
+}
+
+.isg-view-mobile td:last-child {
+  border-bottom: 0 !important;
+}
+
+.isg-view-mobile td button,
+.isg-view-mobile td select,
+.isg-view-mobile td a {
+  margin-top: 6px;
+  width: 100%;
+}
+
+.isg-view-mobile .isg-search-bar,
+.isg-view-mobile [style*="max-width: 240px"],
+.isg-view-mobile [style*="max-width: 300px"],
+.isg-view-mobile [style*="maxWidth: 240"],
+.isg-view-mobile [style*="maxWidth: 300"] {
+  max-width: 100% !important;
+}
+
 @media (max-width: 767px) {
   html,
   body,

@@ -685,6 +685,21 @@ button {
   box-shadow: var(--isg-shadow);
 }
 
+.isg-badge {
+  align-items: center;
+  border-radius: 6px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  justify-content: center;
+  line-height: 1.2;
+  max-width: 100%;
+  padding: 4px 8px;
+  vertical-align: middle;
+  white-space: nowrap;
+  width: max-content;
+}
+
 @media (max-width: 767px) {
   html,
   body,
@@ -927,6 +942,12 @@ button {
   .isg-view-web td a {
     margin-top: 0;
     width: auto;
+  }
+
+  .isg-view-web td .isg-badge {
+    display: inline-flex !important;
+    white-space: nowrap !important;
+    width: max-content !important;
   }
 }
 

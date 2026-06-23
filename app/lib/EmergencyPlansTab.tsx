@@ -42,7 +42,7 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 
 function Badge({ text, color }: { text: string; color: string }) {
   return (
-    <span style={{ border: `1px solid ${color}55`, color, background: `${color}18`, padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 800 }}>{text}</span>
+    <span className="isg-badge" style={{ border: `1px solid ${color}55`, color, background: `${color}18` }}>{text}</span>
   );
 }
 

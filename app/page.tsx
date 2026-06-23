@@ -4,6 +4,7 @@
 import { AccidentReportsTab } from "./lib/AccidentReportsTab";
 import { AdminUserPanel } from "./lib/AdminUserPanel";
 import { AnnualPlansTab } from "./lib/AnnualPlansTab";
+import { AppShell } from "./lib/AppShell";
 import { ArchiveTab } from "./lib/ArchiveTab";
 import { CommitteeMeetingsTab } from "./lib/CommitteeMeetingsTab";
 import { CompanyVisitsTab } from "./lib/CompanyVisitsTab";
@@ -31,7 +32,7 @@ import React from "react";
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
-  app: { minHeight: "100vh", background: "var(--isg-bg)", color: "var(--isg-text)", fontFamily: "'IBM Plex Sans', -apple-system, sans-serif", overflowX: "hidden" as const },
+  app: { minHeight: "100vh", height: "100dvh", background: "var(--isg-bg)", color: "var(--isg-text)", fontFamily: "-apple-system, BlinkMacSystemFont, 'Roboto', 'Segoe UI', sans-serif", overflow: "hidden" as const },
   header: { backgroundColor: "var(--isg-header)", borderBottom: "1px solid var(--isg-border)", padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 58, gap: 10, backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", position: "sticky" as const, top: 0, zIndex: 50, boxShadow: "0 12px 34px rgba(0,0,0,0.22)" },
   nav: { display: "flex", gap: 6, padding: "0 28px", borderBottom: "1px solid var(--isg-border)", backgroundColor: "var(--isg-nav)", overflowX: "auto" as const, WebkitOverflowScrolling: "touch" as const, msOverflowStyle: "none" as const, scrollbarWidth: "none" as const, backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", position: "sticky" as const, top: 58, zIndex: 40, height: 50, alignItems: "center" },
   shell: { display: "flex", alignItems: "stretch", minHeight: "calc(100vh - 58px)", width: "100%", overflow: "hidden" as const },
@@ -40,15 +41,15 @@ const styles: Record<string, React.CSSProperties> = {
   sidebarGroupTitle: { color: "var(--isg-text-subtle)", fontSize: 10, fontWeight: 800, textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "0 0 7px 4px" },
   sidebarItem: { minHeight: 36, width: "100%", border: "1px solid transparent", borderRadius: 8, backgroundColor: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "0 10px", fontSize: 13, fontWeight: 700, textAlign: "left" as const, transition: "color 0.15s, border-color 0.15s, background-color 0.15s, opacity 0.15s" },
   soonBadge: { fontSize: 10, fontWeight: 800, color: "#a78bfa", border: "1px solid rgba(167,139,250,0.24)", backgroundColor: "rgba(167,139,250,0.12)", borderRadius: 6, padding: "2px 6px", whiteSpace: "nowrap" as const },
-  content: { padding: "30px 28px", width: "100%", minWidth: 0, flex: "1 1 auto", boxSizing: "border-box" as const, margin: "0 auto" },
+  content: { padding: "24px", width: "100%", minWidth: 0, flex: "1 1 auto", boxSizing: "border-box" as const, margin: "0 auto" },
   card: { backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 12, padding: "20px 22px", marginBottom: 20 },
   sectionTitle: { fontSize: 12, fontWeight: 800, textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 14 },
-  input: { height: 36, border: "1px solid var(--isg-border)", borderRadius: 8, backgroundColor: "var(--isg-input-bg)", color: "var(--isg-text)", padding: "0 10px", fontSize: 13, width: "100%", outline: "none", boxSizing: "border-box" as const },
-  select: { height: 36, border: "1px solid var(--isg-border)", borderRadius: 8, backgroundColor: "var(--isg-input-bg)", color: "var(--isg-text)", padding: "0 10px", fontSize: 13, width: "100%", outline: "none", boxSizing: "border-box" as const },
-  textarea: { border: "1px solid var(--isg-border)", borderRadius: 8, backgroundColor: "var(--isg-input-bg)", color: "var(--isg-text)", padding: "8px 10px", fontSize: 13, width: "100%", outline: "none", resize: "vertical" as const, fontFamily: "inherit", boxSizing: "border-box" as const },
-  btnPrimary: { height: 36, backgroundColor: "var(--isg-accent)", color: "#fff", border: "none", borderRadius: 8, padding: "0 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" as const },
-  btnSecondary: { height: 36, backgroundColor: "var(--isg-btn-secondary)", color: "var(--isg-text)", border: "1px solid var(--isg-border)", borderRadius: 8, padding: "0 14px", fontSize: 13, fontWeight: 650, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" as const },
-  btnDanger: { height: 36, backgroundColor: "rgba(220,38,38,0.1)", color: "var(--isg-danger)", border: "1px solid rgba(220,38,38,0.2)", borderRadius: 8, padding: "0 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" as const },
+  input: { height: 44, border: "1px solid var(--isg-border)", borderRadius: 10, backgroundColor: "var(--isg-input-bg)", color: "var(--isg-text)", padding: "0 12px", fontSize: 16, width: "100%", outline: "none", boxSizing: "border-box" as const },
+  select: { height: 44, border: "1px solid var(--isg-border)", borderRadius: 10, backgroundColor: "var(--isg-input-bg)", color: "var(--isg-text)", padding: "0 12px", fontSize: 16, width: "100%", outline: "none", boxSizing: "border-box" as const },
+  textarea: { border: "1px solid var(--isg-border)", borderRadius: 10, backgroundColor: "var(--isg-input-bg)", color: "var(--isg-text)", padding: "10px 12px", fontSize: 16, width: "100%", outline: "none", resize: "vertical" as const, fontFamily: "inherit", boxSizing: "border-box" as const },
+  btnPrimary: { minHeight: 44, backgroundColor: "var(--isg-accent)", color: "#fff", border: "none", borderRadius: 10, padding: "0 16px", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, whiteSpace: "nowrap" as const },
+  btnSecondary: { minHeight: 44, backgroundColor: "var(--isg-btn-secondary)", color: "var(--isg-text)", border: "1px solid var(--isg-border)", borderRadius: 10, padding: "0 14px", fontSize: 15, fontWeight: 650, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, whiteSpace: "nowrap" as const },
+  btnDanger: { minHeight: 44, backgroundColor: "rgba(220,38,38,0.1)", color: "var(--isg-danger)", border: "1px solid rgba(220,38,38,0.2)", borderRadius: 10, padding: "0 14px", fontSize: 15, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" as const },
   table: { width: "100%", borderCollapse: "collapse" as const, fontSize: 13 },
   th: { padding: "10px 12px", textAlign: "left" as const, fontWeight: 800, fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.07em", borderBottom: "1px solid var(--isg-border)", color: "var(--isg-text-muted)", whiteSpace: "nowrap" as const },
   td: { padding: "10px 12px", borderBottom: "1px solid var(--isg-border)", verticalAlign: "top" as const },
@@ -202,22 +203,9 @@ export default function Page() {
     addCompanyVisit, updateCompanyVisitStatus, deleteCompanyVisit,
   } = usePageState();
 
-  // Sidebar modül arama — yerel UI state'i
-  const [sidebarSearch, setSidebarSearch] = React.useState("");
   const [lockedModuleNotice, setLockedModuleNotice] = React.useState<string | null>(null);
 
-  const visibleMenuGroups = sidebarSearch.trim()
-    ? menuGroups
-        .map(group => ({
-          ...group,
-          items: group.items.filter(tab =>
-            tab.label.toLowerCase().includes(sidebarSearch.toLowerCase())
-          ),
-        }))
-        .filter(group => group.items.length > 0)
-    : menuGroups;
-
-  function handleSidebarTabClick(tab: { id: string; label: string; disabled?: boolean; locked?: boolean }) {
+  function handleTabChange(tab: { id: string; label: string; disabled?: boolean; locked?: boolean }) {
     if (tab.disabled) return;
     setActiveTab(tab.id);
     setSearch("");
@@ -245,119 +233,19 @@ export default function Page() {
   return (
 
     <div style={styles.app} className="isg-app">
-      <header style={styles.header} className="isg-header">
-        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, var(--isg-accent) 0%, var(--isg-accent-2) 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0, boxShadow: "0 10px 24px var(--isg-accent-glow)" }}>🦺</div>
-          <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: 0, color: "var(--isg-text)" }}>İSG <span style={{ color: "var(--isg-text-muted)", fontWeight: 650 }}>Otomasyon</span></span>
-          {activeRoleLabel && (
-            <span style={{
-              fontSize: 12,
-              color: "var(--isg-text)",
-              backgroundColor: "rgba(76,201,166,0.12)",
-              border: "1px solid rgba(76,201,166,0.24)",
-              borderRadius: 8,
-              marginLeft: 4,
-              padding: "5px 9px",
-              fontWeight: 750,
-              lineHeight: 1,
-              whiteSpace: "nowrap",
-            }}>
-              {activeRoleLabel}
-            </span>
-          )}
-        </div>
-        <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
-          <button style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: "var(--isg-btn-secondary)", border: "1px solid var(--isg-border)", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setDarkMode(!darkMode)}>
-            {darkMode ? "☀️" : "🌙"}
-          </button>
-          {!isAdmin && (
-            <span style={{
-              fontSize: 11, fontWeight: 750, padding: "4px 9px", borderRadius: 7, whiteSpace: "nowrap",
-              backgroundColor: currentPlan.color + "22", color: currentPlan.color,
-              border: `1px solid ${currentPlan.color}44`,
-            }}>
-              {currentPlan.emoji} {currentPlan.label}
-            </span>
-          )}
-          <button style={{ ...styles.btnSecondary, fontSize: 12, padding: "6px 12px" }} onClick={loadAll}>Yenile</button>
-          <button style={{ backgroundColor: "rgba(255,107,107,0.11)", color: "var(--isg-danger)", border: "1px solid rgba(255,107,107,0.22)", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 650, cursor: "pointer" }} onClick={handleSignOut}>Çıkış</button>
-        </div>
-      </header>
-
-      <div style={{ ...styles.shell, flexDirection: compactLayout ? "column" : "row" }} className="isg-shell">
-        {/* Sidebar wrapper: paddingBottom trick ile arka planı sonsuza uzatır,
-            shell'deki overflow:hidden sayfanın gerçek yüksekliğinde keser */}
-        <div style={{
-          flexShrink: 0,
-          width: compactLayout ? "100%" : 252,
-          backgroundColor: "var(--isg-nav)",
-          borderRight: "1px solid var(--isg-border)",
-          marginBottom: compactLayout ? 0 : -9999,
-          paddingBottom: compactLayout ? 0 : 9999,
-        }}>
-        <aside style={{
-          ...styles.sidebar,
-          width: "100%",
-          borderRight: "none",
-          position: compactLayout ? "relative" : "sticky",
-          top: compactLayout ? 0 : 58,
-          height: compactLayout ? "auto" : "calc(100vh - 58px)",
-          boxSizing: "border-box" as const,
-        }} className="isg-sidebar">
-          <div style={styles.sidebarSearch}>
-            <span style={{ color: "var(--isg-text-subtle)", fontSize: 14 }}>⌕</span>
-            <input
-              value={sidebarSearch}
-              onChange={e => setSidebarSearch(e.target.value)}
-              placeholder="Modül ara..."
-              style={{ background: "transparent", border: "none", outline: "none", color: "var(--isg-text)", fontSize: 12, width: "100%" }}
-            />
-            {sidebarSearch && (
-              <button
-                onClick={() => setSidebarSearch("")}
-                style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--isg-text-subtle)", fontSize: 12, padding: 0, lineHeight: 1 }}
-              >✕</button>
-            )}
-          </div>
-          <div style={{ display: "grid", gap: 18 }}>
-            {visibleMenuGroups.map(group => (
-              <div key={group.title}>
-                <div style={styles.sidebarGroupTitle}>{group.title}</div>
-                <div style={{ display: "grid", gap: 4 }}>
-                  {group.items.map(tab => {
-                    const isActive = activeTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        disabled={tab.disabled}
-                        title={tab.disabled ? "Bu modül sonraki adımlarda eklenecek" : undefined}
-                        style={{
-                          ...styles.sidebarItem,
-                          backgroundColor: isActive ? "rgba(76,201,166,0.16)" : "transparent",
-                          color: tab.disabled ? "var(--isg-text-subtle)" : isActive ? "var(--isg-text)" : "var(--isg-text-muted)",
-                          borderColor: isActive ? "rgba(76,201,166,0.3)" : "transparent",
-                          opacity: tab.disabled ? 0.58 : 1,
-                          cursor: tab.disabled ? "not-allowed" : "pointer",
-                        }}
-                        onClick={() => handleSidebarTabClick(tab)}
-                      >
-                        <span>{tab.label}</span>
-                        {tab.disabled && <span style={styles.soonBadge}>Yakında</span>}
-                        {tab.locked && !tab.disabled && (
-                          <span style={{ fontSize: 12, opacity: 0.7 }} title="Bu modül için paket yükseltmesi gerekiyor">🔒</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </aside>
-        </div>
-
-      <main style={{ ...styles.content, maxWidth: "100%" }} className="isg-app">
+      <AppShell
+        activeRoleLabel={activeRoleLabel}
+        activeTab={activeTab}
+        currentPlan={currentPlan}
+        darkMode={darkMode}
+        isAdmin={isAdmin}
+        menuGroups={menuGroups}
+        onRefresh={loadAll}
+        onSignOut={handleSignOut}
+        onTabChange={handleTabChange}
+        setDarkMode={setDarkMode}
+        tabs={tabs}
+      >
         {loadError && (
           <div style={{ backgroundColor: "#dc262615", border: "1px solid #dc262633", borderRadius: 8, color: "#fca5a5", fontSize: 13, marginBottom: 16, padding: "10px 12px" }}>
             {loadError}
@@ -779,8 +667,7 @@ export default function Page() {
 
         {/* Vardiya ve Ayarlar sekmeleri kaldırıldı */}
 
-      </main>
-      </div>
+      </AppShell>
     </div>
 
   );

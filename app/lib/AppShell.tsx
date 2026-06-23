@@ -114,7 +114,7 @@ export function AppShell({
           {homeItem && activeTab !== homeItem.id && (
             <button
               type="button"
-              className="isg-icon-button"
+              className="isg-icon-button isg-back-button"
               aria-label="Özete dön"
               onClick={() => navigate(homeItem)}
             >
@@ -173,9 +173,53 @@ export function AppShell({
         </div>
       )}
 
-      <main className="isg-content-scroll">
-        <div className="isg-content-inner">{children}</div>
-      </main>
+      <div className="isg-app-body">
+        <aside className="isg-web-sidebar" aria-label="Modül menüsü">
+          <div className="isg-web-sidebar-search">
+            <span aria-hidden="true">⌕</span>
+            <input
+              value={moduleSearch}
+              onChange={event => setModuleSearch(event.target.value)}
+              placeholder="Modül ara..."
+              type="search"
+            />
+            {moduleSearch && (
+              <button type="button" onClick={() => setModuleSearch("")} aria-label="Aramayı temizle">
+                ✕
+              </button>
+            )}
+          </div>
+          <div className="isg-web-sidebar-groups">
+            {visibleGroups.map(group => (
+              <div key={group.title} className="isg-web-sidebar-group">
+                <div className="isg-web-sidebar-title">{group.title}</div>
+                <div className="isg-web-sidebar-items">
+                  {group.items.map(tab => {
+                    const active = tab.id === activeTab;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        disabled={tab.disabled}
+                        className={`isg-web-sidebar-item${active ? " is-active" : ""}`}
+                        onClick={() => navigate(tab)}
+                      >
+                        <span>{tab.label}</span>
+                        {tab.locked && <span className="isg-web-sidebar-badge">Kilitli</span>}
+                        {tab.disabled && <span className="isg-web-sidebar-badge">Yakında</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        <main className="isg-content-scroll">
+          <div className="isg-content-inner">{children}</div>
+        </main>
+      </div>
 
       {moreOpen && (
         <div className="isg-more-backdrop" onClick={() => setMoreOpen(false)}>

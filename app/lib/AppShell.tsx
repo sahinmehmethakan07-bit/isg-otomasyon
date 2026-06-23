@@ -20,6 +20,8 @@ type PlanBadge = {
   label: string;
 };
 
+type ViewMode = "mobile" | "web";
+
 type AppShellProps = {
   activeRoleLabel?: string;
   activeTab: string;
@@ -36,6 +38,7 @@ type AppShellProps = {
 };
 
 const PRIMARY_TAB_IDS = ["ozet", "gorevler", "firmalar", "personel"];
+const VIEW_MODE_STORAGE_KEY = "isg-view-mode";
 
 function getIcon(label: string) {
   return label.split(" ")[0] || "•";
@@ -63,6 +66,11 @@ export function AppShell({
 }: AppShellProps) {
   const [moreOpen, setMoreOpen] = React.useState(false);
   const [moduleSearch, setModuleSearch] = React.useState("");
+  const [viewMode, setViewMode] = React.useState<ViewMode>(() => {
+    if (typeof window === "undefined") return "mobile";
+    const saved = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+    return saved === "mobile" || saved === "web" ? saved : "mobile";
+  });
 
   const flatTabs = React.useMemo(
     () => menuGroups.flatMap(group => group.items),
@@ -94,8 +102,13 @@ export function AppShell({
     setModuleSearch("");
   }
 
+  function changeViewMode(mode: ViewMode) {
+    setViewMode(mode);
+    localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+  }
+
   return (
-    <div className="isg-app-shell">
+    <div className={`isg-app-shell isg-view-${viewMode}`}>
       <header className="isg-app-header">
         <div className="isg-header-left">
           {homeItem && activeTab !== homeItem.id && (
@@ -116,6 +129,24 @@ export function AppShell({
         </div>
 
         <div className="isg-header-actions">
+          <div className="isg-view-toggle" aria-label="Görünüm seçimi">
+            <button
+              type="button"
+              className={viewMode === "mobile" ? "is-active" : ""}
+              onClick={() => changeViewMode("mobile")}
+              aria-pressed={viewMode === "mobile"}
+            >
+              Mobil
+            </button>
+            <button
+              type="button"
+              className={viewMode === "web" ? "is-active" : ""}
+              onClick={() => changeViewMode("web")}
+              aria-pressed={viewMode === "web"}
+            >
+              Web
+            </button>
+          </div>
           <button
             type="button"
             className="isg-icon-button"
@@ -167,6 +198,24 @@ export function AppShell({
               type="search"
             />
             <div className="isg-more-actions">
+              <div className="isg-view-toggle isg-view-toggle-sheet" aria-label="Görünüm seçimi">
+                <button
+                  type="button"
+                  className={viewMode === "mobile" ? "is-active" : ""}
+                  onClick={() => changeViewMode("mobile")}
+                  aria-pressed={viewMode === "mobile"}
+                >
+                  Mobil
+                </button>
+                <button
+                  type="button"
+                  className={viewMode === "web" ? "is-active" : ""}
+                  onClick={() => changeViewMode("web")}
+                  aria-pressed={viewMode === "web"}
+                >
+                  Web
+                </button>
+              </div>
               <button type="button" className="isg-header-button" onClick={onRefresh}>Yenile</button>
               <button type="button" className="isg-header-button isg-danger-button" onClick={onSignOut}>Çıkış</button>
             </div>

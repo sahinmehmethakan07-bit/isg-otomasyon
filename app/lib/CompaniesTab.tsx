@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { IsoTarihSecici } from "./TarihSecici";
 import { dangerFromNace, daysUntil, extractNaceFromSgk, getDateStatus, officialNameFromSgk, statusColor } from "./dashboardUtils";
 import { formatDate } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
@@ -47,60 +48,6 @@ function Badge({ text, color }: { text: string; color: string }) {
   );
 }
 
-function DatePicker({ value, onChange, styles }: { value: string; onChange: (value: string) => void; styles: Record<string, React.CSSProperties> }) {
-  const [displayValue, setDisplayValue] = useState("");
-
-  useEffect(() => {
-    if (!value) {
-      setDisplayValue("");
-      return;
-    }
-    setDisplayValue(formatDate(value, ""));
-  }, [value]);
-
-  function formatInput(raw: string) {
-    const digits = raw.replace(/\D/g, "").slice(0, 8);
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
-    return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
-  }
-
-  function commitDate(text: string) {
-    const match = text.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
-    if (!match) return;
-    const [, day, month, year] = match;
-    const iso = `${year}-${month}-${day}`;
-    const parsed = new Date(iso);
-    if (!Number.isNaN(parsed.getTime())) onChange(iso);
-  }
-
-  return (
-    <div style={{ position: "relative" }}>
-      <input
-        style={{ ...styles.input, paddingRight: 44 }}
-        className="isg-input"
-        value={displayValue}
-        onChange={e => {
-          const formatted = formatInput(e.target.value);
-          setDisplayValue(formatted);
-          if (formatted.length === 10) commitDate(formatted);
-          if (formatted.length === 0) onChange("");
-        }}
-        onBlur={() => commitDate(displayValue)}
-        placeholder="Tarih seçin..."
-      />
-      <input
-        type="date"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer" }}
-        aria-label="Tarih seç"
-      />
-      <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--isg-text-muted)" }}>📅</span>
-    </div>
-  );
-}
-
 export function CompaniesTab({
   styles,
   isAdmin,
@@ -126,7 +73,7 @@ export function CompaniesTab({
             <FormField label="NACE Kodu"><input style={styles.input} className="isg-input" value={newCompany.naceCode} onChange={e => setNewCompany({ ...newCompany, naceCode: e.target.value, dangerClass: dangerFromNace(e.target.value) })} /></FormField>
             <FormField label="Tehlike Sınıfı"><select style={styles.select} className="isg-input" value={newCompany.dangerClass} onChange={e => setNewCompany({ ...newCompany, dangerClass: e.target.value as DangerClass })}><option>Az Tehlikeli</option><option>Tehlikeli</option><option>Çok Tehlikeli</option></select></FormField>
             <FormField label="Çalışan Sayısı"><input style={styles.input} className="isg-input" type="number" value={newCompany.employeeCount} onChange={e => setNewCompany({ ...newCompany, employeeCount: e.target.value })} /></FormField>
-            <FormField label="Sözleşme Bitiş"><DatePicker styles={styles} value={newCompany.contractEnd} onChange={v => setNewCompany({ ...newCompany, contractEnd: v })} /></FormField>
+            <FormField label="Sözleşme Bitiş"><IsoTarihSecici allowFuture styles={styles} value={newCompany.contractEnd} onChange={v => setNewCompany({ ...newCompany, contractEnd: v })} /></FormField>
             <FormField label="Hizmet Türü"><select style={styles.select} className="isg-input" value={newCompany.serviceType} onChange={e => setNewCompany({ ...newCompany, serviceType: e.target.value as ServiceType })}><option>İş Güvenliği</option><option>İş Güvenliği + İşyeri Hekimliği</option></select></FormField>
             <FormField label="İletişim E-posta"><input style={styles.input} className="isg-input" type="email" value={newCompany.contactEmail} onChange={e => setNewCompany({ ...newCompany, contactEmail: e.target.value })} placeholder="firma@ornek.com" /></FormField>
           </div>

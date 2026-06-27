@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { IsoTarihSecici } from "./TarihSecici";
 import { formatDate } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { generateCompanyVisitPDF } from "./pdf";
@@ -47,60 +48,6 @@ function Badge({ text, color }: { text: string; color: string }) {
   );
 }
 
-function DatePicker({ value, onChange, styles }: { value: string; onChange: (value: string) => void; styles: Record<string, React.CSSProperties> }) {
-  const [displayValue, setDisplayValue] = useState("");
-
-  useEffect(() => {
-    if (!value) {
-      setDisplayValue("");
-      return;
-    }
-    setDisplayValue(formatDate(value, ""));
-  }, [value]);
-
-  function formatInput(raw: string) {
-    const digits = raw.replace(/\D/g, "").slice(0, 8);
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
-    return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
-  }
-
-  function commitDate(text: string) {
-    const match = text.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
-    if (!match) return;
-    const [, day, month, year] = match;
-    const iso = `${year}-${month}-${day}`;
-    const parsed = new Date(iso);
-    if (!Number.isNaN(parsed.getTime())) onChange(iso);
-  }
-
-  return (
-    <div style={{ position: "relative" }}>
-      <input
-        style={{ ...styles.input, paddingRight: 44 }}
-        className="isg-input"
-        value={displayValue}
-        onChange={e => {
-          const formatted = formatInput(e.target.value);
-          setDisplayValue(formatted);
-          if (formatted.length === 10) commitDate(formatted);
-          if (formatted.length === 0) onChange("");
-        }}
-        onBlur={() => commitDate(displayValue)}
-        placeholder="Tarih seçin..."
-      />
-      <input
-        type="date"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer" }}
-        aria-label="Tarih seç"
-      />
-      <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--isg-text-muted)" }}>📅</span>
-    </div>
-  );
-}
-
 export function CompanyVisitsTab({
   styles,
   companies,
@@ -126,7 +73,7 @@ export function CompanyVisitsTab({
               {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
             </select>
           </FormField>
-          <FormField label="Ziyaret Tarihi *"><DatePicker styles={styles} value={newCompanyVisit.visitDate} onChange={v => setNewCompanyVisit({ ...newCompanyVisit, visitDate: v })} /></FormField>
+          <FormField label="Ziyaret Tarihi *"><IsoTarihSecici allowFuture styles={styles} value={newCompanyVisit.visitDate} onChange={v => setNewCompanyVisit({ ...newCompanyVisit, visitDate: v })} /></FormField>
           <FormField label="Ziyaret Amacı">
             <select style={styles.select} className="isg-input" value={newCompanyVisit.purpose} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, purpose: e.target.value as CompanyVisitPurpose })}>
               <option>Rutin Ziyaret</option>
@@ -146,7 +93,7 @@ export function CompanyVisitsTab({
               <option>Takip Gerekli</option>
             </select>
           </FormField>
-          <FormField label="Sonraki Ziyaret"><DatePicker styles={styles} value={newCompanyVisit.nextVisitDate} onChange={v => setNewCompanyVisit({ ...newCompanyVisit, nextVisitDate: v })} /></FormField>
+          <FormField label="Sonraki Ziyaret"><IsoTarihSecici allowFuture styles={styles} value={newCompanyVisit.nextVisitDate} onChange={v => setNewCompanyVisit({ ...newCompanyVisit, nextVisitDate: v })} /></FormField>
           <FormField label="Tespitler"><input style={styles.input} className="isg-input" value={newCompanyVisit.findings} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, findings: e.target.value })} placeholder="Sahada görülen durumlar" /></FormField>
           <FormField label="Aksiyonlar"><input style={styles.input} className="isg-input" value={newCompanyVisit.actions} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, actions: e.target.value })} placeholder="Alınacak aksiyonlar" /></FormField>
           <FormField label="Not"><input style={styles.input} className="isg-input" value={newCompanyVisit.notes} onChange={e => setNewCompanyVisit({ ...newCompanyVisit, notes: e.target.value })} placeholder="Ek açıklama" /></FormField>

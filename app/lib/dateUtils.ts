@@ -20,6 +20,13 @@ const DATE_TIME_FORMATTER = new Intl.DateTimeFormat("tr-TR", {
   minute: "2-digit",
 });
 
+const DATE_WITH_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("tr-TR", {
+  day: "2-digit",
+  month: "long",
+  year: "numeric",
+  weekday: "long",
+});
+
 const RELATIVE_DAY_FORMATTER = new Intl.RelativeTimeFormat("tr-TR", {
   numeric: "auto",
 });
@@ -58,8 +65,12 @@ export function formatDateTime(value: DateLike, fallback = "—") {
   return date ? DATE_TIME_FORMATTER.format(date) : fallback;
 }
 
+export function formatDateWithWeekday(value: DateLike, fallback = "—") {
+  const date = parseDisplayDate(value);
+  return date ? DATE_WITH_WEEKDAY_FORMATTER.format(date) : fallback;
+}
+
 export function formatRelativeDays(days: number) {
   if (!Number.isFinite(days)) return "";
   return RELATIVE_DAY_FORMATTER.format(Math.trunc(days), "day");
 }
-

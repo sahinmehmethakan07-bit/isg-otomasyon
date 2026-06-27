@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { IsoTarihSecici } from "./TarihSecici";
 import { formatDate } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { generateAccidentReportPDF } from "./pdf";
@@ -51,60 +52,6 @@ function Badge({ text, color }: { text: string; color: string }) {
   );
 }
 
-function DatePicker({ value, onChange, styles }: { value: string; onChange: (value: string) => void; styles: Record<string, React.CSSProperties> }) {
-  const [displayValue, setDisplayValue] = useState("");
-
-  useEffect(() => {
-    if (!value) {
-      setDisplayValue("");
-      return;
-    }
-    setDisplayValue(formatDate(value, ""));
-  }, [value]);
-
-  function formatInput(raw: string) {
-    const digits = raw.replace(/\D/g, "").slice(0, 8);
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
-    return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
-  }
-
-  function commitDate(text: string) {
-    const match = text.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
-    if (!match) return;
-    const [, day, month, year] = match;
-    const iso = `${year}-${month}-${day}`;
-    const parsed = new Date(iso);
-    if (!Number.isNaN(parsed.getTime())) onChange(iso);
-  }
-
-  return (
-    <div style={{ position: "relative" }}>
-      <input
-        style={{ ...styles.input, paddingRight: 44 }}
-        className="isg-input"
-        value={displayValue}
-        onChange={e => {
-          const formatted = formatInput(e.target.value);
-          setDisplayValue(formatted);
-          if (formatted.length === 10) commitDate(formatted);
-          if (formatted.length === 0) onChange("");
-        }}
-        onBlur={() => commitDate(displayValue)}
-        placeholder="Tarih seçin..."
-      />
-      <input
-        type="date"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer" }}
-        aria-label="Tarih seç"
-      />
-      <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--isg-text-muted)" }}>📅</span>
-    </div>
-  );
-}
-
 export function AccidentReportsTab({
   styles,
   companies,
@@ -137,7 +84,7 @@ export function AccidentReportsTab({
               {employees.filter(employee => employee.companyId === newAccidentReport.companyId).map(employee => <option key={employee.id} value={employee.id}>{employee.firstName} {employee.lastName}</option>)}
             </select>
           </FormField>
-          <FormField label="Olay Tarihi *"><DatePicker styles={styles} value={newAccidentReport.accidentDate} onChange={v => setNewAccidentReport({ ...newAccidentReport, accidentDate: v })} /></FormField>
+          <FormField label="Olay Tarihi *"><IsoTarihSecici styles={styles} value={newAccidentReport.accidentDate} onChange={v => setNewAccidentReport({ ...newAccidentReport, accidentDate: v })} /></FormField>
           <FormField label="Olay Yeri"><input style={styles.input} className="isg-input" value={newAccidentReport.location} onChange={e => setNewAccidentReport({ ...newAccidentReport, location: e.target.value })} placeholder="Bölüm, saha, alan..." /></FormField>
           <FormField label="Olay Türü">
             <select style={styles.select} className="isg-input" value={newAccidentReport.incidentType} onChange={e => setNewAccidentReport({ ...newAccidentReport, incidentType: e.target.value })}>
@@ -165,7 +112,7 @@ export function AccidentReportsTab({
             </select>
           </FormField>
           <FormField label="Aksiyon Sorumlusu"><input style={styles.input} className="isg-input" value={newAccidentReport.responsible} onChange={e => setNewAccidentReport({ ...newAccidentReport, responsible: e.target.value })} placeholder="Ad Soyad / birim" /></FormField>
-          <FormField label="Termin"><DatePicker styles={styles} value={newAccidentReport.dueDate} onChange={v => setNewAccidentReport({ ...newAccidentReport, dueDate: v })} /></FormField>
+          <FormField label="Termin"><IsoTarihSecici allowFuture styles={styles} value={newAccidentReport.dueDate} onChange={v => setNewAccidentReport({ ...newAccidentReport, dueDate: v })} /></FormField>
           <FormField label="Olay Açıklaması *"><input style={styles.input} className="isg-input" value={newAccidentReport.description} onChange={e => setNewAccidentReport({ ...newAccidentReport, description: e.target.value })} placeholder="Olay nasıl gerçekleşti?" /></FormField>
           <FormField label="Kök Neden"><input style={styles.input} className="isg-input" value={newAccidentReport.rootCause} onChange={e => setNewAccidentReport({ ...newAccidentReport, rootCause: e.target.value })} placeholder="Ekipman, eğitim, ortam, davranış..." /></FormField>
           <FormField label="Aksiyon Planı"><input style={styles.input} className="isg-input" value={newAccidentReport.actionPlan} onChange={e => setNewAccidentReport({ ...newAccidentReport, actionPlan: e.target.value })} placeholder="Alınacak önlemler" /></FormField>

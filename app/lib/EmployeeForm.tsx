@@ -1,5 +1,5 @@
-import React, { ChangeEvent, useEffect, useState } from "react";
-import { formatDate } from "./dateUtils";
+import React, { ChangeEvent } from "react";
+import { IsoTarihSecici } from "./TarihSecici";
 import type { Company, EmployeeScannedDocument, NewEmployeeForm } from "./types";
 
 type EmployeeFormProps = {
@@ -15,98 +15,6 @@ type EmployeeFormProps = {
 
 function FormField({ styles, label, children }: { styles: Record<string, React.CSSProperties>; label: string; children: React.ReactNode }) {
   return <div><label style={styles.label} className="isg-label">{label}</label>{children}</div>;
-}
-
-function DatePicker({ styles, value, onChange }: { styles: Record<string, React.CSSProperties>; value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-  const now = value ? new Date(value) : new Date();
-  const [viewYear, setViewYear] = useState(now.getFullYear());
-  const [viewMonth, setViewMonth] = useState(now.getMonth());
-
-  const months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const firstDay = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
-  const selectedDate = value ? new Date(value) : null;
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  const select = (day: number) => {
-    const d = String(viewYear) + "-" + String(viewMonth + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
-    onChange(d);
-    setOpen(false);
-  };
-
-  const displayValue = value ? formatDate(value) : "Tarih seçin...";
-
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <div
-        onClick={() => setOpen(!open)}
-        style={{ ...styles.input, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
-      >
-        <span style={{ color: value ? "var(--isg-text)" : "var(--isg-text-muted)" }}>{displayValue}</span>
-        <span style={{ fontSize: 14 }}>📅</span>
-      </div>
-      {open && (
-        <div style={{ position: "absolute", zIndex: 1000, top: "calc(100% + 4px)", left: 0, backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 8, padding: 12, width: 240, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <button type="button" onClick={() => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); }} style={{ ...styles.btnSecondary, padding: "2px 8px" }}>‹</button>
-            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <select value={viewMonth} onChange={e => setViewMonth(Number(e.target.value))} style={{ ...styles.select, width: "auto", padding: "2px 6px", fontSize: 12 }}>
-                {months.map((m, i) => <option key={m} value={i}>{m}</option>)}
-              </select>
-              <select value={viewYear} onChange={e => setViewYear(Number(e.target.value))} style={{ ...styles.select, width: "auto", padding: "2px 6px", fontSize: 12 }}>
-                {Array.from({ length: 20 }, (_, i) => 2020 + i).map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </div>
-            <button type="button" onClick={() => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); }} style={{ ...styles.btnSecondary, padding: "2px 8px" }}>›</button>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
-            {["Pt", "Sa", "Ça", "Pe", "Cu", "Ct", "Pz"].map(d => (
-              <div key={d} style={{ textAlign: "center", fontSize: 10, color: "var(--isg-text-muted)", padding: "2px 0" }}>{d}</div>
-            ))}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
-            {Array.from({ length: firstDay }).map((_, i) => <div key={"empty-" + i} />)}
-            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
-              const isSelected = selectedDate &&
-                selectedDate.getFullYear() === viewYear &&
-                selectedDate.getMonth() === viewMonth &&
-                selectedDate.getDate() === day;
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => select(day)}
-                  style={{
-                    backgroundColor: isSelected ? "#1B4332" : "transparent",
-                    color: isSelected ? "#fff" : "var(--isg-text)",
-                    border: "none",
-                    borderRadius: 4,
-                    padding: "4px 0",
-                    fontSize: 12,
-                    cursor: "pointer",
-                    textAlign: "center",
-                  }}
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
-          <button type="button" onClick={() => { onChange(""); setOpen(false); }} style={{ ...styles.btnSecondary, width: "100%", marginTop: 8, fontSize: 11 }}>Temizle</button>
-        </div>
-      )}
-    </div>
-  );
 }
 
 function statusStyle(status: string): React.CSSProperties {
@@ -203,7 +111,7 @@ export function EmployeeForm({
                 <FormField styles={styles} label="Soyad"><input style={styles.input} className="isg-input" value={newEmployee.lastName} onChange={e => setField("lastName", e.target.value)} /></FormField>
                 <FormField styles={styles} label="TC No"><input style={styles.input} className="isg-input" value={newEmployee.tcNo} onChange={e => setField("tcNo", e.target.value)} /></FormField>
                 <FormField styles={styles} label="Doğum Yeri"><input style={styles.input} className="isg-input" value={newEmployee.birthPlace} onChange={e => setField("birthPlace", e.target.value)} /></FormField>
-                <FormField styles={styles} label="Doğum Tarihi"><DatePicker styles={styles} value={newEmployee.birthDate} onChange={v => setField("birthDate", v)} /></FormField>
+                <FormField styles={styles} label="Doğum Tarihi"><IsoTarihSecici styles={styles} value={newEmployee.birthDate} onChange={v => setField("birthDate", v)} /></FormField>
                 <FormField styles={styles} label="Cinsiyet"><select style={styles.select} className="isg-input" value={newEmployee.gender} onChange={e => setField("gender", e.target.value)}><option value="">Seçin...</option><option>Erkek</option><option>Kadın</option><option>Diğer</option></select></FormField>
                 <FormField styles={styles} label="Uyruk"><select style={styles.select} className="isg-input" value={newEmployee.nationality} onChange={e => setNewEmployee(current => ({ ...current, nationality: e.target.value, nationalityOther: e.target.value === "Diğer" ? current.nationalityOther : "" }))}><option value="T.C.">T.C.</option><option value="Diğer">Diğer</option></select></FormField>
                 {newEmployee.nationality === "Diğer" && (
@@ -228,7 +136,7 @@ export function EmployeeForm({
               <div style={styles.formGrid}>
                 <FormField styles={styles} label="Birim"><input style={styles.input} className="isg-input" value={newEmployee.department} onChange={e => setField("department", e.target.value)} placeholder="Üretim, muhasebe..." /></FormField>
                 <FormField styles={styles} label="Unvan"><input style={styles.input} className="isg-input" value={newEmployee.title} onChange={e => setField("title", e.target.value)} /></FormField>
-                <FormField styles={styles} label="İşe Giriş"><DatePicker styles={styles} value={newEmployee.hireDate} onChange={v => setField("hireDate", v)} /></FormField>
+                <FormField styles={styles} label="İşe Giriş"><IsoTarihSecici allowFuture styles={styles} value={newEmployee.hireDate} onChange={v => setField("hireDate", v)} /></FormField>
                 <FormField styles={styles} label="Eğitim Durumu"><input style={styles.input} className="isg-input" value={newEmployee.educationLevel} onChange={e => setField("educationLevel", e.target.value)} /></FormField>
                 <FormField styles={styles} label="IBAN"><input style={styles.input} className="isg-input" value={newEmployee.iban} onChange={e => setField("iban", e.target.value)} /></FormField>
                 <FormField styles={styles} label="Çalışma Süreleri"><input style={styles.input} className="isg-input" value={newEmployee.workingHours} onChange={e => setField("workingHours", e.target.value)} placeholder="Örn. 08:00 - 17:00" /></FormField>

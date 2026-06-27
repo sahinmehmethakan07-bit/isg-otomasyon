@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { IsoTarihSecici } from "./TarihSecici";
 import { formatDate } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { generateEmergencyPlanPDF } from "./pdf";
@@ -48,60 +49,6 @@ function Badge({ text, color }: { text: string; color: string }) {
   );
 }
 
-function DatePicker({ value, onChange, styles }: { value: string; onChange: (value: string) => void; styles: Record<string, React.CSSProperties> }) {
-  const [displayValue, setDisplayValue] = useState("");
-
-  useEffect(() => {
-    if (!value) {
-      setDisplayValue("");
-      return;
-    }
-    setDisplayValue(formatDate(value, ""));
-  }, [value]);
-
-  function formatInput(raw: string) {
-    const digits = raw.replace(/\D/g, "").slice(0, 8);
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
-    return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
-  }
-
-  function commitDate(text: string) {
-    const match = text.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
-    if (!match) return;
-    const [, day, month, year] = match;
-    const iso = `${year}-${month}-${day}`;
-    const parsed = new Date(iso);
-    if (!Number.isNaN(parsed.getTime())) onChange(iso);
-  }
-
-  return (
-    <div style={{ position: "relative" }}>
-      <input
-        style={{ ...styles.input, paddingRight: 44 }}
-        className="isg-input"
-        value={displayValue}
-        onChange={e => {
-          const formatted = formatInput(e.target.value);
-          setDisplayValue(formatted);
-          if (formatted.length === 10) commitDate(formatted);
-          if (formatted.length === 0) onChange("");
-        }}
-        onBlur={() => commitDate(displayValue)}
-        placeholder="Tarih seçin..."
-      />
-      <input
-        type="date"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer" }}
-        aria-label="Tarih seç"
-      />
-      <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--isg-text-muted)" }}>📅</span>
-    </div>
-  );
-}
-
 export function EmergencyPlansTab({
   styles,
   companies,
@@ -141,8 +88,8 @@ export function EmergencyPlansTab({
             </select>
           </FormField>
           <FormField label="Toplanma Alanı"><input style={styles.input} className="isg-input" value={newEmergencyPlan.assemblyArea} onChange={e => setNewEmergencyPlan({ ...newEmergencyPlan, assemblyArea: e.target.value })} placeholder="Örn. Ana otopark A noktası" /></FormField>
-          <FormField label="Plan Tarihi *"><DatePicker styles={styles} value={newEmergencyPlan.planDate} onChange={v => setNewEmergencyPlan({ ...newEmergencyPlan, planDate: v })} /></FormField>
-          <FormField label="Tatbikat Tarihi"><DatePicker styles={styles} value={newEmergencyPlan.drillDate} onChange={v => setNewEmergencyPlan({ ...newEmergencyPlan, drillDate: v })} /></FormField>
+          <FormField label="Plan Tarihi *"><IsoTarihSecici allowFuture styles={styles} value={newEmergencyPlan.planDate} onChange={v => setNewEmergencyPlan({ ...newEmergencyPlan, planDate: v })} /></FormField>
+          <FormField label="Tatbikat Tarihi"><IsoTarihSecici allowFuture styles={styles} value={newEmergencyPlan.drillDate} onChange={v => setNewEmergencyPlan({ ...newEmergencyPlan, drillDate: v })} /></FormField>
           <FormField label="Sorumlu"><input style={styles.input} className="isg-input" value={newEmergencyPlan.responsible} onChange={e => setNewEmergencyPlan({ ...newEmergencyPlan, responsible: e.target.value })} placeholder="Acil durum koordinatörü" /></FormField>
           <FormField label="Durum">
             <select style={styles.select} className="isg-input" value={newEmergencyPlan.status} onChange={e => setNewEmergencyPlan({ ...newEmergencyPlan, status: e.target.value as EmergencyPlanStatus })}>

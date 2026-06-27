@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { riskScoreColor } from "./dashboardUtils";
-import { formatDate, formatDateShort } from "./dateUtils";
+import { formatDate } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { generateRiskPDF } from "./pdf";
 import type { Company, DofRecord, RiskRecord, Signer } from "./types";
@@ -79,7 +79,7 @@ function DatePicker({ styles, value, onChange }: { styles: Record<string, React.
     setOpen(false);
   };
 
-  const displayValue = value ? formatDateShort(value) : "Tarih seçin...";
+  const displayValue = value ? formatDate(value) : "Tarih seçin...";
 
   return (
     <div ref={ref} style={{ position: "relative" }}>

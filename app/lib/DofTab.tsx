@@ -1,6 +1,6 @@
 import React, { ChangeEvent, useEffect, useState } from "react";
 import { priorityColor } from "./dashboardUtils";
-import { formatDate, formatDateShort } from "./dateUtils";
+import { formatDate } from "./dateUtils";
 import { CHECKLIST, findChecklistItem } from "./dofVisionChecklist";
 import { EmptyState } from "./EmptyState";
 import type { Company, DofRecord, Employee, Observer, RiskRecord } from "./types";
@@ -116,7 +116,7 @@ function DatePicker({ styles, value, onChange }: { styles: Record<string, React.
     setOpen(false);
   };
 
-  const displayValue = value ? formatDateShort(value) : "Tarih seçin...";
+  const displayValue = value ? formatDate(value) : "Tarih seçin...";
 
   return (
     <div ref={ref} style={{ position: "relative" }}>

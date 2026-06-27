@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { formatDate, formatDateShort } from "./dateUtils";
+import { formatDate } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { generatePpeAssignmentPDF } from "./pdf";
 import type { Company, Employee, PpeRecord, PpeStatus } from "./types";
@@ -55,7 +55,7 @@ function DatePicker({ value, onChange, styles }: { value: string; onChange: (val
       setDisplayValue("");
       return;
     }
-    setDisplayValue(formatDateShort(value, ""));
+    setDisplayValue(formatDate(value, ""));
   }, [value]);
 
   function formatInput(raw: string) {

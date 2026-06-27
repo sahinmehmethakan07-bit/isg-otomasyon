@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { documentTemplates } from "./constants";
 import { daysUntil, getDateStatus, statusColor } from "./dashboardUtils";
-import { formatDate, formatDateShort, formatRelativeDays } from "./dateUtils";
+import { formatDate, formatRelativeDays } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import type { Company, DocumentRecord, Employee } from "./types";
 
@@ -51,7 +51,7 @@ function DatePicker({ value, onChange, styles }: { value: string; onChange: (val
       setDisplayValue("");
       return;
     }
-    setDisplayValue(formatDateShort(value, ""));
+    setDisplayValue(formatDate(value, ""));
   }, [value]);
 
   function formatInput(raw: string) {

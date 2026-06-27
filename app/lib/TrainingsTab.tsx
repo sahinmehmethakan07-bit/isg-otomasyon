@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { formatDate, formatDateShort } from "./dateUtils";
+import { formatDate } from "./dateUtils";
 import {
   generateTrainingAttendancePDF,
   generateTrainingCertificatesPDF,
@@ -58,7 +58,7 @@ function DatePicker({ styles, value, onChange }: { styles: Styles; value: string
     setOpen(false);
   };
 
-  const displayValue = value ? formatDateShort(value) : "Tarih seçin...";
+  const displayValue = value ? formatDate(value) : "Tarih seçin...";
 
   return (
     <div ref={ref} style={{ position: "relative" }}>

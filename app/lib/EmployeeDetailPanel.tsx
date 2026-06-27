@@ -1,5 +1,6 @@
 import React from "react";
 import { createOnboardingFromChecklist } from "./dashboardUtils";
+import { TurkishDateInput } from "./TurkishDateInput";
 import type { Company, Employee, EmployeeChecklist } from "./types";
 
 type EmployeeDetailPanelProps = {
@@ -105,15 +106,16 @@ export function EmployeeDetailPanel({
         <p style={{ ...styles.sectionTitle, marginTop: 16 }}>Kontrol Listesi</p>
         {[{ key: "isgCertificateDate", label: "İSG Sertifikası Tarihi" }, { key: "ek2Date", label: "EK-2 Tarihi" }, { key: "orientationDate", label: "Oryantasyon Tarihi" }].map(({ key, label }) => (
           <FormField key={key} label={label}>
-            <input
-              style={{ ...styles.input, marginBottom: 8 }}
-              type="date"
-              value={(selectedEmployee.checklist as any)[key]}
-              onChange={e => {
-                const updated = { ...selectedEmployee.checklist, [key]: e.target.value };
-                updateEmployeeChecklist(selectedEmployee.id, updated);
-              }}
-            />
+            <div style={{ marginBottom: 8 }}>
+              <TurkishDateInput
+                styles={styles}
+                value={(selectedEmployee.checklist as any)[key]}
+                onChange={value => {
+                  const updated = { ...selectedEmployee.checklist, [key]: value };
+                  updateEmployeeChecklist(selectedEmployee.id, updated);
+                }}
+              />
+            </div>
           </FormField>
         ))}
         {[{ key: "preTest", label: "Ön Test" }, { key: "postTest", label: "Son Test" }, { key: "undertaking", label: "Taahhütname" }, { key: "kkdMinutes", label: "KKD Tutanağı" }, { key: "attendanceDoc", label: "Katılım Belgesi" }].map(({ key, label }) => (

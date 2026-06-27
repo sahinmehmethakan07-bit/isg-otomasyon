@@ -13,6 +13,7 @@ import React, { useState, useEffect } from "react";
 import { formatDate } from "./dateUtils";
 import { generateEk2PDF } from "./ek2PdfGenerator";
 import { EmptyState } from "./EmptyState";
+import { TurkishDateInput } from "./TurkishDateInput";
 import { db } from "../../lib/firebase";
 import {
   collection,
@@ -675,6 +676,8 @@ function Ek2Field({ label, value, onChange, wide, textarea, readOnly, styles, in
       <label style={styles.label}>{label}</label>
       {textarea ? (
         <textarea style={{ ...styles.input, minHeight: 60, resize: "vertical" }} value={value} onChange={e => onChange(e.target.value)} readOnly={readOnly} />
+      ) : inputType === "date" ? (
+        <TurkishDateInput styles={styles} value={value} onChange={onChange} readOnly={readOnly} />
       ) : (
         <input type={inputType} style={styles.input} value={value} onChange={e => onChange(e.target.value)} readOnly={readOnly} />
       )}

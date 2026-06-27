@@ -140,13 +140,18 @@ export function usePageState() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
+    const theme = localStorage.getItem("theme");
+    if (theme === "dark" || theme === "light") return theme === "dark";
     const saved = localStorage.getItem("isg-dark-mode");
     return saved !== null ? saved === "true" : true;
   });
 
   useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+    document.documentElement.classList.toggle("light", !darkMode);
     document.body.classList.remove("dark", "light");
     document.body.classList.add(darkMode ? "dark" : "light");
+    localStorage.setItem("theme", darkMode ? "dark" : "light");
     localStorage.setItem("isg-dark-mode", String(darkMode));
   }, [darkMode]);
 

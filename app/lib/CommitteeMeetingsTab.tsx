@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { formatDate, formatDateShort } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { generateCommitteeMeetingPDF } from "./pdf";
 import type { CommitteeMeetingRecord, CommitteeMeetingStatus, Company, Employee } from "./types";
@@ -50,8 +51,7 @@ function DatePicker({ value, onChange, styles }: { value: string; onChange: (val
       setDisplayValue("");
       return;
     }
-    const [year, month, day] = value.split("-");
-    setDisplayValue(year && month && day ? `${day}.${month}.${year}` : value);
+    setDisplayValue(formatDateShort(value, ""));
   }, [value]);
 
   function formatInput(raw: string) {
@@ -203,7 +203,7 @@ export function CommitteeMeetingsTab({
                 <tr key={meeting.id}>
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
                   <td style={styles.td} className="isg-td">{meeting.meetingNo || "—"}</td>
-                  <td style={styles.td} className="isg-td">{meeting.meetingDate ? new Date(meeting.meetingDate).toLocaleDateString("tr-TR") : "—"}</td>
+                  <td style={styles.td} className="isg-td">{formatDate(meeting.meetingDate)}</td>
                   <td style={styles.td} className="isg-td">{meeting.location || "—"}</td>
                   <td style={styles.td} className="isg-td">{meeting.chairperson || "—"}</td>
                   <td style={{ ...styles.td, minWidth: 180 }} className="isg-td">{participants.length > 0 ? participants.join(", ") : "—"}</td>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { formatDate, formatDateShort } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { generateAccidentReportPDF } from "./pdf";
 import type { AccidentReportRecord, AccidentReportStatus, AccidentSeverity, Company, Employee } from "./types";
@@ -58,8 +59,7 @@ function DatePicker({ value, onChange, styles }: { value: string; onChange: (val
       setDisplayValue("");
       return;
     }
-    const [year, month, day] = value.split("-");
-    setDisplayValue(year && month && day ? `${day}.${month}.${year}` : value);
+    setDisplayValue(formatDateShort(value, ""));
   }, [value]);
 
   function formatInput(raw: string) {
@@ -193,7 +193,7 @@ export function AccidentReportsTab({
                 <tr key={report.id}>
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
                   <td style={styles.td} className="isg-td">{employee ? `${employee.firstName} ${employee.lastName}` : "—"}</td>
-                  <td style={styles.td} className="isg-td">{report.accidentDate ? new Date(report.accidentDate).toLocaleDateString("tr-TR") : "—"}</td>
+                  <td style={styles.td} className="isg-td">{formatDate(report.accidentDate)}</td>
                   <td style={styles.td} className="isg-td">{report.location || "—"}</td>
                   <td style={styles.td} className="isg-td"><Badge text={report.incidentType} color="#ef4444" /></td>
                   <td style={styles.td} className="isg-td"><Badge text={report.severity} color={report.severity === "Ağır" ? "#C0392B" : report.severity === "Orta" ? "#D4A017" : "#2D6A4F"} /></td>

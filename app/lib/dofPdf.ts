@@ -1,3 +1,4 @@
+import { formatDate } from "./dateUtils";
 import type { Company, DofRecord, Observer, Signer } from "./types";
 
 type DofPdfContext = {
@@ -19,7 +20,7 @@ export async function generateDofPDF(
   const company = companies.find(c => c.id === dof.companyId);
   const observer = observers.find(o => o.id === dof.observerId);
   const companySigners = signers.filter(s => s.companyId === dof.companyId);
-  const today = new Date().toLocaleDateString("tr-TR");
+  const today = formatDate(new Date());
   const HL = "#FFFFFF";
   const BORDER = "#d1d5db";
 
@@ -57,7 +58,7 @@ export async function generateDofPDF(
           [infoLabel("Isyeri Unvani"), infoValue(company?.officialName || ""), infoLabel("SGK Sicil No."), infoValue(company?.sgkSicil || "")],
           [infoLabel("Isyeri Bolumu"), infoValue(dof.location || "GENEL"), infoLabel("DOF Tarihi"), infoValue(today)],
           [infoLabel("NACE Kodu"), infoValue(company?.naceCode || ""), infoLabel("Tehlike Sinifi"), infoValue(company?.dangerClass || "")],
-          [infoLabel("Calisan Sayisi"), infoValue(String(company?.employeeCount || "")), infoLabel("Termin Tarihi"), infoValue(dof.dueDate || "")],
+          [infoLabel("Calisan Sayisi"), infoValue(String(company?.employeeCount || "")), infoLabel("Termin Tarihi"), infoValue(formatDate(dof.dueDate, ""))],
           [infoLabel("Gozlemci"), infoValue(observer?.fullName || ""), infoLabel("Belge No."), infoValue(observer?.certificateNo || "")],
         ],
       },
@@ -92,7 +93,7 @@ export async function generateDofPDF(
             tdCell(dof.lawReference ? `Mevzuat: ${dof.lawReference}` : ""),
             tdCell(dof.affectedPersons || "Tum calisanlar"),
             tdCell(dof.responsible || ""),
-            tdCell(dof.dueDate || ""),
+            tdCell(formatDate(dof.dueDate, "")),
             tdCell(dof.lawReference || ""),
           ],
         ],

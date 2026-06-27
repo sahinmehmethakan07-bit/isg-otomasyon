@@ -1,4 +1,5 @@
 import React from "react";
+import { formatDate } from "./dateUtils";
 import { EmptyState } from "./EmptyState";
 import type { Company, Employee, ArchiveItem, TaskItem, TaskPriority } from "./types";
 import type { DashboardCard, QuickAction } from "./dashboardOverview";
@@ -112,7 +113,7 @@ export function OzetTab({
                       <div style={{ fontWeight: 800, marginBottom: 4 }}>{task.title}</div>
                       <div style={{ color: "var(--isg-text-muted)", fontSize: 12, lineHeight: 1.45 }}>{task.detail}</div>
                       <div style={{ color: "var(--isg-text-subtle)", fontSize: 11, marginTop: 6 }}>
-                        {company?.nickName || "Firma"} · {task.dueDate ? new Date(task.dueDate).toLocaleDateString("tr-TR") : "Termin yok"}
+                        {company?.nickName || "Firma"} · {task.dueDate ? formatDate(task.dueDate) : "Termin yok"}
                       </div>
                     </div>
                     <Badge text={task.priority} color={color[task.priority]} />
@@ -168,7 +169,7 @@ export function OzetTab({
             <div>
               <div style={{ fontWeight: 600, marginBottom: 4 }}>{c.nickName}</div>
               <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>
-                {empCount} personel · Sözleşme: {c.contractEnd} ·{" "}
+                {empCount} personel · Sözleşme: {formatDate(c.contractEnd)} ·{" "}
                 <Badge
                   text={c.dangerClass}
                   color={c.dangerClass === "Çok Tehlikeli" ? "#C0392B" : c.dangerClass === "Tehlikeli" ? "#D4A017" : "#2D6A4F"}

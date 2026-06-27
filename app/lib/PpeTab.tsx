@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { formatDate, formatDateShort } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { generatePpeAssignmentPDF } from "./pdf";
 import type { Company, Employee, PpeRecord, PpeStatus } from "./types";
@@ -54,8 +55,7 @@ function DatePicker({ value, onChange, styles }: { value: string; onChange: (val
       setDisplayValue("");
       return;
     }
-    const [year, month, day] = value.split("-");
-    setDisplayValue(year && month && day ? `${day}.${month}.${year}` : value);
+    setDisplayValue(formatDateShort(value, ""));
   }, [value]);
 
   function formatInput(raw: string) {
@@ -183,8 +183,8 @@ export function PpeTab({
                   <td style={styles.td} className="isg-td"><strong>{employee ? `${employee.firstName} ${employee.lastName}` : "—"}</strong></td>
                   <td style={styles.td} className="isg-td"><Badge text={record.equipment} color="#f59e0b" /></td>
                   <td style={styles.td} className="isg-td">{record.quantity}</td>
-                  <td style={styles.td} className="isg-td">{record.issueDate ? new Date(record.issueDate).toLocaleDateString("tr-TR") : "—"}</td>
-                  <td style={styles.td} className="isg-td">{record.returnDate ? new Date(record.returnDate).toLocaleDateString("tr-TR") : "—"}</td>
+                  <td style={styles.td} className="isg-td">{formatDate(record.issueDate)}</td>
+                  <td style={styles.td} className="isg-td">{formatDate(record.returnDate)}</td>
                   <td style={styles.td} className="isg-td">
                     <select style={{ ...styles.select, minWidth: 142 }} value={record.status} onChange={e => updatePpeStatus(record.id, e.target.value as PpeStatus)}>
                       <option>Teslim Edildi</option>

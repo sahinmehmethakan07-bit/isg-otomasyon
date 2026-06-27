@@ -1,4 +1,5 @@
 import React, { ChangeEvent, useEffect, useState } from "react";
+import { formatDateShort } from "./dateUtils";
 import type { Company, EmployeeScannedDocument, NewEmployeeForm } from "./types";
 
 type EmployeeFormProps = {
@@ -43,7 +44,7 @@ function DatePicker({ styles, value, onChange }: { styles: Record<string, React.
     setOpen(false);
   };
 
-  const displayValue = value ? new Date(value).toLocaleDateString("tr-TR") : "Tarih seçin...";
+  const displayValue = value ? formatDateShort(value) : "Tarih seçin...";
 
   return (
     <div ref={ref} style={{ position: "relative" }}>

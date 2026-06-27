@@ -12,6 +12,7 @@ import type {
   SignerRole,
   TrainingRecord,
 } from "./types";
+import { formatDate } from "./dateUtils";
 
 export async function generateRiskPDF(risks: RiskRecord[], companies: Company[], signers: Signer[]) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,8 +22,8 @@ export async function generateRiskPDF(risks: RiskRecord[], companies: Company[],
   const maker = pdfMake.default || pdfMake;
   maker.vfs = (pdfFonts.default || pdfFonts).vfs;
 
-  const today = new Date().toLocaleDateString("tr-TR");
-  const nextYear = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toLocaleDateString("tr-TR");
+  const today = formatDate(new Date());
+  const nextYear = formatDate(new Date(new Date().setFullYear(new Date().getFullYear() + 1)));
   const byCompany = companies
     .map((c) => ({ company: c, risks: risks.filter((r) => r.companyId === c.id) }))
     .filter((g) => g.risks.length > 0);
@@ -105,8 +106,8 @@ export async function generateRiskPDF(risks: RiskRecord[], companies: Company[],
         tCell(r.actionToTake || ""),
         tCell(r.affectedPersons || "-"),
         tCell(r.responsible || ""),
-        tCell(r.dueDate || "", "center"),
-        tCell(r.controlDate || "", "center"),
+        tCell(formatDate(r.dueDate, ""), "center"),
+        tCell(formatDate(r.controlDate, ""), "center"),
         tCell(String(r.residualProbability), "center"),
         tCell(String(r.residualSeverity), "center"),
         scoreCell(r.residualScore),
@@ -267,7 +268,7 @@ export async function generateAnnualPlanPDF(plans: AnnualPlanRecord[], companies
   const sortedPlans = [...plans].sort((a, b) => `${a.companyId}-${a.plannedDate}`.localeCompare(`${b.companyId}-${b.plannedDate}`));
   const content: any[] = [
     { text: "YILLIK İSG PLANI", fontSize: 16, bold: true, color: "#FFFFFF", alignment: "center", margin: [0, 0, 0, 4] },
-    { text: new Date().toLocaleDateString("tr-TR"), fontSize: 9, color: "#6B7280", alignment: "center", margin: [0, 0, 0, 14] },
+    { text: formatDate(new Date()), fontSize: 9, color: "#6B7280", alignment: "center", margin: [0, 0, 0, 14] },
     {
       table: {
         headerRows: 1,
@@ -279,7 +280,7 @@ export async function generateAnnualPlanPDF(plans: AnnualPlanRecord[], companies
             String(plan.year),
             plan.type,
             plan.title,
-            plan.plannedDate ? new Date(plan.plannedDate).toLocaleDateString("tr-TR") : "-",
+            formatDate(plan.plannedDate, "-"),
             plan.responsible || "-",
             plan.status,
             plan.notes || "-",
@@ -317,7 +318,7 @@ export async function generateTrainingPDF(trainings: TrainingRecord[], companies
 
   const content: any[] = [
     { text: "İSG EĞİTİM TAKİP LİSTESİ", fontSize: 16, bold: true, color: "#FFFFFF", alignment: "center", margin: [0, 0, 0, 4] },
-    { text: new Date().toLocaleDateString("tr-TR"), fontSize: 9, color: "#6B7280", alignment: "center", margin: [0, 0, 0, 14] },
+    { text: formatDate(new Date()), fontSize: 9, color: "#6B7280", alignment: "center", margin: [0, 0, 0, 14] },
     {
       table: {
         headerRows: 1,
@@ -328,7 +329,7 @@ export async function generateTrainingPDF(trainings: TrainingRecord[], companies
             companyName(training.companyId),
             training.title,
             training.type,
-            training.trainingDate ? new Date(training.trainingDate).toLocaleDateString("tr-TR") : "-",
+            formatDate(training.trainingDate, "-"),
             training.trainer || "-",
             training.participantIds.map(employeeName).filter(Boolean).join(", ") || "-",
             training.status,
@@ -379,7 +380,7 @@ export async function generateTrainingAttendancePDF(training: TrainingRecord, co
         widths: [90, "*", 90, "*"],
         body: [
           ["Firma", company?.officialName || company?.nickName || "-", "Eğitim Türü", training.type],
-          ["Eğitim Başlığı", training.title, "Eğitim Tarihi", training.trainingDate ? new Date(training.trainingDate).toLocaleDateString("tr-TR") : "-"],
+          ["Eğitim Başlığı", training.title, "Eğitim Tarihi", formatDate(training.trainingDate, "-")],
           ["Eğitmen", training.trainer || "-", "Süre / Yer", `${training.durationHours || "-"} saat / ${training.location || "-"}`],
         ].map(row => row.map((text, index) => ({ text, fontSize: 8, bold: index % 2 === 0, color: "#334155", margin: [4, 5, 4, 5] }))),
       },
@@ -436,7 +437,7 @@ export async function generateTrainingCertificatesPDF(training: TrainingRecord, 
             widths: ["*", "*"],
             body: [
               ["Firma", company?.officialName || company?.nickName || "-"],
-              ["Tarih", training.trainingDate ? new Date(training.trainingDate).toLocaleDateString("tr-TR") : "-"],
+              ["Tarih", formatDate(training.trainingDate, "-")],
               ["Süre", training.durationHours ? `${training.durationHours} saat` : "-"],
               ["Eğitmen", training.trainer || "-"],
             ].map(row => row.map((text, cellIndex) => ({ text, bold: cellIndex === 0, fontSize: 9, color: "#334155", margin: [5, 5, 5, 5] }))),
@@ -479,7 +480,7 @@ export async function generatePpeAssignmentPDF(record: PpeRecord, company: Compa
       table: {
         widths: [100, "*", 100, "*"],
         body: [
-          ["Firma", company?.officialName || company?.nickName || "-", "Tarih", record.issueDate ? new Date(record.issueDate).toLocaleDateString("tr-TR") : "-"],
+          ["Firma", company?.officialName || company?.nickName || "-", "Tarih", formatDate(record.issueDate, "-")],
           ["Personel", `${employee.firstName} ${employee.lastName}`, "T.C. Kimlik No", employee.tcNo || "-"],
           ["Bölüm", employee.department || "-", "Görev / Ünvan", employee.title || "-"],
         ].map(row => row.map((text, index) => ({ text, fontSize: 8, bold: index % 2 === 0, color: "#334155", margin: [4, 5, 4, 5] }))),
@@ -538,8 +539,8 @@ export async function generateEmergencyPlanPDF(plan: EmergencyPlanRecord, compan
   const companyEmployees = employees.filter(employee => employee.companyId === plan.companyId);
   const infoRows = [
     ["Firma", company?.officialName || company?.nickName || "-", "Tehlike Sınıfı", company?.dangerClass || "-"],
-    ["Plan Başlığı", plan.title, "Plan Tarihi", plan.planDate ? new Date(plan.planDate).toLocaleDateString("tr-TR") : "-"],
-    ["Senaryo", plan.scenario, "Tatbikat Tarihi", plan.drillDate ? new Date(plan.drillDate).toLocaleDateString("tr-TR") : "-"],
+    ["Plan Başlığı", plan.title, "Plan Tarihi", formatDate(plan.planDate, "-")],
+    ["Senaryo", plan.scenario, "Tatbikat Tarihi", formatDate(plan.drillDate, "-")],
     ["Toplanma Alanı", plan.assemblyArea || "-", "Sorumlu", plan.responsible || "-"],
   ];
 
@@ -623,7 +624,7 @@ export async function generateCommitteeMeetingPDF(meeting: CommitteeMeetingRecor
         widths: [90, "*", 90, "*"],
         body: [
           ["Firma", company?.officialName || company?.nickName || "-", "Toplantı No", meeting.meetingNo || "-"],
-          ["Tarih", meeting.meetingDate ? new Date(meeting.meetingDate).toLocaleDateString("tr-TR") : "-", "Yer", meeting.location || "-"],
+          ["Tarih", formatDate(meeting.meetingDate, "-"), "Yer", meeting.location || "-"],
           ["Başkan", meeting.chairperson || "-", "Durum", meeting.status],
         ].map(row => row.map((text, index) => ({ text, fontSize: 8, bold: index % 2 === 0, color: "#334155", margin: [4, 5, 4, 5] }))),
       },
@@ -691,7 +692,7 @@ export async function generateAccidentReportPDF(report: AccidentReportRecord, co
       table: {
         widths: [90, "*", 90, "*"],
         body: [
-          ["Firma", company?.officialName || company?.nickName || "-", "Tarih", report.accidentDate ? new Date(report.accidentDate).toLocaleDateString("tr-TR") : "-"],
+          ["Firma", company?.officialName || company?.nickName || "-", "Tarih", formatDate(report.accidentDate, "-")],
           ["Personel", employee ? `${employee.firstName} ${employee.lastName}` : "-", "T.C. Kimlik No", employee?.tcNo || "-"],
           ["Olay Yeri", report.location || "-", "Şiddet", report.severity],
           ["Olay Türü", report.incidentType || "-", "Durum", report.status],
@@ -704,7 +705,7 @@ export async function generateAccidentReportPDF(report: AccidentReportRecord, co
       ["Olay Açıklaması", report.description],
       ["Kök Neden", report.rootCause],
       ["Aksiyon Planı", report.actionPlan],
-      ["Sorumlu / Termin", `${report.responsible || "-"} / ${report.dueDate ? new Date(report.dueDate).toLocaleDateString("tr-TR") : "-"}`],
+      ["Sorumlu / Termin", `${report.responsible || "-"} / ${formatDate(report.dueDate, "-")}`],
       ["Not", report.notes],
     ].flatMap(([title, text]) => [
       { text: title, fontSize: 11, bold: true, color: "#FFFFFF", margin: [0, 0, 0, 6] },
@@ -744,10 +745,10 @@ export async function generateCompanyVisitPDF(visit: CompanyVisitRecord, company
       table: {
         widths: [90, "*", 90, "*"],
         body: [
-          ["Firma", company?.officialName || company?.nickName || "-", "Ziyaret Tarihi", visit.visitDate ? new Date(visit.visitDate).toLocaleDateString("tr-TR") : "-"],
+          ["Firma", company?.officialName || company?.nickName || "-", "Ziyaret Tarihi", formatDate(visit.visitDate, "-")],
           ["Ziyaret Amacı", visit.purpose, "Durum", visit.status],
           ["Ziyaret Eden", visit.visitor || "-", "Görüşülen Kişi", visit.contactedPerson || "-"],
-          ["Sonraki Ziyaret", visit.nextVisitDate ? new Date(visit.nextVisitDate).toLocaleDateString("tr-TR") : "-", "SGK Sicil", company?.sgkSicil || "-"],
+          ["Sonraki Ziyaret", formatDate(visit.nextVisitDate, "-"), "SGK Sicil", company?.sgkSicil || "-"],
         ].map(row => row.map((text, index) => ({ text, fontSize: 8, bold: index % 2 === 0, color: "#334155", margin: [4, 5, 4, 5] }))),
       },
       layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },

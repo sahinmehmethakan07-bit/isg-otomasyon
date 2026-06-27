@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { formatDate, formatDateShort } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { generateEmergencyPlanPDF } from "./pdf";
 import type { Company, EmergencyPlanRecord, EmergencyPlanStatus, Employee } from "./types";
@@ -55,8 +56,7 @@ function DatePicker({ value, onChange, styles }: { value: string; onChange: (val
       setDisplayValue("");
       return;
     }
-    const [year, month, day] = value.split("-");
-    setDisplayValue(year && month && day ? `${day}.${month}.${year}` : value);
+    setDisplayValue(formatDateShort(value, ""));
   }, [value]);
 
   function formatInput(raw: string) {
@@ -178,8 +178,8 @@ export function EmergencyPlansTab({
                   <td style={{ ...styles.td, minWidth: 170 }} className="isg-td"><strong>{plan.title}</strong></td>
                   <td style={styles.td} className="isg-td"><Badge text={plan.scenario} color="#f97316" /></td>
                   <td style={styles.td} className="isg-td">{plan.assemblyArea || "—"}</td>
-                  <td style={styles.td} className="isg-td">{plan.planDate ? new Date(plan.planDate).toLocaleDateString("tr-TR") : "—"}</td>
-                  <td style={styles.td} className="isg-td">{plan.drillDate ? new Date(plan.drillDate).toLocaleDateString("tr-TR") : "—"}</td>
+                  <td style={styles.td} className="isg-td">{formatDate(plan.planDate)}</td>
+                  <td style={styles.td} className="isg-td">{formatDate(plan.drillDate)}</td>
                   <td style={styles.td} className="isg-td">{plan.responsible || "—"}</td>
                   <td style={styles.td} className="isg-td">
                     <select style={{ ...styles.select, minWidth: 150 }} value={plan.status} onChange={e => updateEmergencyPlanStatus(plan.id, e.target.value as EmergencyPlanStatus)}>

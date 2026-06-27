@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { formatDate, formatDateShort } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { generateAnnualPlanPDF } from "./pdf";
 import type { AnnualPlanRecord, AnnualPlanStatus, AnnualPlanType, Company } from "./types";
@@ -51,7 +52,7 @@ function DatePicker({ styles, value, onChange }: { styles: Styles; value: string
     setOpen(false);
   };
 
-  const displayValue = value ? new Date(value).toLocaleDateString("tr-TR") : "Tarih seçin...";
+  const displayValue = value ? formatDateShort(value) : "Tarih seçin...";
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -159,7 +160,7 @@ export function AnnualPlansTab({
                   <td style={styles.td} className="isg-td">{plan.year}</td>
                   <td style={styles.td} className="isg-td"><Badge styles={styles} text={plan.type} color="#1B4332" /></td>
                   <td style={{ ...styles.td, minWidth: 180 }} className="isg-td"><strong>{plan.title}</strong></td>
-                  <td style={styles.td} className="isg-td">{plan.plannedDate ? new Date(plan.plannedDate).toLocaleDateString("tr-TR") : "—"}</td>
+                  <td style={styles.td} className="isg-td">{formatDate(plan.plannedDate)}</td>
                   <td style={styles.td} className="isg-td">{plan.responsible || "—"}</td>
                   <td style={styles.td} className="isg-td"><select style={{ ...styles.select, minWidth: 132 }} value={plan.status} onChange={e => updateAnnualPlanStatus(plan.id, e.target.value as AnnualPlanStatus)}><option>Planlandı</option><option>Devam Ediyor</option><option>Tamamlandı</option><option>Gecikti</option></select></td>
                   <td style={{ ...styles.td, color: "var(--isg-text-muted)", minWidth: 160 }}>{plan.notes || "—"}</td>

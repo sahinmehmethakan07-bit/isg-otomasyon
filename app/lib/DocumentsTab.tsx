@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { documentTemplates } from "./constants";
 import { daysUntil, getDateStatus, statusColor } from "./dashboardUtils";
+import { formatDate, formatDateShort, formatRelativeDays } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import type { Company, DocumentRecord, Employee } from "./types";
 
@@ -50,8 +51,7 @@ function DatePicker({ value, onChange, styles }: { value: string; onChange: (val
       setDisplayValue("");
       return;
     }
-    const [year, month, day] = value.split("-");
-    setDisplayValue(year && month && day ? `${day}.${month}.${year}` : value);
+    setDisplayValue(formatDateShort(value, ""));
   }, [value]);
 
   function formatInput(raw: string) {
@@ -143,9 +143,9 @@ export function DocumentsTab({
                   <td style={{ ...styles.td, fontWeight: 500 }}>{d.type}</td>
                   <td style={styles.td} className="isg-td">{company?.nickName}</td>
                   <td style={{ ...styles.td, fontSize: 12, color: "var(--isg-text-muted)" }}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</td>
-                  <td style={{ ...styles.td, fontSize: 12 }}>{d.issueDate}</td>
-                  <td style={{ ...styles.td, fontSize: 12 }}>{d.expiryDate || "—"}</td>
-                  <td style={styles.td} className="isg-td">{d.expiryDate ? <div><Badge text={ds} color={statusColor(ds)} />{days !== null && days >= 0 && <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>{days} gün</div>}</div> : "—"}</td>
+                  <td style={{ ...styles.td, fontSize: 12 }}>{formatDate(d.issueDate)}</td>
+                  <td style={{ ...styles.td, fontSize: 12 }}>{formatDate(d.expiryDate)}</td>
+                  <td style={styles.td} className="isg-td">{d.expiryDate ? <div><Badge text={ds} color={statusColor(ds)} />{days !== null && days >= 0 && <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>{formatRelativeDays(days)}</div>}</div> : "—"}</td>
                   <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteDocument(d.id)}>Sil</button></td>
                 </tr>
               );

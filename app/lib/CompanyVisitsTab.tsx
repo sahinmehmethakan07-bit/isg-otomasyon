@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { formatDate, formatDateShort } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { generateCompanyVisitPDF } from "./pdf";
 import type { Company, CompanyVisitPurpose, CompanyVisitRecord, CompanyVisitStatus } from "./types";
@@ -54,8 +55,7 @@ function DatePicker({ value, onChange, styles }: { value: string; onChange: (val
       setDisplayValue("");
       return;
     }
-    const [year, month, day] = value.split("-");
-    setDisplayValue(year && month && day ? `${day}.${month}.${year}` : value);
+    setDisplayValue(formatDateShort(value, ""));
   }, [value]);
 
   function formatInput(raw: string) {
@@ -171,7 +171,7 @@ export function CompanyVisitsTab({
               return (
                 <tr key={visit.id}>
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
-                  <td style={styles.td} className="isg-td">{visit.visitDate ? new Date(visit.visitDate).toLocaleDateString("tr-TR") : "—"}</td>
+                  <td style={styles.td} className="isg-td">{formatDate(visit.visitDate)}</td>
                   <td style={styles.td} className="isg-td"><Badge text={visit.purpose} color="#1B4332" /></td>
                   <td style={styles.td} className="isg-td">{visit.visitor || "—"}</td>
                   <td style={styles.td} className="isg-td">{visit.contactedPerson || "—"}</td>
@@ -184,7 +184,7 @@ export function CompanyVisitsTab({
                     </select>
                   </td>
                   <td style={{ ...styles.td, minWidth: 260, color: "var(--isg-text-muted)" }} className="isg-td">{[visit.findings, visit.actions, visit.notes].filter(Boolean).join(" / ") || "—"}</td>
-                  <td style={styles.td} className="isg-td">{visit.nextVisitDate ? new Date(visit.nextVisitDate).toLocaleDateString("tr-TR") : "—"}</td>
+                  <td style={styles.td} className="isg-td">{formatDate(visit.nextVisitDate)}</td>
                   <td style={styles.td} className="isg-td"><button style={styles.btnSecondary} onClick={() => generateCompanyVisitPDF(visit, company)}>Ziyaret PDF</button></td>
                   <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteCompanyVisit(visit.id)}>Sil</button></td>
                 </tr>

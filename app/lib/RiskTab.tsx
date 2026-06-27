@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { riskScoreColor } from "./dashboardUtils";
+import { formatDate, formatDateShort } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { generateRiskPDF } from "./pdf";
 import type { Company, DofRecord, RiskRecord, Signer } from "./types";
@@ -78,7 +79,7 @@ function DatePicker({ styles, value, onChange }: { styles: Record<string, React.
     setOpen(false);
   };
 
-  const displayValue = value ? new Date(value).toLocaleDateString("tr-TR") : "Tarih seçin...";
+  const displayValue = value ? formatDateShort(value) : "Tarih seçin...";
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -225,8 +226,8 @@ export function RiskTab({
                   <td style={styles.td} className="isg-td"><span style={{ fontWeight: 700, color: riskScoreColor(r.residualScore), fontSize: 14 }}>{r.residualScore}</span></td>
                   <td style={{ ...styles.td, fontSize: 11 }}>{r.affectedPersons || "—"}</td>
                   <td style={{ ...styles.td, fontSize: 12 }}>{r.responsible}</td>
-                  <td style={{ ...styles.td, fontSize: 12 }}>{r.dueDate}</td>
-                  <td style={{ ...styles.td, fontSize: 12 }}>{r.controlDate || "—"}</td>
+                  <td style={{ ...styles.td, fontSize: 12 }}>{formatDate(r.dueDate)}</td>
+                  <td style={{ ...styles.td, fontSize: 12 }}>{formatDate(r.controlDate)}</td>
                   <td style={styles.td} className="isg-td"><Badge styles={styles} text={r.status} color={r.status === "Kapandı" ? "#2D6A4F" : r.status === "Kontrol Altında" ? "#D4A017" : "#C0392B"} /></td>
                   <td style={{ ...styles.td, fontSize: 11, color: "#6B7280", maxWidth: 140 }}>{r.lawReference || "—"}</td>
                   <td style={styles.td} className="isg-td">

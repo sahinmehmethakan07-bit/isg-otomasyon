@@ -10,6 +10,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { formatDate } from "./dateUtils";
 import { generateEk2PDF } from "./ek2PdfGenerator";
 import { EmptyState } from "./EmptyState";
 import { db } from "../../lib/firebase";
@@ -402,7 +403,7 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
                     <td style={styles.td}>{f.employeeName}</td>
                     <td style={styles.td}>{f.tcKimlikNo}</td>
                     <td style={styles.td}>{f.companyName}</td>
-                    <td style={styles.td}>{f.formTarihi}</td>
+                    <td style={styles.td}>{formatDate(f.formTarihi)}</td>
                     <td style={styles.td}>
                       <span style={{
                         ...styles.badge,
@@ -639,7 +640,7 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
           <Ek2Field label="Diploma Tarih ve No" value={(form as any)["diplomaTarihNo"] || ""} onChange={(val) => updateField("diplomaTarihNo", val)} readOnly={readOnly} styles={styles} />
           <Ek2Field label="Diploma Tescil Tarih ve No" value={(form as any)["diplomaTescilNo"] || ""} onChange={(val) => updateField("diplomaTescilNo", val)} readOnly={readOnly} styles={styles} />
           <Ek2Field label="İşyeri Hekimliği Belgesi Tarih ve No" value={(form as any)["isyeriHekimBelgeNo"] || ""} onChange={(val) => updateField("isyeriHekimBelgeNo", val)} readOnly={readOnly} styles={styles} />
-          <Ek2Field label="Form Tarihi" value={(form as any)["formTarihi"] || ""} onChange={(val) => updateField("formTarihi", val)} readOnly={readOnly} styles={styles} />
+          <Ek2Field label="Form Tarihi" value={(form as any)["formTarihi"] || ""} onChange={(val) => updateField("formTarihi", val)} readOnly={readOnly} styles={styles} inputType="date" />
         </div>
 
         {/* Kaydet / Geri butonları */}
@@ -668,14 +669,14 @@ function Ek2SectionTitle({ title }: { title: string }) {
   );
 }
 
-function Ek2Field({ label, value, onChange, wide, textarea, readOnly, styles }: { label: string; value: string; onChange: (val: string) => void; wide?: boolean; textarea?: boolean; readOnly: boolean; styles: any }) {
+function Ek2Field({ label, value, onChange, wide, textarea, readOnly, styles, inputType = "text" }: { label: string; value: string; onChange: (val: string) => void; wide?: boolean; textarea?: boolean; readOnly: boolean; styles: any; inputType?: React.HTMLInputTypeAttribute }) {
   return (
     <div style={wide ? { gridColumn: "1 / -1" } : {}}>
       <label style={styles.label}>{label}</label>
       {textarea ? (
         <textarea style={{ ...styles.input, minHeight: 60, resize: "vertical" }} value={value} onChange={e => onChange(e.target.value)} readOnly={readOnly} />
       ) : (
-        <input style={styles.input} value={value} onChange={e => onChange(e.target.value)} readOnly={readOnly} />
+        <input type={inputType} style={styles.input} value={value} onChange={e => onChange(e.target.value)} readOnly={readOnly} />
       )}
     </div>
   );

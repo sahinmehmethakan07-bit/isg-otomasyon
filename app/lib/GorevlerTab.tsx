@@ -1,4 +1,5 @@
 import React from "react";
+import { formatDate } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import type { Company, TaskItem, TaskPriority } from "./types";
 
@@ -118,7 +119,7 @@ export function GorevlerTab({
                     {task.owner}
                   </td>
                   <td style={styles.td} className="isg-td">
-                    {task.dueDate ? new Date(task.dueDate).toLocaleDateString("tr-TR") : "—"}
+                    {formatDate(task.dueDate)}
                   </td>
                   <td style={styles.td} className="isg-td">
                     <button style={styles.btnSecondary} onClick={() => setActiveTab(task.sourceTab)}>

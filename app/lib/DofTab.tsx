@@ -1,5 +1,6 @@
 import React, { ChangeEvent, useEffect, useState } from "react";
 import { priorityColor } from "./dashboardUtils";
+import { formatDate, formatDateShort } from "./dateUtils";
 import { CHECKLIST, findChecklistItem } from "./dofVisionChecklist";
 import { EmptyState } from "./EmptyState";
 import type { Company, DofRecord, Employee, Observer, RiskRecord } from "./types";
@@ -115,7 +116,7 @@ function DatePicker({ styles, value, onChange }: { styles: Record<string, React.
     setOpen(false);
   };
 
-  const displayValue = value ? new Date(value).toLocaleDateString("tr-TR") : "Tarih seçin...";
+  const displayValue = value ? formatDateShort(value) : "Tarih seçin...";
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -473,7 +474,7 @@ export function DofTab({
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
                 <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>📍 {dof.location}</span>
                 <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>👤 {dof.responsible}</span>
-                <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>📅 {dof.dueDate}</span>
+                <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>📅 {formatDate(dof.dueDate)}</span>
                 {dof.affectedPersons && <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>👥 {dof.affectedPersons}</span>}
               </div>
               <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>

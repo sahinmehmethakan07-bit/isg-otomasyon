@@ -1,5 +1,6 @@
 import React from "react";
 import { checklistCompletion, createOnboardingFromChecklist } from "./dashboardUtils";
+import { formatDate } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import type { Company, Employee } from "./types";
 
@@ -69,7 +70,7 @@ export function EmployeeTable({
                   <td style={{ ...styles.td, fontSize: 12 }}>{emp.department || "—"}</td>
                   <td style={styles.td} className="isg-td">{emp.title}</td>
                   <td style={{ ...styles.td, fontSize: 12 }}>{company?.nickName}</td>
-                  <td style={{ ...styles.td, fontSize: 12 }}>{emp.hireDate}</td>
+                  <td style={{ ...styles.td, fontSize: 12 }}>{formatDate(emp.hireDate)}</td>
                   <td style={styles.td} className="isg-td"><Badge text={onboarding.status === "completed" ? "Tamamlandı" : "Bekliyor"} color={onboarding.status === "completed" ? "#2D6A4F" : "#D4A017"} /></td>
                   <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)", minWidth: 220 }}>{onboarding.missingSteps.length > 0 ? onboarding.missingSteps.join(", ") : "Tüm görevler tamamlandı"}</td>
                   <td style={styles.td} className="isg-td">

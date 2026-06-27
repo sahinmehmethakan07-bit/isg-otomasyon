@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { dangerFromNace, daysUntil, extractNaceFromSgk, getDateStatus, officialNameFromSgk, statusColor } from "./dashboardUtils";
+import { formatDate, formatDateShort } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import type { Company, DangerClass, ServiceType } from "./types";
 
@@ -54,8 +55,7 @@ function DatePicker({ value, onChange, styles }: { value: string; onChange: (val
       setDisplayValue("");
       return;
     }
-    const [year, month, day] = value.split("-");
-    setDisplayValue(year && month && day ? `${day}.${month}.${year}` : value);
+    setDisplayValue(formatDateShort(value, ""));
   }, [value]);
 
   function formatInput(raw: string) {
@@ -161,8 +161,8 @@ export function CompaniesTab({
                   <td style={styles.td} className="isg-td"><Badge text={c.dangerClass} color={c.dangerClass === "Çok Tehlikeli" ? "#C0392B" : c.dangerClass === "Tehlikeli" ? "#D4A017" : "#2D6A4F"} /></td>
                   <td style={styles.td} className="isg-td">{c.employeeCount}</td>
                   <td style={styles.td} className="isg-td">
-                    <span style={{ fontSize: 12 }}>{c.contractEnd}</span> <Badge text={cs} color={statusColor(cs)} />
-                    {remainingDays !== null && remainingDays >= 0 && <div style={{ fontSize: 11, color: "#6B7280", marginTop: 4 }}>{remainingDays} gün</div>}
+                    <span style={{ fontSize: 12 }}>{formatDate(c.contractEnd)}</span> <Badge text={cs} color={statusColor(cs)} />
+                    {remainingDays !== null && remainingDays >= 0 && <div style={{ fontSize: 11, color: "#6B7280", marginTop: 4 }}>{remainingDays} gün kaldı</div>}
                   </td>
                   <td style={{ ...styles.td, fontSize: 12 }}>{c.serviceType}</td>
                   <td style={styles.td} className="isg-td"><Badge text={ind.text} color={ind.color} /></td>

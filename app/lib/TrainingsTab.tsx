@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { formatDate, formatDateShort } from "./dateUtils";
 import {
   generateTrainingAttendancePDF,
   generateTrainingCertificatesPDF,
@@ -57,7 +58,7 @@ function DatePicker({ styles, value, onChange }: { styles: Styles; value: string
     setOpen(false);
   };
 
-  const displayValue = value ? new Date(value).toLocaleDateString("tr-TR") : "Tarih seçin...";
+  const displayValue = value ? formatDateShort(value) : "Tarih seçin...";
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -226,7 +227,7 @@ export function TrainingsTab({
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
                   <td style={{ ...styles.td, minWidth: 180 }} className="isg-td"><strong>{training.title}</strong></td>
                   <td style={styles.td} className="isg-td"><Badge styles={styles} text={training.type} color="#8b5cf6" /></td>
-                  <td style={styles.td} className="isg-td">{training.trainingDate ? new Date(training.trainingDate).toLocaleDateString("tr-TR") : "—"}</td>
+                  <td style={styles.td} className="isg-td">{formatDate(training.trainingDate)}</td>
                   <td style={styles.td} className="isg-td">{training.durationHours || training.location ? (training.durationHours || "—") + " saat / " + (training.location || "—") : "—"}</td>
                   <td style={styles.td} className="isg-td">{training.trainer || "—"}</td>
                   <td style={{ ...styles.td, minWidth: 180 }} className="isg-td">{participants.length > 0 ? participants.join(", ") : "—"}</td>

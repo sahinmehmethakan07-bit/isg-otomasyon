@@ -8,6 +8,7 @@ import {
   requireAuthenticatedUser,
   securityErrorResponse,
 } from "../../lib/serverSecurity";
+import { formatDate, formatDateShort } from "../../lib/dateUtils";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDCCKqJLR7V_VN9n4NPM5_ZlPlc-O1alAk",
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
           <p style="font-size:14px;color:#334155;margin:0 0 16px;"><strong>${escapeHtml(companyName)}</strong> firmasina ait yeni bir DOF kaydi olusturulmustur.</p>
           <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Baslik:</strong> ${escapeHtml(dof.title)}</p>
           <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Oncelik:</strong> ${escapeHtml(dof.priority || "Orta")}</p>
-          <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Termin:</strong> ${escapeHtml(dof.dueDate || "—")}</p>
+          <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Termin:</strong> ${escapeHtml(formatDate(dof.dueDate))}</p>
           ${settings.message ? `<p style="font-size:14px;color:#334155;margin:16px 0 0;padding:12px;background:#1A1A1A;border-radius:6px;border:1px solid #e2e8f0;">${escapeHtml(settings.message)}</p>` : ""}
           <p style="font-size:13px;color:#6B7280;margin:20px 0 0;">Detayli bilgi icin ekteki PDF dosyasini inceleyiniz.</p>
           <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;">
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "RESEND_API_KEY tanimli degil" }, { status: 500 });
     }
 
-    const today = new Date().toLocaleDateString("tr-TR").replace(/\./g, "_");
+    const today = formatDateShort(new Date()).replace(/\./g, "_");
     const emailPayload: any = {
       from: "ISG Otomasyon <onboarding@resend.dev>",
       to: [settings.toEmail],

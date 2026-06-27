@@ -3,6 +3,8 @@
  * Resmi formun birebir aynısı. Kompakt 2 sayfa.
  */
 
+import { formatDate } from "./dateUtils";
+
 export async function generateEk2PDF(form: any) {
   const pdfMake = (await import("pdfmake/build/pdfmake")) as any;
   const pdfFonts = (await import("pdfmake/build/vfs_fonts")) as any;
@@ -187,7 +189,7 @@ export async function generateEk2PDF(form: any) {
     { text: "(*Yapılan muayene sonucunda çalışanın gece veya vardiyalı çalışma koşullarında çalışıp çalışamayacağı ile vücut sağlığını ve bütünlüğünü tamamlayıcı uygun alet teçhizat vs... bulunması durumunda çalışan için bu koşullarla çalışmaya elverişli olup olmadığı kanaati belirtilecektir.)", fontSize: 6.5, italics: true, margin: [0, 0, 0, 8] },
 
     // Tarih + İmza
-    { text: "……...... /............. / 20.............", fontSize: F, alignment: "right", margin: [0, 0, 0, 6] },
+    { text: formatDate(form.formTarihi, "……...... /............. / 20............."), fontSize: F, alignment: "right", margin: [0, 0, 0, 6] },
     { stack: [
       { text: "İMZA", bold: true, fontSize: F, margin: [0, 0, 0, 2] },
       { text: `Adı ve Soyadı: ${v(form.doktorAdi)}`, fontSize: F },

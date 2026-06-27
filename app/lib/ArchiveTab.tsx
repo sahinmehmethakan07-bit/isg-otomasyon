@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { formatDate, formatDateShort } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import type { ArchiveItem, Company } from "./types";
 
@@ -41,8 +42,7 @@ function DatePicker({ value, onChange, styles }: { value: string; onChange: (val
       setDisplayValue("");
       return;
     }
-    const [year, month, day] = value.split("-");
-    setDisplayValue(year && month && day ? `${day}.${month}.${year}` : value);
+    setDisplayValue(formatDateShort(value, ""));
   }, [value]);
 
   function formatInput(raw: string) {
@@ -178,7 +178,7 @@ export function ArchiveTab({
                   <td style={{ ...styles.td, minWidth: 220, fontWeight: 700 }} className="isg-td">{item.title || "—"}</td>
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
                   <td style={{ ...styles.td, color: "var(--isg-text-muted)" }} className="isg-td">{item.owner || "—"}</td>
-                  <td style={styles.td} className="isg-td">{item.date ? new Date(item.date).toLocaleDateString("tr-TR") : "—"}</td>
+                  <td style={styles.td} className="isg-td">{formatDate(item.date)}</td>
                   <td style={styles.td} className="isg-td"><Badge text={item.status || "Arşivde"} color={color} /></td>
                   <td style={styles.td} className="isg-td"><button style={styles.btnSecondary} onClick={() => setActiveTab(item.sourceTab)}>Modüle Git</button></td>
                 </tr>

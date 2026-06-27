@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { riskScoreColor } from "./dashboardUtils";
+import { EmptyTableRow } from "./EmptyState";
 import { generateRiskPDF } from "./pdf";
 import type { Company, DofRecord, RiskRecord, Signer } from "./types";
 
@@ -106,7 +107,7 @@ function DatePicker({ styles, value, onChange }: { styles: Record<string, React.
             {Array.from({ length: firstDay }).map((_, i) => <div key={"empty-" + i} />)}
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
               const isSelected = selectedDate && selectedDate.getFullYear() === viewYear && selectedDate.getMonth() === viewMonth && selectedDate.getDate() === day;
-              return <button key={day} type="button" onClick={() => select(day)} style={{ backgroundColor: isSelected ? "#0ea5e9" : "transparent", color: isSelected ? "#fff" : "var(--isg-text)", border: "none", borderRadius: 4, padding: "4px 0", fontSize: 12, cursor: "pointer", textAlign: "center" }}>{day}</button>;
+              return <button key={day} type="button" onClick={() => select(day)} style={{ backgroundColor: isSelected ? "#1B4332" : "transparent", color: isSelected ? "#fff" : "var(--isg-text)", border: "none", borderRadius: 4, padding: "4px 0", fontSize: 12, cursor: "pointer", textAlign: "center" }}>{day}</button>;
             })}
           </div>
           <button type="button" onClick={() => { onChange(""); setOpen(false); }} style={{ ...styles.btnSecondary, width: "100%", marginTop: 8, fontSize: 11 }}>Temizle</button>
@@ -176,7 +177,7 @@ export function RiskTab({
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-        <span style={{ color: "#64748b", fontSize: 13 }}>{filteredRisks.length} kayıt</span>
+        <span style={{ color: "#6B7280", fontSize: 13 }}>{filteredRisks.length} kayıt</span>
         <button
           style={{ ...styles.btnSuccess, marginLeft: "auto", opacity: pdfLoading || risks.length === 0 ? 0.6 : 1 }}
           disabled={pdfLoading || risks.length === 0}
@@ -226,8 +227,8 @@ export function RiskTab({
                   <td style={{ ...styles.td, fontSize: 12 }}>{r.responsible}</td>
                   <td style={{ ...styles.td, fontSize: 12 }}>{r.dueDate}</td>
                   <td style={{ ...styles.td, fontSize: 12 }}>{r.controlDate || "—"}</td>
-                  <td style={styles.td} className="isg-td"><Badge styles={styles} text={r.status} color={r.status === "Kapandı" ? "#16a34a" : r.status === "Kontrol Altında" ? "#d97706" : "#dc2626"} /></td>
-                  <td style={{ ...styles.td, fontSize: 11, color: "#94a3b8", maxWidth: 140 }}>{r.lawReference || "—"}</td>
+                  <td style={styles.td} className="isg-td"><Badge styles={styles} text={r.status} color={r.status === "Kapandı" ? "#2D6A4F" : r.status === "Kontrol Altında" ? "#D4A017" : "#C0392B"} /></td>
+                  <td style={{ ...styles.td, fontSize: 11, color: "#6B7280", maxWidth: 140 }}>{r.lawReference || "—"}</td>
                   <td style={styles.td} className="isg-td">
                     {sourceDof ? (
                       <span onClick={() => setActiveTab("dof")} style={{ cursor: "pointer", display: "inline-block", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 600, backgroundColor: "#7c3aed22", color: "#7c3aed", border: "1px solid #7c3aed44" }} title={sourceDof.title}>
@@ -241,6 +242,9 @@ export function RiskTab({
                 </tr>
               );
             })}
+            {filteredRisks.length === 0 && (
+              <EmptyTableRow colSpan={20} message="Yeni risk kaydı eklemek için yukarıdaki formu kullanın veya DÖF kaydından risk oluşturun." />
+            )}
           </tbody>
         </table>
       </div>

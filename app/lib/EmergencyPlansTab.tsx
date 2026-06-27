@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { EmptyTableRow } from "./EmptyState";
 import { generateEmergencyPlanPDF } from "./pdf";
 import type { Company, EmergencyPlanRecord, EmergencyPlanStatus, Employee } from "./types";
 
@@ -195,9 +196,7 @@ export function EmergencyPlansTab({
               );
             })}
             {filteredEmergencyPlans.length === 0 && (
-              <tr>
-                <td colSpan={11} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz acil durum planı yok.</td>
-              </tr>
+              <EmptyTableRow colSpan={11} message="Yeni acil durum planı eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>
         </table>

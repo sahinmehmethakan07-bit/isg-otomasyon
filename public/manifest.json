@@ -4,8 +4,8 @@
   "description": "İş Sağlığı ve Güvenliği Yönetim Sistemi",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f3460",
-  "theme_color": "#0f3460",
+  "background_color": "#1B4332",
+  "theme_color": "#1B4332",
   "orientation": "portrait-primary",
   "icons": [
     {

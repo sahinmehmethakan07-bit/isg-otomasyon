@@ -70,9 +70,9 @@ export async function POST(req: NextRequest) {
     // 5. Kisa HTML govde (PDF ekte)
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-        <div style="background:#1e293b;padding:20px;border-radius:8px 8px 0 0;">
+        <div style="background:#FFFFFF;padding:20px;border-radius:8px 8px 0 0;">
           <h1 style="color:white;margin:0;font-size:20px;">ISG Otomasyon</h1>
-          <p style="color:#94a3b8;margin:4px 0 0;font-size:14px;">DOF Bildirimi</p>
+          <p style="color:#6B7280;margin:4px 0 0;font-size:14px;">DOF Bildirimi</p>
         </div>
         <div style="border:1px solid #e2e8f0;border-top:none;padding:24px;border-radius:0 0 8px 8px;">
           <p style="font-size:14px;color:#334155;margin:0 0 8px;">Sayin Yetkili,</p>
@@ -80,10 +80,10 @@ export async function POST(req: NextRequest) {
           <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Baslik:</strong> ${escapeHtml(dof.title)}</p>
           <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Oncelik:</strong> ${escapeHtml(dof.priority || "Orta")}</p>
           <p style="font-size:14px;color:#334155;margin:0 0 8px;"><strong>Termin:</strong> ${escapeHtml(dof.dueDate || "—")}</p>
-          ${settings.message ? `<p style="font-size:14px;color:#334155;margin:16px 0 0;padding:12px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">${escapeHtml(settings.message)}</p>` : ""}
-          <p style="font-size:13px;color:#64748b;margin:20px 0 0;">Detayli bilgi icin ekteki PDF dosyasini inceleyiniz.</p>
+          ${settings.message ? `<p style="font-size:14px;color:#334155;margin:16px 0 0;padding:12px;background:#1A1A1A;border-radius:6px;border:1px solid #e2e8f0;">${escapeHtml(settings.message)}</p>` : ""}
+          <p style="font-size:13px;color:#6B7280;margin:20px 0 0;">Detayli bilgi icin ekteki PDF dosyasini inceleyiniz.</p>
           <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;">
-            <p style="color:#94a3b8;font-size:12px;margin:0;">Bu bildirim ISG Otomasyon tarafindan otomatik gonderilmistir.</p>
+            <p style="color:#6B7280;font-size:12px;margin:0;">Bu bildirim ISG Otomasyon tarafindan otomatik gonderilmistir.</p>
           </div>
         </div>
       </div>`;

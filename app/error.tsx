@@ -25,9 +25,9 @@ export default function Error({
         display: "grid",
         placeItems: "center",
         padding: 24,
-        background: "linear-gradient(135deg, #090a0d 0%, #101218 48%, #0b1110 100%)",
-        color: "#f8fafc",
-        fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
+        background: "linear-gradient(135deg, #F8F7F4 0%, #F1EEE8 48%, #F8F7F4 100%)",
+        color: "#1A1A1A",
+        fontFamily: "var(--isg-font-sans)",
       }}
     >
       <section
@@ -42,7 +42,7 @@ export default function Error({
       >
         <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
         <h1 style={{ margin: "0 0 8px", fontSize: 24 }}>Sayfa güvenli moda alındı</h1>
-        <p style={{ margin: "0 0 18px", color: "#a8b3c7", lineHeight: 1.55 }}>
+        <p style={{ margin: "0 0 18px", color: "#6B7280", lineHeight: 1.55 }}>
           Oturum veya rol bilgisi çakıştığı için ekran açılmadı. Yeniden deneyebilir ya da giriş ekranına dönüp temiz oturum açabilirsiniz.
         </p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -53,7 +53,7 @@ export default function Error({
               border: "1px solid rgba(255,255,255,0.14)",
               borderRadius: 8,
               background: "#242832",
-              color: "#f8fafc",
+              color: "#1A1A1A",
               padding: "10px 14px",
               fontWeight: 700,
               cursor: "pointer",
@@ -67,7 +67,7 @@ export default function Error({
             style={{
               border: "1px solid rgba(76,201,166,0.4)",
               borderRadius: 8,
-              background: "#4cc9a6",
+              background: "#2D6A4F",
               color: "#07110f",
               padding: "10px 14px",
               fontWeight: 800,

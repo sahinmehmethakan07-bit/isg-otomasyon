@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { EmptyTableRow } from "./EmptyState";
 import { generateAccidentReportPDF } from "./pdf";
 import type { AccidentReportRecord, AccidentReportStatus, AccidentSeverity, Company, Employee } from "./types";
 
@@ -195,7 +196,7 @@ export function AccidentReportsTab({
                   <td style={styles.td} className="isg-td">{report.accidentDate ? new Date(report.accidentDate).toLocaleDateString("tr-TR") : "—"}</td>
                   <td style={styles.td} className="isg-td">{report.location || "—"}</td>
                   <td style={styles.td} className="isg-td"><Badge text={report.incidentType} color="#ef4444" /></td>
-                  <td style={styles.td} className="isg-td"><Badge text={report.severity} color={report.severity === "Ağır" ? "#dc2626" : report.severity === "Orta" ? "#d97706" : "#16a34a"} /></td>
+                  <td style={styles.td} className="isg-td"><Badge text={report.severity} color={report.severity === "Ağır" ? "#C0392B" : report.severity === "Orta" ? "#D4A017" : "#2D6A4F"} /></td>
                   <td style={styles.td} className="isg-td">
                     <select style={{ ...styles.select, minWidth: 150 }} value={report.status} onChange={e => updateAccidentReportStatus(report.id, e.target.value as AccidentReportStatus)}>
                       <option>Açık</option>
@@ -211,9 +212,7 @@ export function AccidentReportsTab({
               );
             })}
             {filteredAccidentReports.length === 0 && (
-              <tr>
-                <td colSpan={10} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz iş kazası / ramak kala raporu yok.</td>
-              </tr>
+              <EmptyTableRow colSpan={10} message="Yeni iş kazası veya ramak kala raporu eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>
         </table>

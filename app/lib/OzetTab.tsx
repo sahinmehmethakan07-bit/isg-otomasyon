@@ -1,4 +1,5 @@
 import React from "react";
+import { EmptyState } from "./EmptyState";
 import type { Company, Employee, ArchiveItem, TaskItem, TaskPriority } from "./types";
 import type { DashboardCard, QuickAction } from "./dashboardOverview";
 
@@ -99,7 +100,7 @@ export function OzetTab({
             {topDashboardTasks.map(task => {
               const company = companies.find(c => c.id === task.companyId);
               const color: Record<TaskPriority, string> = {
-                Kritik: "#dc2626", Yüksek: "#d97706", Orta: "#0ea5e9", Düşük: "#16a34a",
+                Kritik: "#C0392B", Yüksek: "#D4A017", Orta: "#1B4332", Düşük: "#2D6A4F",
               };
               return (
                 <div
@@ -120,9 +121,7 @@ export function OzetTab({
               );
             })}
             {topDashboardTasks.length === 0 && (
-              <div style={{ color: "var(--isg-text-muted)", fontSize: 13, padding: "10px 0" }}>
-                Şu an kritik takip görünmüyor.
-              </div>
+              <EmptyState title="Kritik takip görünmüyor." message="Acil görev oluştuğunda bu alanda öne çıkarılacak." />
             )}
           </div>
         </div>
@@ -172,14 +171,14 @@ export function OzetTab({
                 {empCount} personel · Sözleşme: {c.contractEnd} ·{" "}
                 <Badge
                   text={c.dangerClass}
-                  color={c.dangerClass === "Çok Tehlikeli" ? "#dc2626" : c.dangerClass === "Tehlikeli" ? "#d97706" : "#16a34a"}
+                  color={c.dangerClass === "Çok Tehlikeli" ? "#C0392B" : c.dangerClass === "Tehlikeli" ? "#D4A017" : "#2D6A4F"}
                 />
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {summary.missingCount > 0 && <Badge text={`${summary.missingCount} Eksik`} color="#dc2626" />}
-              {summary.expiredCount > 0 && <Badge text={`${summary.expiredCount} Süresi Dolmuş`} color="#dc2626" />}
-              {summary.soonCount > 0 && <Badge text={`${summary.soonCount} Yaklaşıyor`} color="#d97706" />}
+              {summary.missingCount > 0 && <Badge text={`${summary.missingCount} Eksik`} color="#C0392B" />}
+              {summary.expiredCount > 0 && <Badge text={`${summary.expiredCount} Süresi Dolmuş`} color="#C0392B" />}
+              {summary.soonCount > 0 && <Badge text={`${summary.soonCount} Yaklaşıyor`} color="#D4A017" />}
               <Badge text={ind.text} color={ind.color} />
             </div>
           </div>

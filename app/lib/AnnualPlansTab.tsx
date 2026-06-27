@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { EmptyTableRow } from "./EmptyState";
 import { generateAnnualPlanPDF } from "./pdf";
 import type { AnnualPlanRecord, AnnualPlanStatus, AnnualPlanType, Company } from "./types";
 
@@ -80,7 +81,7 @@ function DatePicker({ styles, value, onChange }: { styles: Styles; value: string
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
               const isSelected = selectedDate && selectedDate.getFullYear() === viewYear && selectedDate.getMonth() === viewMonth && selectedDate.getDate() === day;
               return (
-                <button key={day} onClick={() => select(day)} style={{ backgroundColor: isSelected ? "#0ea5e9" : "transparent", color: isSelected ? "#fff" : "var(--isg-text)", border: "none", borderRadius: 4, padding: "4px 0", fontSize: 12, cursor: "pointer", textAlign: "center" }}>
+                <button key={day} onClick={() => select(day)} style={{ backgroundColor: isSelected ? "#1B4332" : "transparent", color: isSelected ? "#fff" : "var(--isg-text)", border: "none", borderRadius: 4, padding: "4px 0", fontSize: 12, cursor: "pointer", textAlign: "center" }}>
                   {day}
                 </button>
               );
@@ -156,7 +157,7 @@ export function AnnualPlansTab({
                 <tr key={plan.id}>
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
                   <td style={styles.td} className="isg-td">{plan.year}</td>
-                  <td style={styles.td} className="isg-td"><Badge styles={styles} text={plan.type} color="#0ea5e9" /></td>
+                  <td style={styles.td} className="isg-td"><Badge styles={styles} text={plan.type} color="#1B4332" /></td>
                   <td style={{ ...styles.td, minWidth: 180 }} className="isg-td"><strong>{plan.title}</strong></td>
                   <td style={styles.td} className="isg-td">{plan.plannedDate ? new Date(plan.plannedDate).toLocaleDateString("tr-TR") : "—"}</td>
                   <td style={styles.td} className="isg-td">{plan.responsible || "—"}</td>
@@ -167,9 +168,7 @@ export function AnnualPlansTab({
               );
             })}
             {filteredAnnualPlans.length === 0 && (
-              <tr>
-                <td colSpan={9} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz yıllık plan kalemi yok.</td>
-              </tr>
+              <EmptyTableRow colSpan={9} message="Yeni yıllık plan kalemi eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>
         </table>

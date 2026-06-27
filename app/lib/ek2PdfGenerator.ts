@@ -201,7 +201,7 @@ export async function generateEk2PDF(form: any) {
     pageSize: "A4",
     pageMargins: [36, 24, 36, 24],
     content,
-    defaultStyle: { font: "Roboto" },
+    defaultStyle: {},
   };
 
   const fileName = `EK2_${(form.employeeName || "form").replace(/\s/g, "_")}_${form.formTarihi || "tarihsiz"}.pdf`;

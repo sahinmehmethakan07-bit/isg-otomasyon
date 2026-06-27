@@ -29,8 +29,8 @@ export async function generateRiskPDF(risks: RiskRecord[], companies: Company[],
 
   if (byCompany.length === 0) return;
 
-  const scoreColor = (s: number): string => s >= 15 ? "#dc2626" : s >= 8 ? "#d97706" : "#16a34a";
-  const HL = "#1e293b"; // header/label color
+  const scoreColor = (s: number): string => s >= 15 ? "#C0392B" : s >= 8 ? "#D4A017" : "#2D6A4F";
+  const HL = "#FFFFFF"; // header/label color
 
   const content: any[] = [];
   let pageNum = 0;
@@ -123,13 +123,13 @@ export async function generateRiskPDF(risks: RiskRecord[], companies: Company[],
       layout: {
         hLineWidth: () => 0.5,
         vLineWidth: () => 0.5,
-        hLineColor: () => "#94a3b8",
-        vLineColor: () => "#94a3b8",
+        hLineColor: () => "#6B7280",
+        vLineColor: () => "#6B7280",
       },
     });
 
     // ── Sayfa numarası ──
-    content.push({ text: `Sayfa ${pageNum}`, alignment: "center", fontSize: 8, color: "#64748b", margin: [0, 6, 0, 6] });
+    content.push({ text: `Sayfa ${pageNum}`, alignment: "center", fontSize: 8, color: "#6B7280", margin: [0, 6, 0, 6] });
 
     // ── İmza bölümü ──
     const roles: SignerRole[] = ["İş Güvenliği Uzmanı", "İşveren / İşveren Vekili", "Çalışan Temsilcisi"];
@@ -147,7 +147,7 @@ export async function generateRiskPDF(risks: RiskRecord[], companies: Company[],
               { text: s.role, fontSize: 8, bold: true, alignment: "center" as const, color: "#334155" },
               { text: s.name.toUpperCase(), fontSize: 9, bold: true, alignment: "center" as const, margin: [0, 4, 0, 0] as [number, number, number, number] },
               { text: "\n\n", fontSize: 6 },
-              { text: "İmza", fontSize: 7, alignment: "center" as const, color: "#94a3b8" },
+              { text: "İmza", fontSize: 7, alignment: "center" as const, color: "#6B7280" },
             ],
             margin: [6, 6, 6, 6] as [number, number, number, number],
           })),
@@ -156,8 +156,8 @@ export async function generateRiskPDF(risks: RiskRecord[], companies: Company[],
       layout: {
         hLineWidth: () => 0.5,
         vLineWidth: () => 0.5,
-        hLineColor: () => "#94a3b8",
-        vLineColor: () => "#94a3b8",
+        hLineColor: () => "#6B7280",
+        vLineColor: () => "#6B7280",
       },
       margin: [0, 8, 0, 0],
     });
@@ -187,7 +187,7 @@ export async function generateRiskPDF(risks: RiskRecord[], companies: Company[],
           [mCell("5", true), mCell("Çok Yüksek"), mCell("Çok sıklıkla (haftada bir, her gün)")],
         ],
       },
-      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#94a3b8", vLineColor: () => "#94a3b8" },
+      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#6B7280", vLineColor: () => "#6B7280" },
       margin: [0, 0, 0, 12],
     });
 
@@ -205,7 +205,7 @@ export async function generateRiskPDF(risks: RiskRecord[], companies: Company[],
           [mCell("5", true), mCell("Çok Ciddi"), mCell("Ölüm, sürekli iş göremezlik")],
         ],
       },
-      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#94a3b8", vLineColor: () => "#94a3b8" },
+      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#6B7280", vLineColor: () => "#6B7280" },
       margin: [0, 0, 0, 12],
     });
 
@@ -216,14 +216,14 @@ export async function generateRiskPDF(risks: RiskRecord[], companies: Company[],
         headerRows: 1,
         body: [
           [mHdr("Risk Skoru"), mHdr("Anlamı"), mHdr("Açıklama")],
-          [{ text: "25", fontSize: 8, bold: true, fillColor: "#dc2626", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Kabul Edilemez"), mCell("Risk kabul edilebilir seviyeye düşürülünceye kadar iş başlatılmamalıdır.")],
-          [{ text: "15, 16, 20", fontSize: 8, bold: true, fillColor: "#dc2626", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Ciddi"), mCell("Riskleri düşürmek için faaliyetler kısa zamanda başlatılmalıdır.")],
-          [{ text: "8, 9, 10, 12", fontSize: 8, bold: true, fillColor: "#d97706", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Orta"), mCell("Riskleri düşürmek için faaliyetler en az 6 ay içinde tamamlanmalıdır.")],
-          [{ text: "2, 3, 4, 5, 6", fontSize: 8, bold: true, fillColor: "#16a34a", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Düşük (Katlanılabilir)"), mCell("Mevcut kontroller sürdürülmelidir.")],
-          [{ text: "1", fontSize: 8, bold: true, fillColor: "#16a34a", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Önemsiz"), mCell("Önlem öncelikli değildir.")],
+          [{ text: "25", fontSize: 8, bold: true, fillColor: "#C0392B", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Kabul Edilemez"), mCell("Risk kabul edilebilir seviyeye düşürülünceye kadar iş başlatılmamalıdır.")],
+          [{ text: "15, 16, 20", fontSize: 8, bold: true, fillColor: "#C0392B", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Ciddi"), mCell("Riskleri düşürmek için faaliyetler kısa zamanda başlatılmalıdır.")],
+          [{ text: "8, 9, 10, 12", fontSize: 8, bold: true, fillColor: "#D4A017", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Orta"), mCell("Riskleri düşürmek için faaliyetler en az 6 ay içinde tamamlanmalıdır.")],
+          [{ text: "2, 3, 4, 5, 6", fontSize: 8, bold: true, fillColor: "#2D6A4F", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Düşük (Katlanılabilir)"), mCell("Mevcut kontroller sürdürülmelidir.")],
+          [{ text: "1", fontSize: 8, bold: true, fillColor: "#2D6A4F", color: "white", alignment: "center", margin: [4, 3, 4, 3] }, mCell("Önemsiz"), mCell("Önlem öncelikli değildir.")],
         ],
       },
-      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#94a3b8", vLineColor: () => "#94a3b8" },
+      layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => "#6B7280", vLineColor: () => "#6B7280" },
       margin: [0, 0, 0, 12],
     });
 
@@ -233,11 +233,11 @@ export async function generateRiskPDF(risks: RiskRecord[], companies: Company[],
     });
     content.push({
       columns: [
-        { width: "auto", stack: [{ canvas: [{ type: "rect", x: 0, y: 0, w: 14, h: 14, r: 2, color: "#dc2626" }] }], margin: [0, 0, 4, 0] },
+        { width: "auto", stack: [{ canvas: [{ type: "rect", x: 0, y: 0, w: 14, h: 14, r: 2, color: "#C0392B" }] }], margin: [0, 0, 4, 0] },
         { width: "auto", text: "Yüksek Risk (≥15) — Kabul edilemez / Ciddi", fontSize: 8, margin: [0, 2, 16, 0] },
-        { width: "auto", stack: [{ canvas: [{ type: "rect", x: 0, y: 0, w: 14, h: 14, r: 2, color: "#d97706" }] }], margin: [0, 0, 4, 0] },
+        { width: "auto", stack: [{ canvas: [{ type: "rect", x: 0, y: 0, w: 14, h: 14, r: 2, color: "#D4A017" }] }], margin: [0, 0, 4, 0] },
         { width: "auto", text: "Orta Risk (8-14) — Faaliyetler 6 ay içinde", fontSize: 8, margin: [0, 2, 16, 0] },
-        { width: "auto", stack: [{ canvas: [{ type: "rect", x: 0, y: 0, w: 14, h: 14, r: 2, color: "#16a34a" }] }], margin: [0, 0, 4, 0] },
+        { width: "auto", stack: [{ canvas: [{ type: "rect", x: 0, y: 0, w: 14, h: 14, r: 2, color: "#2D6A4F" }] }], margin: [0, 0, 4, 0] },
         { width: "auto", text: "Düşük Risk (<8) — Mevcut kontroller yeterli", fontSize: 8, margin: [0, 2, 0, 0] },
       ],
     });
@@ -248,7 +248,7 @@ export async function generateRiskPDF(risks: RiskRecord[], companies: Company[],
     pageSize: "A3",
     pageMargins: [20, 20, 20, 20],
     content,
-    defaultStyle: { font: "Roboto" },
+    defaultStyle: {},
   };
 
   maker.createPdf(docDef).download(`Risk_Degerlendirme_Raporu_${today.replace(/\./g, "_")}.pdf`);
@@ -266,14 +266,14 @@ export async function generateAnnualPlanPDF(plans: AnnualPlanRecord[], companies
   const companyName = (companyId: string) => companies.find(c => c.id === companyId)?.officialName || companies.find(c => c.id === companyId)?.nickName || "-";
   const sortedPlans = [...plans].sort((a, b) => `${a.companyId}-${a.plannedDate}`.localeCompare(`${b.companyId}-${b.plannedDate}`));
   const content: any[] = [
-    { text: "YILLIK İSG PLANI", fontSize: 16, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 4] },
-    { text: new Date().toLocaleDateString("tr-TR"), fontSize: 9, color: "#64748b", alignment: "center", margin: [0, 0, 0, 14] },
+    { text: "YILLIK İSG PLANI", fontSize: 16, bold: true, color: "#FFFFFF", alignment: "center", margin: [0, 0, 0, 4] },
+    { text: new Date().toLocaleDateString("tr-TR"), fontSize: 9, color: "#6B7280", alignment: "center", margin: [0, 0, 0, 14] },
     {
       table: {
         headerRows: 1,
         widths: [78, 46, 72, "*", 58, 70, 62, "*"],
         body: [
-          ["Firma", "Yıl", "Tür", "Başlık", "Tarih", "Sorumlu", "Durum", "Not"].map(text => ({ text, bold: true, color: "white", fillColor: "#1e293b", fontSize: 8, margin: [3, 4, 3, 4] })),
+          ["Firma", "Yıl", "Tür", "Başlık", "Tarih", "Sorumlu", "Durum", "Not"].map(text => ({ text, bold: true, color: "white", fillColor: "#FFFFFF", fontSize: 8, margin: [3, 4, 3, 4] })),
           ...sortedPlans.map(plan => [
             companyName(plan.companyId),
             String(plan.year),
@@ -295,7 +295,7 @@ export async function generateAnnualPlanPDF(plans: AnnualPlanRecord[], companies
     pageSize: "A4",
     pageMargins: [18, 18, 18, 18],
     content,
-    defaultStyle: { font: "Roboto" },
+    defaultStyle: {},
   }).download(`Yillik_ISG_Plani_${new Date().getFullYear()}.pdf`);
 }
 
@@ -316,14 +316,14 @@ export async function generateTrainingPDF(trainings: TrainingRecord[], companies
   const sortedTrainings = [...trainings].sort((a, b) => `${a.companyId}-${a.trainingDate}`.localeCompare(`${b.companyId}-${b.trainingDate}`));
 
   const content: any[] = [
-    { text: "İSG EĞİTİM TAKİP LİSTESİ", fontSize: 16, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 4] },
-    { text: new Date().toLocaleDateString("tr-TR"), fontSize: 9, color: "#64748b", alignment: "center", margin: [0, 0, 0, 14] },
+    { text: "İSG EĞİTİM TAKİP LİSTESİ", fontSize: 16, bold: true, color: "#FFFFFF", alignment: "center", margin: [0, 0, 0, 4] },
+    { text: new Date().toLocaleDateString("tr-TR"), fontSize: 9, color: "#6B7280", alignment: "center", margin: [0, 0, 0, 14] },
     {
       table: {
         headerRows: 1,
         widths: [82, 86, 82, 58, 70, 96, 58, "*"],
         body: [
-          ["Firma", "Eğitim", "Tür", "Tarih", "Eğitmen", "Katılımcılar", "Durum", "Not"].map(text => ({ text, bold: true, color: "white", fillColor: "#1e293b", fontSize: 8, margin: [3, 4, 3, 4] })),
+          ["Firma", "Eğitim", "Tür", "Tarih", "Eğitmen", "Katılımcılar", "Durum", "Not"].map(text => ({ text, bold: true, color: "white", fillColor: "#FFFFFF", fontSize: 8, margin: [3, 4, 3, 4] })),
           ...sortedTrainings.map(training => [
             companyName(training.companyId),
             training.title,
@@ -345,7 +345,7 @@ export async function generateTrainingPDF(trainings: TrainingRecord[], companies
     pageSize: "A4",
     pageMargins: [18, 18, 18, 18],
     content,
-    defaultStyle: { font: "Roboto" },
+    defaultStyle: {},
   }).download(`ISG_Egitim_Takip_${new Date().getFullYear()}.pdf`);
 }
 
@@ -362,7 +362,7 @@ export async function generateTrainingAttendancePDF(training: TrainingRecord, co
     .filter(Boolean) as Employee[];
 
   const body = [
-    ["No", "Ad Soyad", "T.C. Kimlik No", "Görev / Ünvan", "İmza"].map(text => ({ text, bold: true, color: "white", fillColor: "#1e293b", fontSize: 8, margin: [4, 5, 4, 5] })),
+    ["No", "Ad Soyad", "T.C. Kimlik No", "Görev / Ünvan", "İmza"].map(text => ({ text, bold: true, color: "white", fillColor: "#FFFFFF", fontSize: 8, margin: [4, 5, 4, 5] })),
     ...(participants.length > 0 ? participants : [{ firstName: "", lastName: "", tcNo: "", title: "" } as Employee]).map((employee, index) => [
       String(index + 1),
       `${employee.firstName} ${employee.lastName}`.trim() || " ",
@@ -373,7 +373,7 @@ export async function generateTrainingAttendancePDF(training: TrainingRecord, co
   ];
 
   const content: any[] = [
-    { text: "EĞİTİM KATILIM FORMU", fontSize: 16, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 12] },
+    { text: "EĞİTİM KATILIM FORMU", fontSize: 16, bold: true, color: "#FFFFFF", alignment: "center", margin: [0, 0, 0, 12] },
     {
       table: {
         widths: [90, "*", 90, "*"],
@@ -407,7 +407,7 @@ export async function generateTrainingAttendancePDF(training: TrainingRecord, co
     pageSize: "A4",
     pageMargins: [28, 28, 28, 28],
     content,
-    defaultStyle: { font: "Roboto" },
+    defaultStyle: {},
   }).download(`Egitim_Katilim_Formu_${training.title.replace(/\s+/g, "_")}.pdf`);
 }
 
@@ -428,8 +428,8 @@ export async function generateTrainingCertificatesPDF(training: TrainingRecord, 
     const page: any = {
       stack: [
         { text: "İŞ SAĞLIĞI VE GÜVENLİĞİ", fontSize: 13, bold: true, color: "#0f766e", alignment: "center", margin: [0, 10, 0, 4] },
-        { text: "EĞİTİM KATILIM SERTİFİKASI", fontSize: 24, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 24] },
-        { text: `${employee.firstName} ${employee.lastName}`, fontSize: 22, bold: true, color: "#111827", alignment: "center", margin: [0, 0, 0, 12] },
+        { text: "EĞİTİM KATILIM SERTİFİKASI", fontSize: 24, bold: true, color: "#FFFFFF", alignment: "center", margin: [0, 0, 0, 24] },
+        { text: `${employee.firstName} ${employee.lastName}`, fontSize: 22, bold: true, color: "#FFFFFF", alignment: "center", margin: [0, 0, 0, 12] },
         { text: `${training.title} (${training.type}) eğitimine katılmıştır.`, fontSize: 12, color: "#334155", alignment: "center", margin: [40, 0, 40, 18] },
         {
           table: {
@@ -460,7 +460,7 @@ export async function generateTrainingCertificatesPDF(training: TrainingRecord, 
     pageSize: "A4",
     pageMargins: [34, 34, 34, 34],
     content: certificatePages,
-    defaultStyle: { font: "Roboto" },
+    defaultStyle: {},
   }).download(`Egitim_Sertifikalari_${training.title.replace(/\s+/g, "_")}.pdf`);
 }
 
@@ -474,7 +474,7 @@ export async function generatePpeAssignmentPDF(record: PpeRecord, company: Compa
   maker.vfs = (pdfFonts.default || pdfFonts).vfs;
 
   const content: any[] = [
-    { text: "KİŞİSEL KORUYUCU DONANIM ZİMMET FORMU", fontSize: 15, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 14] },
+    { text: "KİŞİSEL KORUYUCU DONANIM ZİMMET FORMU", fontSize: 15, bold: true, color: "#FFFFFF", alignment: "center", margin: [0, 0, 0, 14] },
     {
       table: {
         widths: [100, "*", 100, "*"],
@@ -492,7 +492,7 @@ export async function generatePpeAssignmentPDF(record: PpeRecord, company: Compa
         headerRows: 1,
         widths: ["*", 50, 86, 86, "*"],
         body: [
-          ["KKD / Malzeme", "Adet", "Seri No", "Durum", "Not"].map(text => ({ text, bold: true, color: "white", fillColor: "#1e293b", fontSize: 8, margin: [4, 5, 4, 5] })),
+          ["KKD / Malzeme", "Adet", "Seri No", "Durum", "Not"].map(text => ({ text, bold: true, color: "white", fillColor: "#FFFFFF", fontSize: 8, margin: [4, 5, 4, 5] })),
           [
             record.equipment,
             String(record.quantity || 1),
@@ -523,7 +523,7 @@ export async function generatePpeAssignmentPDF(record: PpeRecord, company: Compa
     pageSize: "A4",
     pageMargins: [28, 28, 28, 28],
     content,
-    defaultStyle: { font: "Roboto" },
+    defaultStyle: {},
   }).download(`KKD_Zimmet_${employee.firstName}_${employee.lastName}.pdf`);
 }
 
@@ -544,7 +544,7 @@ export async function generateEmergencyPlanPDF(plan: EmergencyPlanRecord, compan
   ];
 
   const content: any[] = [
-    { text: "ACİL DURUM PLANI", fontSize: 17, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 12] },
+    { text: "ACİL DURUM PLANI", fontSize: 17, bold: true, color: "#FFFFFF", alignment: "center", margin: [0, 0, 0, 12] },
     {
       table: {
         widths: [92, "*", 92, "*"],
@@ -553,7 +553,7 @@ export async function generateEmergencyPlanPDF(plan: EmergencyPlanRecord, compan
       layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
       margin: [0, 0, 0, 12],
     },
-    { text: "Acil Durum Ekibi", fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+    { text: "Acil Durum Ekibi", fontSize: 11, bold: true, color: "#FFFFFF", margin: [0, 0, 0, 6] },
     {
       table: {
         widths: ["*"],
@@ -562,7 +562,7 @@ export async function generateEmergencyPlanPDF(plan: EmergencyPlanRecord, compan
       layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
       margin: [0, 0, 0, 12],
     },
-    { text: "Uygulama Notları", fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+    { text: "Uygulama Notları", fontSize: 11, bold: true, color: "#FFFFFF", margin: [0, 0, 0, 6] },
     {
       table: {
         widths: ["*"],
@@ -571,13 +571,13 @@ export async function generateEmergencyPlanPDF(plan: EmergencyPlanRecord, compan
       layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
       margin: [0, 0, 0, 12],
     },
-    { text: "Personel Bilgisi", fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+    { text: "Personel Bilgisi", fontSize: 11, bold: true, color: "#FFFFFF", margin: [0, 0, 0, 6] },
     {
       table: {
         headerRows: 1,
         widths: ["*", "*", 74],
         body: [
-          ["Ad Soyad", "Bölüm / Ünvan", "Telefon"].map(text => ({ text, bold: true, color: "white", fillColor: "#1e293b", fontSize: 8, margin: [4, 5, 4, 5] })),
+          ["Ad Soyad", "Bölüm / Ünvan", "Telefon"].map(text => ({ text, bold: true, color: "white", fillColor: "#FFFFFF", fontSize: 8, margin: [4, 5, 4, 5] })),
           ...(companyEmployees.length > 0 ? companyEmployees : [{ firstName: "", lastName: "", department: "", title: "", phone: "" } as Employee]).slice(0, 18).map(employee => [
             `${employee.firstName} ${employee.lastName}`.trim() || " ",
             [employee.department, employee.title].filter(Boolean).join(" / ") || " ",
@@ -600,7 +600,7 @@ export async function generateEmergencyPlanPDF(plan: EmergencyPlanRecord, compan
     pageSize: "A4",
     pageMargins: [28, 28, 28, 28],
     content,
-    defaultStyle: { font: "Roboto" },
+    defaultStyle: {},
   }).download(`Acil_Durum_Plani_${plan.title.replace(/\s+/g, "_")}.pdf`);
 }
 
@@ -617,7 +617,7 @@ export async function generateCommitteeMeetingPDF(meeting: CommitteeMeetingRecor
     .filter(Boolean) as Employee[];
 
   const content: any[] = [
-    { text: "İSG KURUL TOPLANTISI TUTANAĞI", fontSize: 16, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 12] },
+    { text: "İSG KURUL TOPLANTISI TUTANAĞI", fontSize: 16, bold: true, color: "#FFFFFF", alignment: "center", margin: [0, 0, 0, 12] },
     {
       table: {
         widths: [90, "*", 90, "*"],
@@ -630,25 +630,25 @@ export async function generateCommitteeMeetingPDF(meeting: CommitteeMeetingRecor
       layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
       margin: [0, 0, 0, 12],
     },
-    { text: "Gündem", fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+    { text: "Gündem", fontSize: 11, bold: true, color: "#FFFFFF", margin: [0, 0, 0, 6] },
     {
       table: { widths: ["*"], body: [[{ text: meeting.agenda || "-", fontSize: 9, color: "#334155", margin: [5, 8, 5, 8] }]] },
       layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
       margin: [0, 0, 0, 12],
     },
-    { text: "Alınan Kararlar", fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+    { text: "Alınan Kararlar", fontSize: 11, bold: true, color: "#FFFFFF", margin: [0, 0, 0, 6] },
     {
       table: { widths: ["*"], body: [[{ text: meeting.decisions || "-", fontSize: 9, color: "#334155", margin: [5, 8, 5, 8] }]] },
       layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
       margin: [0, 0, 0, 12],
     },
-    { text: "Katılımcılar", fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+    { text: "Katılımcılar", fontSize: 11, bold: true, color: "#FFFFFF", margin: [0, 0, 0, 6] },
     {
       table: {
         headerRows: 1,
         widths: [28, "*", "*", 110],
         body: [
-          ["No", "Ad Soyad", "Görev / Ünvan", "İmza"].map(text => ({ text, bold: true, color: "white", fillColor: "#1e293b", fontSize: 8, margin: [4, 5, 4, 5] })),
+          ["No", "Ad Soyad", "Görev / Ünvan", "İmza"].map(text => ({ text, bold: true, color: "white", fillColor: "#FFFFFF", fontSize: 8, margin: [4, 5, 4, 5] })),
           ...(participants.length > 0 ? participants : [{ firstName: "", lastName: "", title: "" } as Employee]).map((employee, index) => [
             String(index + 1),
             `${employee.firstName} ${employee.lastName}`.trim() || " ",
@@ -660,7 +660,7 @@ export async function generateCommitteeMeetingPDF(meeting: CommitteeMeetingRecor
       layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
       margin: [0, 0, 0, 18],
     },
-    { text: meeting.notes || "", fontSize: 8, color: "#64748b", margin: [0, 0, 0, 16] },
+    { text: meeting.notes || "", fontSize: 8, color: "#6B7280", margin: [0, 0, 0, 16] },
     {
       columns: [
         { width: "*", text: "Kurul Başkanı\n\n\nAd Soyad / İmza", fontSize: 9, alignment: "center" },
@@ -673,7 +673,7 @@ export async function generateCommitteeMeetingPDF(meeting: CommitteeMeetingRecor
     pageSize: "A4",
     pageMargins: [28, 28, 28, 28],
     content,
-    defaultStyle: { font: "Roboto" },
+    defaultStyle: {},
   }).download(`Kurul_Toplantisi_${meeting.meetingNo || meeting.meetingDate}.pdf`);
 }
 
@@ -686,7 +686,7 @@ export async function generateAccidentReportPDF(report: AccidentReportRecord, co
   maker.vfs = (pdfFonts.default || pdfFonts).vfs;
 
   const content: any[] = [
-    { text: "İŞ KAZASI / RAMAK KALA RAPORU", fontSize: 16, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 12] },
+    { text: "İŞ KAZASI / RAMAK KALA RAPORU", fontSize: 16, bold: true, color: "#FFFFFF", alignment: "center", margin: [0, 0, 0, 12] },
     {
       table: {
         widths: [90, "*", 90, "*"],
@@ -707,7 +707,7 @@ export async function generateAccidentReportPDF(report: AccidentReportRecord, co
       ["Sorumlu / Termin", `${report.responsible || "-"} / ${report.dueDate ? new Date(report.dueDate).toLocaleDateString("tr-TR") : "-"}`],
       ["Not", report.notes],
     ].flatMap(([title, text]) => [
-      { text: title, fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+      { text: title, fontSize: 11, bold: true, color: "#FFFFFF", margin: [0, 0, 0, 6] },
       {
         table: { widths: ["*"], body: [[{ text: text || "-", fontSize: 9, color: "#334155", margin: [5, 8, 5, 8] }]] },
         layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
@@ -726,7 +726,7 @@ export async function generateAccidentReportPDF(report: AccidentReportRecord, co
     pageSize: "A4",
     pageMargins: [28, 28, 28, 28],
     content,
-    defaultStyle: { font: "Roboto" },
+    defaultStyle: {},
   }).download(`Is_Kazasi_Raporu_${report.accidentDate || report.id}.pdf`);
 }
 
@@ -739,7 +739,7 @@ export async function generateCompanyVisitPDF(visit: CompanyVisitRecord, company
   maker.vfs = (pdfFonts.default || pdfFonts).vfs;
 
   const content: any[] = [
-    { text: "FİRMA ZİYARET RAPORU", fontSize: 16, bold: true, color: "#1e293b", alignment: "center", margin: [0, 0, 0, 12] },
+    { text: "FİRMA ZİYARET RAPORU", fontSize: 16, bold: true, color: "#FFFFFF", alignment: "center", margin: [0, 0, 0, 12] },
     {
       table: {
         widths: [90, "*", 90, "*"],
@@ -758,7 +758,7 @@ export async function generateCompanyVisitPDF(visit: CompanyVisitRecord, company
       ["Aksiyonlar", visit.actions],
       ["Notlar", visit.notes],
     ].flatMap(([title, text]) => [
-      { text: title, fontSize: 11, bold: true, color: "#1e293b", margin: [0, 0, 0, 6] },
+      { text: title, fontSize: 11, bold: true, color: "#FFFFFF", margin: [0, 0, 0, 6] },
       {
         table: { widths: ["*"], body: [[{ text: text || "-", fontSize: 9, color: "#334155", margin: [5, 8, 5, 8] }]] },
         layout: { hLineWidth: () => 0.4, vLineWidth: () => 0.4, hLineColor: () => "#cbd5e1", vLineColor: () => "#cbd5e1" },
@@ -777,6 +777,6 @@ export async function generateCompanyVisitPDF(visit: CompanyVisitRecord, company
     pageSize: "A4",
     pageMargins: [28, 28, 28, 28],
     content,
-    defaultStyle: { font: "Roboto" },
+    defaultStyle: {},
   }).download(`Firma_Ziyaret_Raporu_${visit.visitDate || visit.id}.pdf`);
 }

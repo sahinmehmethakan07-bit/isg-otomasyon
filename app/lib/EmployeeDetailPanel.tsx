@@ -35,8 +35,8 @@ export function EmployeeDetailPanel({
   printEmployeeCertificate,
 }: EmployeeDetailPanelProps) {
   const onboarding = selectedEmployee.onboarding || createOnboardingFromChecklist(selectedEmployee.checklist);
-  const onboardingBorder = onboarding.status === "completed" ? "#16a34a33" : "#d9770633";
-  const onboardingBackground = onboarding.status === "completed" ? "#16a34a10" : "#d9770610";
+  const onboardingBorder = onboarding.status === "completed" ? "#2D6A4F33" : "#D4A01733";
+  const onboardingBackground = onboarding.status === "completed" ? "#2D6A4F10" : "#D4A01710";
   const scannedDocuments = selectedEmployee.scannedDocuments || [];
 
   return (
@@ -95,7 +95,7 @@ export function EmployeeDetailPanel({
             <span style={{ fontSize: 12, fontWeight: 700, color: onboarding.status === "completed" ? "#86efac" : "#fbbf24" }}>
               {onboarding.status === "completed" ? "Yeşil statü: tamamlandı" : "Eksik görev var"}
             </span>
-            <Badge text={onboarding.status === "completed" ? "Tamamlandı" : onboarding.missingSteps.length + " eksik"} color={onboarding.status === "completed" ? "#16a34a" : "#d97706"} />
+            <Badge text={onboarding.status === "completed" ? "Tamamlandı" : onboarding.missingSteps.length + " eksik"} color={onboarding.status === "completed" ? "#2D6A4F" : "#D4A017"} />
           </div>
           <div style={{ fontSize: 11, color: "var(--isg-text-muted)", lineHeight: 1.5 }}>
             {onboarding.missingSteps.length > 0 ? onboarding.missingSteps.join(" · ") : "Doktor ve İSG uzmanı görevleri tamamlandı."}

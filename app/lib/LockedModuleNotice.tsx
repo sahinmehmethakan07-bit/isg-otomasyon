@@ -11,7 +11,7 @@ export function LockedModuleNotice({ message, onClose }: LockedModuleNoticeProps
       backgroundColor: "rgba(217,119,6,0.12)",
       border: "1px solid rgba(217,119,6,0.32)",
       borderRadius: 8,
-      color: "#fcd34d",
+      color: "#D4A017",
       fontSize: 13,
       fontWeight: 700,
       marginBottom: 16,
@@ -28,7 +28,7 @@ export function LockedModuleNotice({ message, onClose }: LockedModuleNoticeProps
         style={{
           background: "transparent",
           border: "none",
-          color: "#fcd34d",
+          color: "#D4A017",
           cursor: "pointer",
           fontSize: 14,
           lineHeight: 1,

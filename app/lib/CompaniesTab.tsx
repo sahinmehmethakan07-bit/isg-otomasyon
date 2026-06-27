@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { dangerFromNace, daysUntil, extractNaceFromSgk, getDateStatus, officialNameFromSgk, statusColor } from "./dashboardUtils";
+import { EmptyTableRow } from "./EmptyState";
 import type { Company, DangerClass, ServiceType } from "./types";
 
 type CompanyDraft = {
@@ -141,7 +142,7 @@ export function CompaniesTab({
       )}
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
-        <span style={{ color: "#64748b", fontSize: 13 }}>{filteredCompanies.length} firma</span>
+        <span style={{ color: "#6B7280", fontSize: 13 }}>{filteredCompanies.length} firma</span>
       </div>
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
@@ -157,11 +158,11 @@ export function CompaniesTab({
                   <td style={{ ...styles.td, maxWidth: 180, fontSize: 12, color: "var(--isg-text-muted)" }}>{c.officialName}</td>
                   <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)" }}>{c.sgkSicil}</td>
                   <td style={styles.td} className="isg-td">{c.naceCode}</td>
-                  <td style={styles.td} className="isg-td"><Badge text={c.dangerClass} color={c.dangerClass === "Çok Tehlikeli" ? "#dc2626" : c.dangerClass === "Tehlikeli" ? "#d97706" : "#16a34a"} /></td>
+                  <td style={styles.td} className="isg-td"><Badge text={c.dangerClass} color={c.dangerClass === "Çok Tehlikeli" ? "#C0392B" : c.dangerClass === "Tehlikeli" ? "#D4A017" : "#2D6A4F"} /></td>
                   <td style={styles.td} className="isg-td">{c.employeeCount}</td>
                   <td style={styles.td} className="isg-td">
                     <span style={{ fontSize: 12 }}>{c.contractEnd}</span> <Badge text={cs} color={statusColor(cs)} />
-                    {remainingDays !== null && remainingDays >= 0 && <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>{remainingDays} gün</div>}
+                    {remainingDays !== null && remainingDays >= 0 && <div style={{ fontSize: 11, color: "#6B7280", marginTop: 4 }}>{remainingDays} gün</div>}
                   </td>
                   <td style={{ ...styles.td, fontSize: 12 }}>{c.serviceType}</td>
                   <td style={styles.td} className="isg-td"><Badge text={ind.text} color={ind.color} /></td>
@@ -169,6 +170,9 @@ export function CompaniesTab({
                 </tr>
               );
             })}
+            {filteredCompanies.length === 0 && (
+              <EmptyTableRow colSpan={isAdmin ? 10 : 9} message="Yeni bir firma eklemek için yukarıdaki formu kullanın." />
+            )}
           </tbody>
         </table>
       </div>

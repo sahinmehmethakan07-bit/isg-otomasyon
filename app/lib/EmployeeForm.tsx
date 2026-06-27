@@ -86,7 +86,7 @@ function DatePicker({ styles, value, onChange }: { styles: Record<string, React.
                   type="button"
                   onClick={() => select(day)}
                   style={{
-                    backgroundColor: isSelected ? "#0ea5e9" : "transparent",
+                    backgroundColor: isSelected ? "#1B4332" : "transparent",
                     color: isSelected ? "#fff" : "var(--isg-text)",
                     border: "none",
                     borderRadius: 4,
@@ -111,8 +111,8 @@ function DatePicker({ styles, value, onChange }: { styles: Record<string, React.
 function statusStyle(status: string): React.CSSProperties {
   const success = status.startsWith("✅");
   const warning = status.startsWith("⚠️");
-  const color = success ? "#86efac" : warning ? "#fbbf24" : "#fca5a5";
-  const base = success ? "#16a34a" : warning ? "#d97706" : "#dc2626";
+  const color = success ? "#86efac" : warning ? "#fbbf24" : "#C0392B";
+  const base = success ? "#2D6A4F" : warning ? "#D4A017" : "#C0392B";
 
   return {
     marginTop: 12,
@@ -179,7 +179,7 @@ export function EmployeeForm({
             {newEmployee.photo ? (
               <div style={{ position: "relative", width: 132 }}>
                 <img src={newEmployee.photo} alt="personel fotoğrafı" style={{ width: 132, height: 160, objectFit: "cover", borderRadius: 8, border: "1px solid var(--isg-border)" }} />
-                <button type="button" onClick={() => setField("photo", "")} style={{ position: "absolute", top: -7, right: -7, width: 24, height: 24, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 12, cursor: "pointer" }}>✕</button>
+                <button type="button" onClick={() => setField("photo", "")} style={{ position: "absolute", top: -7, right: -7, width: 24, height: 24, borderRadius: "50%", border: "none", backgroundColor: "#C0392B", color: "white", fontSize: 12, cursor: "pointer" }}>✕</button>
               </div>
             ) : (
               <div>

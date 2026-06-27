@@ -77,45 +77,45 @@ export function getDashboardOverview(input: DashboardOverviewInput) {
 
   const cards: DashboardCard[] = input.activeRole === "doctor"
     ? [
-      { value: ek2PendingEmployees, label: "EK-2 Bekleyen", color: ek2PendingEmployees > 0 ? "#d97706" : "#16a34a" },
-      { value: openAccidentReports, label: "Açık Olay", color: openAccidentReports > 0 ? "#dc2626" : "#16a34a" },
+      { value: ek2PendingEmployees, label: "EK-2 Bekleyen", color: ek2PendingEmployees > 0 ? "#D4A017" : "#2D6A4F" },
+      { value: openAccidentReports, label: "Açık Olay", color: openAccidentReports > 0 ? "#C0392B" : "#2D6A4F" },
       { value: input.employees.length, label: "Personel", color: "#a78bfa" },
-      { value: totalSoonDocs, label: "Yaklaşan Belge", color: totalSoonDocs > 0 ? "#d97706" : "#16a34a" },
+      { value: totalSoonDocs, label: "Yaklaşan Belge", color: totalSoonDocs > 0 ? "#D4A017" : "#2D6A4F" },
     ]
     : input.activeRole === "nurse"
       ? [
         { value: input.employees.length, label: "Personel", color: "#a78bfa" },
-        { value: input.ppeRecords.length, label: "KKD Kaydı", color: "#16a34a" },
-        { value: upcomingTrainings, label: "Planlı Eğitim", color: upcomingTrainings > 0 ? "#0ea5e9" : "#16a34a" },
-        { value: totalSoonDocs, label: "Yaklaşan Belge", color: totalSoonDocs > 0 ? "#d97706" : "#16a34a" },
+        { value: input.ppeRecords.length, label: "KKD Kaydı", color: "#2D6A4F" },
+        { value: upcomingTrainings, label: "Planlı Eğitim", color: upcomingTrainings > 0 ? "#1B4332" : "#2D6A4F" },
+        { value: totalSoonDocs, label: "Yaklaşan Belge", color: totalSoonDocs > 0 ? "#D4A017" : "#2D6A4F" },
       ]
       : input.activeRole === "safety_expert"
         ? [
-          { value: openDofs, label: "Açık DÖF", color: openDofs > 0 ? "#d97706" : "#16a34a" },
-          { value: highRisks, label: "Yüksek Risk", color: highRisks > 0 ? "#dc2626" : "#16a34a" },
-          { value: upcomingTrainings, label: "Planlı Eğitim", color: upcomingTrainings > 0 ? "#0ea5e9" : "#16a34a" },
-          { value: plannedCompanyVisits, label: "Ziyaret Takibi", color: plannedCompanyVisits > 0 ? "#d97706" : "#16a34a" },
+          { value: openDofs, label: "Açık DÖF", color: openDofs > 0 ? "#D4A017" : "#2D6A4F" },
+          { value: highRisks, label: "Yüksek Risk", color: highRisks > 0 ? "#C0392B" : "#2D6A4F" },
+          { value: upcomingTrainings, label: "Planlı Eğitim", color: upcomingTrainings > 0 ? "#1B4332" : "#2D6A4F" },
+          { value: plannedCompanyVisits, label: "Ziyaret Takibi", color: plannedCompanyVisits > 0 ? "#D4A017" : "#2D6A4F" },
         ]
         : input.activeRole === "human_resources"
           ? [
             { value: input.employees.length, label: "Personel", color: "#a78bfa" },
-            { value: incompleteEmployees, label: "Onboarding Eksik", color: incompleteEmployees > 0 ? "#d97706" : "#16a34a" },
-            { value: ek2PendingEmployees, label: "EK-2 Bekleyen", color: ek2PendingEmployees > 0 ? "#d97706" : "#16a34a" },
-            { value: safetyPendingEmployees, label: "İSG Evrak/Eğitim", color: safetyPendingEmployees > 0 ? "#d97706" : "#16a34a" },
+            { value: incompleteEmployees, label: "Onboarding Eksik", color: incompleteEmployees > 0 ? "#D4A017" : "#2D6A4F" },
+            { value: ek2PendingEmployees, label: "EK-2 Bekleyen", color: ek2PendingEmployees > 0 ? "#D4A017" : "#2D6A4F" },
+            { value: safetyPendingEmployees, label: "İSG Evrak/Eğitim", color: safetyPendingEmployees > 0 ? "#D4A017" : "#2D6A4F" },
           ]
           : [
             { value: input.companies.length, label: "Firma", color: "#38bdf8" },
             { value: input.employees.length, label: "Personel", color: "#a78bfa" },
-            { value: criticalTasks.length, label: "Kritik Görev", color: criticalTasks.length > 0 ? "#dc2626" : "#16a34a" },
-            { value: highPriorityTasks.length, label: "Yüksek Öncelik", color: highPriorityTasks.length > 0 ? "#d97706" : "#16a34a" },
-            { value: totalExpiredDocs, label: "Süresi Dolmuş Belge", color: totalExpiredDocs > 0 ? "#dc2626" : "#16a34a" },
-            { value: totalSoonDocs, label: "Yaklaşan Belge", color: totalSoonDocs > 0 ? "#d97706" : "#16a34a" },
-            { value: openDofs, label: "Açık DÖF", color: openDofs > 0 ? "#d97706" : "#16a34a" },
-            { value: highRisks, label: "Yüksek Risk (≥15)", color: highRisks > 0 ? "#dc2626" : "#16a34a" },
-            { value: incompleteEmployees, label: "Eğitim Eksik", color: incompleteEmployees > 0 ? "#d97706" : "#16a34a" },
-            { value: upcomingTrainings, label: "Planlı Eğitim", color: upcomingTrainings > 0 ? "#0ea5e9" : "#16a34a" },
-            { value: openAccidentReports, label: "Açık Olay", color: openAccidentReports > 0 ? "#dc2626" : "#16a34a" },
-            { value: followUpVisits, label: "Ziyaret Takibi", color: followUpVisits > 0 ? "#d97706" : "#16a34a" },
+            { value: criticalTasks.length, label: "Kritik Görev", color: criticalTasks.length > 0 ? "#C0392B" : "#2D6A4F" },
+            { value: highPriorityTasks.length, label: "Yüksek Öncelik", color: highPriorityTasks.length > 0 ? "#D4A017" : "#2D6A4F" },
+            { value: totalExpiredDocs, label: "Süresi Dolmuş Belge", color: totalExpiredDocs > 0 ? "#C0392B" : "#2D6A4F" },
+            { value: totalSoonDocs, label: "Yaklaşan Belge", color: totalSoonDocs > 0 ? "#D4A017" : "#2D6A4F" },
+            { value: openDofs, label: "Açık DÖF", color: openDofs > 0 ? "#D4A017" : "#2D6A4F" },
+            { value: highRisks, label: "Yüksek Risk (≥15)", color: highRisks > 0 ? "#C0392B" : "#2D6A4F" },
+            { value: incompleteEmployees, label: "Eğitim Eksik", color: incompleteEmployees > 0 ? "#D4A017" : "#2D6A4F" },
+            { value: upcomingTrainings, label: "Planlı Eğitim", color: upcomingTrainings > 0 ? "#1B4332" : "#2D6A4F" },
+            { value: openAccidentReports, label: "Açık Olay", color: openAccidentReports > 0 ? "#C0392B" : "#2D6A4F" },
+            { value: followUpVisits, label: "Ziyaret Takibi", color: followUpVisits > 0 ? "#D4A017" : "#2D6A4F" },
           ];
 
   const quickActions: QuickAction[] = input.activeRole === "doctor"

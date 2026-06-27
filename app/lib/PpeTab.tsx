@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { EmptyTableRow } from "./EmptyState";
 import { generatePpeAssignmentPDF } from "./pdf";
 import type { Company, Employee, PpeRecord, PpeStatus } from "./types";
 
@@ -198,9 +199,7 @@ export function PpeTab({
               );
             })}
             {filteredPpeRecords.length === 0 && (
-              <tr>
-                <td colSpan={10} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz KKD kaydı yok.</td>
-              </tr>
+              <EmptyTableRow colSpan={10} message="Yeni KKD kaydı eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>
         </table>

@@ -52,13 +52,13 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#0a0e1a",
-        fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
+        backgroundColor: "#F8F7F4",
+        fontFamily: "var(--isg-font-sans)",
         padding: isMobile ? 12 : 20,
       }}>
         <div style={{
-          backgroundColor: "#111827",
-          border: "1px solid #1e293b",
+          backgroundColor: "#FFFFFF",
+          border: "1px solid #FFFFFF",
           borderRadius: 16,
           padding: isMobile ? 20 : 32,
           maxWidth: 480,
@@ -66,17 +66,17 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
           textAlign: "center",
         }}>
           <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
-          <h2 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: "#f1f5f9", marginBottom: 12 }}>
+          <h2 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: "#1A1A1A", marginBottom: 12 }}>
             Çerez İzni Gerekli
           </h2>
-          <p style={{ fontSize: isMobile ? 13 : 14, color: "#94a3b8", lineHeight: 1.6, marginBottom: 20 }}>
+          <p style={{ fontSize: isMobile ? 13 : 14, color: "#6B7280", lineHeight: 1.6, marginBottom: 20 }}>
             Bu uygulama, oturum yönetimi ve temel işlevler için çerez kullanımını gerektirir.
             Çerezleri kabul etmeden uygulamayı kullanmanız mümkün değildir.
           </p>
           <button
             onClick={() => setConsent("pending")}
             style={{
-              backgroundColor: "#0ea5e9",
+              backgroundColor: "#1B4332",
               color: "#fff",
               border: "none",
               borderRadius: 10,
@@ -101,14 +101,14 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
       display: "flex",
       alignItems: isMobile ? "flex-start" : "center",
       justifyContent: "center",
-      backgroundColor: "#0a0e1a",
-      fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
+      backgroundColor: "#F8F7F4",
+      fontFamily: "var(--isg-font-sans)",
       padding: isMobile ? "40px 12px 20px" : 20,
       overflowY: "auto",
     }}>
       <div style={{
-        backgroundColor: "#111827",
-        border: "1px solid #1e293b",
+        backgroundColor: "#FFFFFF",
+        border: "1px solid #FFFFFF",
         borderRadius: isMobile ? 12 : 16,
         padding: isMobile ? 16 : 32,
         maxWidth: 560,
@@ -117,16 +117,16 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: isMobile ? 12 : 20 }}>
           <span style={{ fontSize: isMobile ? 28 : 36 }}>🦺</span>
-          <h1 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 700, color: "#f1f5f9", marginTop: 8 }}>
+          <h1 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 700, color: "#1A1A1A", marginTop: 8 }}>
             İSG <span style={{ color: "#38bdf8" }}>Otomasyon</span>
           </h1>
         </div>
 
-        <h2 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 700, color: "#f1f5f9", marginBottom: 12 }}>
+        <h2 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 700, color: "#1A1A1A", marginBottom: 12 }}>
           🍪 Çerez ve Veri İşleme Politikası
         </h2>
 
-        <p style={{ fontSize: isMobile ? 12 : 13, color: "#94a3b8", lineHeight: 1.7, marginBottom: 12 }}>
+        <p style={{ fontSize: isMobile ? 12 : 13, color: "#6B7280", lineHeight: 1.7, marginBottom: 12 }}>
           Bu uygulama, size güvenli ve işlevsel bir deneyim sunabilmek için belirli verileri
           işlemekte ve çerezler kullanmaktadır. Devam etmeden önce lütfen aşağıdaki bilgileri
           inceleyiniz.
@@ -146,8 +146,8 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
             { icon: "📊", title: "İşlem Kayıtları", desc: "Sistem güvenliği için aktivite logları" },
           ].map((item, i) => (
             <div key={i} style={{
-              backgroundColor: "#0f172a",
-              border: "1px solid #1e293b",
+              backgroundColor: "#F8F7F4",
+              border: "1px solid #FFFFFF",
               borderRadius: 10,
               padding: isMobile ? "8px 12px" : "10px 12px",
               display: isMobile ? "flex" : "block",
@@ -157,7 +157,7 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
               <div style={{ fontSize: isMobile ? 16 : 18, marginBottom: isMobile ? 0 : 4 }}>{item.icon}</div>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", marginBottom: 2 }}>{item.title}</div>
-                <div style={{ fontSize: 11, color: "#64748b" }}>{item.desc}</div>
+                <div style={{ fontSize: 11, color: "#6B7280" }}>{item.desc}</div>
               </div>
             </div>
           ))}
@@ -182,13 +182,13 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
 
         {showDetails && (
           <div style={{
-            backgroundColor: "#0f172a",
-            border: "1px solid #1e293b",
+            backgroundColor: "#F8F7F4",
+            border: "1px solid #FFFFFF",
             borderRadius: 10,
             padding: isMobile ? 12 : 16,
             marginBottom: 16,
             fontSize: isMobile ? 11 : 12,
-            color: "#94a3b8",
+            color: "#6B7280",
             lineHeight: 1.7,
             maxHeight: isMobile ? 200 : 240,
             overflowY: "auto",
@@ -273,7 +273,7 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
             onClick={handleAcceptAll}
             style={{
               flex: 1,
-              backgroundColor: "#0ea5e9",
+              backgroundColor: "#1B4332",
               color: "#fff",
               border: "none",
               borderRadius: 10,
@@ -290,7 +290,7 @@ export function CookieConsent({ children }: { children: React.ReactNode }) {
             style={{
               flex: isMobile ? 1 : 0.6,
               backgroundColor: "transparent",
-              color: "#64748b",
+              color: "#6B7280",
               border: "1px solid #334155",
               borderRadius: 10,
               padding: isMobile ? "15px 0" : "13px 0",

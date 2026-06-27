@@ -29,18 +29,18 @@ export async function POST(req: NextRequest) {
 
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-        <div style="background:#1e293b;padding:20px;border-radius:8px 8px 0 0;">
+        <div style="background:#FFFFFF;padding:20px;border-radius:8px 8px 0 0;">
           <h1 style="color:white;margin:0;font-size:20px;">ISG Otomasyon</h1>
-          <p style="color:#94a3b8;margin:4px 0 0;font-size:14px;">Test E-postası</p>
+          <p style="color:#6B7280;margin:4px 0 0;font-size:14px;">Test E-postası</p>
         </div>
         <div style="border:1px solid #e2e8f0;border-top:none;padding:24px;border-radius:0 0 8px 8px;">
           <p style="font-size:14px;color:#334155;margin:0 0 8px;">Bu bir test e-postasıdır.</p>
           <p style="font-size:14px;color:#334155;margin:0 0 16px;">E-posta bildirimleri başarıyla yapılandırılmıştır. DÖF oluşturulduğunda otomatik bildirim bu adrese gönderilecektir.</p>
           <div style="margin-top:24px;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;">
-            <p style="color:#16a34a;font-size:13px;margin:0;font-weight:600;">✅ E-posta yapılandırması başarılı</p>
+            <p style="color:#2D6A4F;font-size:13px;margin:0;font-weight:600;">✅ E-posta yapılandırması başarılı</p>
           </div>
           <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;">
-            <p style="color:#94a3b8;font-size:12px;margin:0;">Bu bildirim ISG Otomasyon tarafından otomatik gönderilmiştir.</p>
+            <p style="color:#6B7280;font-size:12px;margin:0;">Bu bildirim ISG Otomasyon tarafından otomatik gönderilmiştir.</p>
           </div>
         </div>
       </div>`;

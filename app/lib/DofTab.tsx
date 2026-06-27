@@ -1,6 +1,7 @@
 import React, { ChangeEvent, useEffect, useState } from "react";
 import { priorityColor } from "./dashboardUtils";
 import { CHECKLIST, findChecklistItem } from "./dofVisionChecklist";
+import { EmptyState } from "./EmptyState";
 import type { Company, DofRecord, Employee, Observer, RiskRecord } from "./types";
 import { auth } from "../../lib/firebase";
 
@@ -144,7 +145,7 @@ function DatePicker({ styles, value, onChange }: { styles: Record<string, React.
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
               const isSelected = selectedDate && selectedDate.getFullYear() === viewYear && selectedDate.getMonth() === viewMonth && selectedDate.getDate() === day;
               return (
-                <button key={day} type="button" onClick={() => select(day)} style={{ backgroundColor: isSelected ? "#0ea5e9" : "transparent", color: isSelected ? "#fff" : "var(--isg-text)", border: "none", borderRadius: 4, padding: "4px 0", fontSize: 12, cursor: "pointer", textAlign: "center" }}>
+                <button key={day} type="button" onClick={() => select(day)} style={{ backgroundColor: isSelected ? "#1B4332" : "transparent", color: isSelected ? "#fff" : "var(--isg-text)", border: "none", borderRadius: 4, padding: "4px 0", fontSize: 12, cursor: "pointer", textAlign: "center" }}>
                   {day}
                 </button>
               );
@@ -372,7 +373,7 @@ export function DofTab({
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                     <div style={{ position: "relative" as const, display: "inline-block" }}>
                       <img src={value} alt={field} style={{ width: 120, height: 90, objectFit: "cover" as const, borderRadius: 8, border: "1px solid var(--isg-border)" }} />
-                      <button type="button" onClick={() => setField(field, "")} style={{ position: "absolute" as const, top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                      <button type="button" onClick={() => setField(field, "")} style={{ position: "absolute" as const, top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#C0392B", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                     </div>
                     <label htmlFor={inputId} style={{ ...styles.btnSecondary, cursor: "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}>
                       🔄 Değiştir
@@ -448,14 +449,14 @@ export function DofTab({
         <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <button style={{ ...styles.btnPrimary, opacity: dofAdding ? 0.6 : 1 }} disabled={dofAdding} onClick={addDof}>{dofAdding ? "Kaydediliyor..." : "DÖF Ekle"}</button>
           {dofAddStatus && (
-            <span style={{ fontSize: 13, padding: "6px 12px", borderRadius: 6, backgroundColor: dofAddStatus.startsWith("✅") ? "#16a34a22" : dofAddStatus.startsWith("⚠️") ? "#d9770622" : "#dc262622", color: dofAddStatus.startsWith("✅") ? "#16a34a" : dofAddStatus.startsWith("⚠️") ? "#d97706" : "#dc2626" }}>{dofAddStatus}</span>
+            <span style={{ fontSize: 13, padding: "6px 12px", borderRadius: 6, backgroundColor: dofAddStatus.startsWith("✅") ? "#2D6A4F22" : dofAddStatus.startsWith("⚠️") ? "#D4A01722" : "#C0392B22", color: dofAddStatus.startsWith("✅") ? "#2D6A4F" : dofAddStatus.startsWith("⚠️") ? "#D4A017" : "#C0392B" }}>{dofAddStatus}</span>
           )}
         </div>
       </div>
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-        <span style={{ color: "#64748b", fontSize: 13 }}>{filteredDofs.length} kayıt</span>
+        <span style={{ color: "#6B7280", fontSize: 13 }}>{filteredDofs.length} kayıt</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>
         {filteredDofs.map(dof => {
@@ -468,7 +469,7 @@ export function DofTab({
                 <div style={{ fontWeight: 700, fontSize: 14 }}>{dof.title}</div>
                 <Badge styles={styles} text={dof.priority} color={priorityColor(dof.priority)} />
               </div>
-              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>{dof.description}</div>
+              <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 4 }}>{dof.description}</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
                 <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>📍 {dof.location}</span>
                 <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>👤 {dof.responsible}</span>
@@ -476,14 +477,14 @@ export function DofTab({
                 {dof.affectedPersons && <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>👥 {dof.affectedPersons}</span>}
               </div>
               <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-                <Badge styles={styles} text={dof.status} color={dof.status === "Çözüldü" ? "#16a34a" : dof.status === "Riske Aktarıldı" ? "#7c3aed" : dof.status === "Önlem Alındı" ? "#d97706" : dof.status === "Bildirildi" ? "#0ea5e9" : "#dc2626"} />
+                <Badge styles={styles} text={dof.status} color={dof.status === "Çözüldü" ? "#2D6A4F" : dof.status === "Riske Aktarıldı" ? "#7c3aed" : dof.status === "Önlem Alındı" ? "#D4A017" : dof.status === "Bildirildi" ? "#1B4332" : "#C0392B"} />
                 <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{company?.nickName}</span>
                 {observer && <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{observer.fullName}</span>}
               </div>
               {(dof.beforePhoto || dof.afterPhoto) && (
                 <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                  {dof.beforePhoto && <div><div style={{ fontSize: 10, color: "#64748b", marginBottom: 2 }}>Önce</div><img src={dof.beforePhoto} alt="önce" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 4 }} /></div>}
-                  {dof.afterPhoto && <div><div style={{ fontSize: 10, color: "#64748b", marginBottom: 2 }}>Sonra</div><img src={dof.afterPhoto} alt="sonra" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 4 }} /></div>}
+                  {dof.beforePhoto && <div><div style={{ fontSize: 10, color: "#6B7280", marginBottom: 2 }}>Önce</div><img src={dof.beforePhoto} alt="önce" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 4 }} /></div>}
+                  {dof.afterPhoto && <div><div style={{ fontSize: 10, color: "#6B7280", marginBottom: 2 }}>Sonra</div><img src={dof.afterPhoto} alt="sonra" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 4 }} /></div>}
                 </div>
               )}
               {isEditing && (
@@ -503,7 +504,7 @@ export function DofTab({
                             <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
                               <div style={{ position: "relative" as const, display: "inline-block" }}>
                                 <img src={val} alt={field} style={{ width: 140, height: 100, objectFit: "cover" as const, borderRadius: 8, border: "1px solid var(--isg-border)" }} />
-                                <button type="button" onClick={() => removeDofPhoto(dof.id, field)} style={{ position: "absolute" as const, top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#dc2626", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                                <button type="button" onClick={() => removeDofPhoto(dof.id, field)} style={{ position: "absolute" as const, top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", border: "none", backgroundColor: "#C0392B", color: "white", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                               </div>
                               <label htmlFor={inputId} style={{ ...styles.btnSecondary, cursor: "pointer", fontSize: 11, display: "inline-flex", alignItems: "center", gap: 4 }}>
                                 🔄 Değiştir
@@ -542,6 +543,11 @@ export function DofTab({
             </div>
           );
         })}
+        {filteredDofs.length === 0 && (
+          <div style={{ ...styles.card, gridColumn: "1 / -1" }} className="isg-card">
+            <EmptyState message="Yeni bir DÖF kaydı oluşturmak için yukarıdaki formu kullanın." />
+          </div>
+        )}
       </div>
     </div>
   );

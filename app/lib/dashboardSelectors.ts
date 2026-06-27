@@ -460,7 +460,7 @@ export function getCompanyDocSummary(documents: DocumentRecord[], companyId: str
 
 export function getCompanyIndicator(documents: DocumentRecord[], companyId: string) {
   const summary = getCompanyDocSummary(documents, companyId);
-  if (summary.missingCount > 0 || summary.expiredCount > 0) return { text: "Kritik", color: "#dc2626" };
-  if (summary.soonCount > 0) return { text: "Yaklaşıyor", color: "#d97706" };
-  return { text: "Uygun", color: "#16a34a" };
+  if (summary.missingCount > 0 || summary.expiredCount > 0) return { text: "Kritik", color: "#C0392B" };
+  if (summary.soonCount > 0) return { text: "Yaklaşıyor", color: "#D4A017" };
+  return { text: "Uygun", color: "#2D6A4F" };
 }

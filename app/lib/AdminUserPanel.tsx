@@ -21,6 +21,7 @@ import {
   Account,
 } from "./accountService";
 import { PLANS, getPlan, limitLabel, type PlanId } from "./plans";
+import { EmptyState } from "./EmptyState";
 
 type Props = {
   styles: Record<string, React.CSSProperties>;
@@ -169,7 +170,7 @@ function AddUserForm({
       </div>
 
       {error && (
-        <div style={{ fontSize: 12, color: "#fca5a5", backgroundColor: "#dc262615", border: "1px solid #dc262633", borderRadius: 7, padding: "8px 10px" }}>
+        <div style={{ fontSize: 12, color: "#C0392B", backgroundColor: "#C0392B15", border: "1px solid #C0392B33", borderRadius: 7, padding: "8px 10px" }}>
           {error}
         </div>
       )}
@@ -406,9 +407,7 @@ function AccountCard({
           })}
         </div>
       ) : (
-        <div style={{ color: "var(--isg-text-subtle)", fontSize: 12, marginBottom: 12, padding: "10px 0" }}>
-          Henüz kullanıcı eklenmemiş.
-        </div>
+        <EmptyState title="Henüz kullanıcı eklenmemiş." message="Yeni kullanıcı eklemek için hesap formundaki kullanıcı alanını kullanın." />
       )}
 
       {/* Kullanıcı ekle */}
@@ -540,10 +539,10 @@ export function AdminUserPanel({ styles, companies }: Props) {
       {/* Durum mesajı */}
       {status && (
         <div style={{
-          backgroundColor: status.startsWith("✅") ? "#16a34a15" : "#dc262615",
-          border: `1px solid ${status.startsWith("✅") ? "#16a34a33" : "#dc262633"}`,
+          backgroundColor: status.startsWith("✅") ? "#2D6A4F15" : "#C0392B15",
+          border: `1px solid ${status.startsWith("✅") ? "#2D6A4F33" : "#C0392B33"}`,
           borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13,
-          color: status.startsWith("✅") ? "#86efac" : "#fca5a5",
+          color: status.startsWith("✅") ? "#86efac" : "#C0392B",
         }}>
           {status}
         </div>
@@ -602,7 +601,7 @@ export function AdminUserPanel({ styles, companies }: Props) {
                     </label>
                   );
                 })}
-                {companies.length === 0 && <span style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Henüz firma yok.</span>}
+                {companies.length === 0 && <EmptyState title="Henüz firma yok." message="Firma eklendiğinde kullanıcı yetkilendirmesi burada yapılabilir." />}
               </div>
             </div>
             <div>
@@ -622,8 +621,8 @@ export function AdminUserPanel({ styles, companies }: Props) {
 
       {/* Hesap kartları */}
       {accounts.length === 0 && !showNewAccountForm && (
-        <div style={{ ...styles.card, textAlign: "center" as const, color: "var(--isg-text-muted)", padding: 32 }}>
-          Henüz hesap yok. "+ Yeni Hesap" ile başlayın.
+        <div style={styles.card} className="isg-card">
+          <EmptyState title="Henüz hesap yok." message="Yeni hesap oluşturmak için + Yeni Hesap butonuyla başlayın." />
         </div>
       )}
       {accounts.map(account => (

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { EmptyTableRow } from "./EmptyState";
 import { generateCommitteeMeetingPDF } from "./pdf";
 import type { CommitteeMeetingRecord, CommitteeMeetingStatus, Company, Employee } from "./types";
 
@@ -221,9 +222,7 @@ export function CommitteeMeetingsTab({
               );
             })}
             {filteredCommitteeMeetings.length === 0 && (
-              <tr>
-                <td colSpan={10} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz kurul toplantısı kaydı yok.</td>
-              </tr>
+              <EmptyTableRow colSpan={10} message="Yeni kurul toplantısı kaydı eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>
         </table>

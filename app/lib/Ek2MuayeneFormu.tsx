@@ -11,6 +11,7 @@
 
 import React, { useState, useEffect } from "react";
 import { generateEk2PDF } from "./ek2PdfGenerator";
+import { EmptyState } from "./EmptyState";
 import { db } from "../../lib/firebase";
 import {
   collection,
@@ -379,8 +380,8 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
         )}
 
         {filteredForms.length === 0 ? (
-          <div style={{ ...styles.card, textAlign: "center", color: "var(--isg-text-muted)", padding: 40 }}>
-            {canEdit ? "Henüz muayene formu oluşturulmamış. Yeni form eklemek için yukarıdaki butonu kullanın." : "Henüz muayene formu bulunmamaktadır."}
+          <div style={styles.card} className="isg-card">
+            <EmptyState message={canEdit ? "Yeni muayene formu oluşturmak için yukarıdaki butonu kullanın." : "Muayene formu oluşturulduğunda burada görünecek."} />
           </div>
         ) : (
           <div style={styles.card}>
@@ -405,9 +406,9 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
                     <td style={styles.td}>
                       <span style={{
                         ...styles.badge,
-                        backgroundColor: f.kanaatSonuc ? "#16a34a22" : "#d9770622",
-                        color: f.kanaatSonuc ? "#16a34a" : "#d97706",
-                        border: `1px solid ${f.kanaatSonuc ? "#16a34a44" : "#d9770644"}`,
+                        backgroundColor: f.kanaatSonuc ? "#2D6A4F22" : "#D4A01722",
+                        color: f.kanaatSonuc ? "#2D6A4F" : "#D4A017",
+                        border: `1px solid ${f.kanaatSonuc ? "#2D6A4F44" : "#D4A01744"}`,
                       }}>
                         {f.kanaatSonuc ? "Tamamlandı" : "Taslak"}
                       </span>

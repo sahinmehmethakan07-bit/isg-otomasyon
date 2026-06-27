@@ -4,6 +4,7 @@ import {
   generateTrainingCertificatesPDF,
   generateTrainingPDF,
 } from "./pdf";
+import { EmptyTableRow } from "./EmptyState";
 import type { Company, Employee, TrainingRecord, TrainingStatus, TrainingType } from "./types";
 
 type Styles = Record<string, React.CSSProperties>;
@@ -86,7 +87,7 @@ function DatePicker({ styles, value, onChange }: { styles: Styles; value: string
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
               const isSelected = selectedDate && selectedDate.getFullYear() === viewYear && selectedDate.getMonth() === viewMonth && selectedDate.getDate() === day;
               return (
-                <button key={day} onClick={() => select(day)} style={{ backgroundColor: isSelected ? "#0ea5e9" : "transparent", color: isSelected ? "#fff" : "var(--isg-text)", border: "none", borderRadius: 4, padding: "4px 0", fontSize: 12, cursor: "pointer", textAlign: "center" }}>
+                <button key={day} onClick={() => select(day)} style={{ backgroundColor: isSelected ? "#1B4332" : "transparent", color: isSelected ? "#fff" : "var(--isg-text)", border: "none", borderRadius: 4, padding: "4px 0", fontSize: 12, cursor: "pointer", textAlign: "center" }}>
                   {day}
                 </button>
               );
@@ -248,9 +249,7 @@ export function TrainingsTab({
               );
             })}
             {filteredTrainings.length === 0 && (
-              <tr>
-                <td colSpan={11} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz eğitim kaydı yok.</td>
-              </tr>
+              <EmptyTableRow colSpan={11} message="Yeni eğitim kaydı eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>
         </table>

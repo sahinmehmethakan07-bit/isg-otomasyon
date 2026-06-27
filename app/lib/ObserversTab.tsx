@@ -42,7 +42,7 @@ export function ObserversTab({ styles, observers, newObserver, setNewObserver, a
         {observers.map(obs => (
           <div key={obs.id} style={styles.card} className="isg-card">
             <div style={{ fontWeight: 700, marginBottom: 4 }}>{obs.fullName}</div>
-            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 2 }}>{obs.title}</div>
+            <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 2 }}>{obs.title}</div>
             <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Sertifika: {obs.certificateNo}</div>
             <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Tel: {obs.phone}</div>
             <div style={{ marginTop: 12 }}><button style={styles.btnDanger} onClick={() => deleteObserver(obs.id)}>Sil</button></div>

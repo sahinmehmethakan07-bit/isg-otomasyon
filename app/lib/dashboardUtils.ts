@@ -136,28 +136,28 @@ export function officialNameFromSgk(sgkSicil: string) {
 }
 
 export function statusColor(status: string) {
-  if (status === "Süresi Dolmuş") return "#dc2626";
-  if (status === "Yaklaşıyor") return "#d97706";
-  return "#16a34a";
+  if (status === "Süresi Dolmuş") return "#C0392B";
+  if (status === "Yaklaşıyor") return "#D4A017";
+  return "#2D6A4F";
 }
 
 export function priorityColor(priority: string) {
-  if (priority === "Yüksek") return "#dc2626";
-  if (priority === "Orta") return "#d97706";
-  return "#16a34a";
+  if (priority === "Yüksek") return "#C0392B";
+  if (priority === "Orta") return "#D4A017";
+  return "#2D6A4F";
 }
 
 export function riskScoreColor(value: number) {
-  if (value >= 15) return "#dc2626";
-  if (value >= 8) return "#d97706";
-  return "#16a34a";
+  if (value >= 15) return "#C0392B";
+  if (value >= 8) return "#D4A017";
+  return "#2D6A4F";
 }
 
 export function annualPlanStatusColor(status: AnnualPlanStatus) {
-  if (status === "Tamamlandı") return "#16a34a";
-  if (status === "Devam Ediyor") return "#0ea5e9";
-  if (status === "Gecikti") return "#dc2626";
-  return "#d97706";
+  if (status === "Tamamlandı") return "#2D6A4F";
+  if (status === "Devam Ediyor") return "#1B4332";
+  if (status === "Gecikti") return "#C0392B";
+  return "#D4A017";
 }
 
 export function checklistCompletion(checklist: EmployeeChecklist) {

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { mykRecords, naceRecords } from "./constants";
+import { EmptyState } from "./EmptyState";
 import type { Company, DangerClass, Employee } from "./types";
 
 type Styles = Record<string, React.CSSProperties>;
@@ -49,7 +50,7 @@ export function NaceLookupTab({
 
       <div style={{ display: "grid", gridTemplateColumns: compactLayout ? "1fr" : "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
         {filteredNaceRecords.map(record => {
-          const color = record.dangerClass === "Çok Tehlikeli" ? "#dc2626" : record.dangerClass === "Tehlikeli" ? "#d97706" : "#16a34a";
+          const color = record.dangerClass === "Çok Tehlikeli" ? "#C0392B" : record.dangerClass === "Tehlikeli" ? "#D4A017" : "#2D6A4F";
           return (
             <div key={record.code} style={styles.card} className="isg-card">
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", marginBottom: 10 }}>
@@ -71,8 +72,8 @@ export function NaceLookupTab({
           );
         })}
         {filteredNaceRecords.length === 0 && (
-          <div style={{ ...styles.card, color: "var(--isg-text-muted)", fontSize: 13 }} className="isg-card">
-            Aradığınız kriterlere uygun NACE kaydı bulunamadı.
+          <div style={styles.card} className="isg-card">
+            <EmptyState message="Arama kriterini değiştirerek uygun NACE kaydını tekrar sorgulayın." />
           </div>
         )}
       </div>
@@ -137,14 +138,14 @@ export function MykLookupTab({
                   <div style={{ fontSize: 18, fontWeight: 900, color: "var(--isg-text)", marginBottom: 4 }}>{record.title}</div>
                   <div style={{ color: "var(--isg-text-muted)", fontSize: 12 }}>{record.code} · {record.level} · {record.sector}</div>
                 </div>
-                <LookupBadge styles={styles} text={record.mandatory ? "Zorunlu" : "Takip Edilebilir"} color={record.mandatory ? "#dc2626" : "#0ea5e9"} />
+                <LookupBadge styles={styles} text={record.mandatory ? "Zorunlu" : "Takip Edilebilir"} color={record.mandatory ? "#C0392B" : "#1B4332"} />
               </div>
               <p style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.55, margin: 0 }}>{record.note}</p>
             </div>
           ))}
           {filteredMykRecords.length === 0 && (
-            <div style={{ ...styles.card, color: "var(--isg-text-muted)", fontSize: 13 }} className="isg-card">
-              Aradığınız kriterlere uygun MYK kaydı bulunamadı.
+            <div style={styles.card} className="isg-card">
+              <EmptyState message="Arama kriterini değiştirerek uygun MYK meslek kaydını tekrar sorgulayın." />
             </div>
           )}
         </div>
@@ -179,7 +180,7 @@ export function MykLookupTab({
               );
             })}
             {mykMatchedEmployees.length === 0 && (
-              <div style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>Eşleşen personel bulunamadı.</div>
+              <EmptyState title="Eşleşen personel bulunmuyor." message="Personel unvanlarını veya MYK arama kriterini kontrol edin." />
             )}
           </div>
         </div>

@@ -20,7 +20,7 @@ export async function generateDofPDF(
   const observer = observers.find(o => o.id === dof.observerId);
   const companySigners = signers.filter(s => s.companyId === dof.companyId);
   const today = new Date().toLocaleDateString("tr-TR");
-  const HL = "#1e293b";
+  const HL = "#FFFFFF";
   const BORDER = "#d1d5db";
 
   const thCell = (t: string) => ({ text: t, fontSize: 7, bold: true, color: "white", fillColor: HL, margin: [3, 4, 3, 4] as [number, number, number, number] });
@@ -29,13 +29,13 @@ export async function generateDofPDF(
   const infoValue = (t: string) => ({ text: t || "—", fontSize: 8, color: "#475569", margin: [0, 2, 0, 2] as [number, number, number, number] });
 
   const prBadge = (priority: string) => {
-    const color = priority === "Yüksek" ? "#dc2626" : priority === "Orta" ? "#d97706" : "#16a34a";
+    const color = priority === "Yüksek" ? "#C0392B" : priority === "Orta" ? "#D4A017" : "#2D6A4F";
     return { text: priority, fontSize: 7, bold: true, color: "white", fillColor: color, alignment: "center" as const, margin: [3, 3, 3, 3] as [number, number, number, number] };
   };
 
   const stBadge = (status: string) => {
-    const colorMap: Record<string, string> = { "Açık": "#dc2626", "Bildirildi": "#0ea5e9", "Önlem Alındı": "#d97706", "Çözüldü": "#16a34a", "Riske Aktarıldı": "#7c3aed" };
-    const color = colorMap[status] || "#64748b";
+    const colorMap: Record<string, string> = { "Açık": "#C0392B", "Bildirildi": "#1B4332", "Önlem Alındı": "#D4A017", "Çözüldü": "#2D6A4F", "Riske Aktarıldı": "#7c3aed" };
+    const color = colorMap[status] || "#6B7280";
     return { text: status, fontSize: 7, bold: true, color: "white", fillColor: color, alignment: "center" as const, margin: [3, 3, 3, 3] as [number, number, number, number] };
   };
 
@@ -44,7 +44,7 @@ export async function generateDofPDF(
       table: { widths: ["*"], body: [[{
         stack: [
           { text: (company?.officialName || "—").toUpperCase(), fontSize: 14, bold: true, color: "white", alignment: "center" },
-          { text: "DOF — DUZELTME ONLEYICI FAALIYET FORMU", fontSize: 9, color: "#94a3b8", alignment: "center", margin: [0, 2, 0, 0] },
+          { text: "DOF — DUZELTME ONLEYICI FAALIYET FORMU", fontSize: 9, color: "#6B7280", alignment: "center", margin: [0, 2, 0, 0] },
         ],
         fillColor: HL, margin: [0, 8, 0, 8],
       }]] },
@@ -140,9 +140,9 @@ export async function generateDofPDF(
             { text: companySigners.find(s => s.role === "Çalışan Temsilcisi")?.fullName || "", fontSize: 8, color: "#475569" },
           ],
           [
-            { text: "____________________\nImza", fontSize: 7, color: "#94a3b8", margin: [0, 12, 0, 0] },
-            { text: "____________________\nImza", fontSize: 7, color: "#94a3b8", margin: [0, 12, 0, 0] },
-            { text: "____________________\nImza", fontSize: 7, color: "#94a3b8", margin: [0, 12, 0, 0] },
+            { text: "____________________\nImza", fontSize: 7, color: "#6B7280", margin: [0, 12, 0, 0] },
+            { text: "____________________\nImza", fontSize: 7, color: "#6B7280", margin: [0, 12, 0, 0] },
+            { text: "____________________\nImza", fontSize: 7, color: "#6B7280", margin: [0, 12, 0, 0] },
           ],
         ],
       },
@@ -156,12 +156,12 @@ export async function generateDofPDF(
     pageOrientation: "landscape",
     pageMargins: [30, 30, 30, 40],
     content,
-    defaultStyle: { font: "Roboto" },
+    defaultStyle: {},
     footer: (currentPage: number) => ({
       text: `Sayfa ${currentPage}`,
       alignment: "right",
       fontSize: 7,
-      color: "#94a3b8",
+      color: "#6B7280",
       margin: [0, 0, 30, 0],
     }),
   };

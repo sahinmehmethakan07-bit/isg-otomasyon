@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { EmptyTableRow } from "./EmptyState";
 import type { ArchiveItem, Company } from "./types";
 
 type ArchiveTabProps = {
@@ -115,15 +116,15 @@ export function ArchiveTab({
     <div>
       <div style={styles.statGrid}>
         <div style={styles.statCard} className="isg-stat-card">
-          <div style={{ ...styles.statValue, color: "#0ea5e9" }}>{archiveItems.length}</div>
+          <div style={{ ...styles.statValue, color: "#1B4332" }}>{archiveItems.length}</div>
           <div style={styles.statLabel}>Toplam Arşiv Kaydı</div>
         </div>
         <div style={styles.statCard} className="isg-stat-card">
-          <div style={{ ...styles.statValue, color: "#16a34a" }}>{documentsCount}</div>
+          <div style={{ ...styles.statValue, color: "#2D6A4F" }}>{documentsCount}</div>
           <div style={styles.statLabel}>Belge</div>
         </div>
         <div style={styles.statCard} className="isg-stat-card">
-          <div style={{ ...styles.statValue, color: "#d97706" }}>{plansAndTrainingsCount}</div>
+          <div style={{ ...styles.statValue, color: "#D4A017" }}>{plansAndTrainingsCount}</div>
           <div style={styles.statLabel}>Plan / Eğitim</div>
         </div>
         <div style={styles.statCard} className="isg-stat-card">
@@ -170,10 +171,10 @@ export function ArchiveTab({
           <tbody>
             {filteredArchiveItems.map(item => {
               const company = companies.find(c => c.id === item.companyId);
-              const color = item.status === "Süresi Dolmuş" || item.status === "Açık" ? "#dc2626" : item.status === "Tamamlandı" || item.status === "Kapandı" || item.status === "Geçerli" ? "#16a34a" : "#d97706";
+              const color = item.status === "Süresi Dolmuş" || item.status === "Açık" ? "#C0392B" : item.status === "Tamamlandı" || item.status === "Kapandı" || item.status === "Geçerli" ? "#2D6A4F" : "#D4A017";
               return (
                 <tr key={`${item.type}-${item.id}`}>
-                  <td style={styles.td} className="isg-td"><Badge text={item.type} color="#0ea5e9" /></td>
+                  <td style={styles.td} className="isg-td"><Badge text={item.type} color="#1B4332" /></td>
                   <td style={{ ...styles.td, minWidth: 220, fontWeight: 700 }} className="isg-td">{item.title || "—"}</td>
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
                   <td style={{ ...styles.td, color: "var(--isg-text-muted)" }} className="isg-td">{item.owner || "—"}</td>
@@ -184,9 +185,7 @@ export function ArchiveTab({
               );
             })}
             {filteredArchiveItems.length === 0 && (
-              <tr>
-                <td colSpan={7} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Arşivde gösterilecek kayıt bulunamadı.</td>
-              </tr>
+              <EmptyTableRow colSpan={7} message="Filtreleri temizleyin veya kayıt oluşturulduğunda arşiv burada görünecek." />
             )}
           </tbody>
         </table>

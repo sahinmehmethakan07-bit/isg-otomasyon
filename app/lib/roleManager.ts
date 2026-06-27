@@ -60,7 +60,7 @@ export const ROLE_CONFIG: Record<
   doctor: {
     label: "Doktor",
     icon: "🩺",
-    color: "#0ea5e9",
+    color: "#1B4332",
     description: "Sadece kendi eklediği verileri görür",
   },
   nurse: {

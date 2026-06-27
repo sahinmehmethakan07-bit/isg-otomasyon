@@ -1,5 +1,6 @@
 import React from "react";
 import { checklistCompletion, createOnboardingFromChecklist } from "./dashboardUtils";
+import { EmptyTableRow } from "./EmptyState";
 import type { Company, Employee } from "./types";
 
 type EmployeeTableProps = {
@@ -41,7 +42,7 @@ export function EmployeeTable({
           <option value="all">Tüm Firmalar</option>
           {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
         </select>
-        <span style={{ color: "#64748b", fontSize: 13 }}>{filteredEmployees.length} kişi</span>
+        <span style={{ color: "#6B7280", fontSize: 13 }}>{filteredEmployees.length} kişi</span>
       </div>
       <div style={{ ...styles.card, gridColumn: "1 / -1", padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
@@ -69,12 +70,12 @@ export function EmployeeTable({
                   <td style={styles.td} className="isg-td">{emp.title}</td>
                   <td style={{ ...styles.td, fontSize: 12 }}>{company?.nickName}</td>
                   <td style={{ ...styles.td, fontSize: 12 }}>{emp.hireDate}</td>
-                  <td style={styles.td} className="isg-td"><Badge text={onboarding.status === "completed" ? "Tamamlandı" : "Bekliyor"} color={onboarding.status === "completed" ? "#16a34a" : "#d97706"} /></td>
+                  <td style={styles.td} className="isg-td"><Badge text={onboarding.status === "completed" ? "Tamamlandı" : "Bekliyor"} color={onboarding.status === "completed" ? "#2D6A4F" : "#D4A017"} /></td>
                   <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)", minWidth: 220 }}>{onboarding.missingSteps.length > 0 ? onboarding.missingSteps.join(", ") : "Tüm görevler tamamlandı"}</td>
                   <td style={styles.td} className="isg-td">
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <div style={{ height: 6, width: 80, backgroundColor: "var(--isg-bg)", borderRadius: 3, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: completionWidth + "%", backgroundColor: cl.missing === 0 ? "#16a34a" : "#d97706" }} />
+                        <div style={{ height: "100%", width: completionWidth + "%", backgroundColor: cl.missing === 0 ? "#2D6A4F" : "#D4A017" }} />
                       </div>
                       <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{cl.completed}/{cl.total}</span>
                     </div>
@@ -83,6 +84,9 @@ export function EmployeeTable({
                 </tr>
               );
             })}
+            {filteredEmployees.length === 0 && (
+              <EmptyTableRow colSpan={11} message="Yeni personel eklemek için yukarıdaki personel formunu kullanın." />
+            )}
           </tbody>
         </table>
       </div>

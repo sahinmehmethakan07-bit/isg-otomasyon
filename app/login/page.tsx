@@ -1,26 +1,80 @@
-/**
- * login/page.tsx — Rol Tabanlı Login Sayfası (Türkçe + Mobil Uyumlu)
- */
-
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-  signInWithEmailAndPassword,
-  signOut,
-} from "firebase/auth";
-import { auth, db } from "../../lib/firebase";
+import React, { useEffect, useState } from "react";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import {
-  getUserProfile,
-  UserRole,
-  ROLE_CONFIG,
-} from "../lib/roleManager";
-import { useLanguage } from "../lib/i18n";
+import { auth, db } from "../../lib/firebase";
 import { CookieConsent } from "../lib/CookieConsent";
+import { useLanguage } from "../lib/i18n";
+import { getUserProfile, ROLE_CONFIG, UserRole } from "../lib/roleManager";
 
 type LoginStep = "select_role" | "enter_credentials";
+
+const AUTH_ERRORS = {
+  wrongCredentials: "E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.",
+  accountLocked: "Hesabınız geçici olarak kilitlendi. 15 dakika sonra tekrar deneyin.",
+  emptyField: "Bu alan zorunludur.",
+  network: "Bağlantı hatası. İnternet bağlantınızı kontrol edin.",
+  sessionExpired: "Oturumunuz sona erdi. Lütfen tekrar giriş yapın.",
+};
+
+function EyeIcon({ visible }: { visible: boolean }) {
+  return (
+    <svg className="isg-login-eye" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+      {visible ? (
+        <>
+          <path d="M3.6 12s3-5.2 8.4-5.2S20.4 12 20.4 12s-3 5.2-8.4 5.2S3.6 12 3.6 12Z" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <circle cx="12" cy="12" r="2.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+        </>
+      ) : (
+        <>
+          <path d="M4 4l16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8.6 8.1A7.8 7.8 0 0 1 12 7c5.4 0 8.4 5 8.4 5a13.2 13.2 0 0 1-2.5 3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M14.2 14.4A3 3 0 0 1 9.7 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M6.7 10.2A13.8 13.8 0 0 0 3.6 12s3 5 8.4 5c1.2 0 2.3-.25 3.2-.67" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function FloatingField({
+  error,
+  label,
+  onChange,
+  type,
+  value,
+  autoComplete,
+  autoFocus,
+  children,
+}: {
+  error?: string;
+  label: string;
+  onChange: (value: string) => void;
+  type: string;
+  value: string;
+  autoComplete?: string;
+  autoFocus?: boolean;
+  children?: React.ReactNode;
+}) {
+  return (
+    <label className={`isg-floating-field${error ? " has-error" : ""}`}>
+      <input
+        autoComplete={autoComplete}
+        autoFocus={autoFocus}
+        className="isg-login-input"
+        onChange={event => onChange(event.target.value)}
+        placeholder=" "
+        type={type}
+        value={value}
+      />
+      <span>{label}</span>
+      {children}
+      {error && <small>{error}</small>}
+    </label>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,22 +85,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
-  /* ── Mobil ekran algılama ── */
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const reason = params.get("reason");
-    if (reason === "expired") setInfoMessage(t("login.expired"));
+    if (reason === "expired") setInfoMessage(AUTH_ERRORS.sessionExpired);
     else if (reason === "logged_out") setInfoMessage(t("login.loggedOut"));
     else if (reason === "no_role") setInfoMessage(t("login.noRole"));
     else if (reason === "role_mismatch") setInfoMessage(t("login.roleMismatch"));
@@ -60,11 +106,16 @@ export default function LoginPage() {
     human_resources: { label: t("role.human_resources"), desc: t("role.human_resources.desc") },
   };
 
+  function clearMessages() {
+    setError("");
+    setInfoMessage(null);
+    setFieldErrors({});
+  }
+
   function selectRole(role: UserRole) {
     setSelectedRole(role);
     setStep("enter_credentials");
-    setError("");
-    setInfoMessage(null);
+    clearMessages();
   }
 
   function goBack() {
@@ -72,23 +123,51 @@ export default function LoginPage() {
     setSelectedRole(null);
     setEmail("");
     setPassword("");
-    setError("");
+    clearMessages();
   }
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
+  function updateEmail(value: string) {
+    setEmail(value);
+    clearMessages();
+  }
+
+  function updatePassword(value: string) {
+    setPassword(value);
+    clearMessages();
+  }
+
+  function mapAuthError(err: any) {
+    const code = err?.code?.replace("firestore/", "") || "";
+    if (code === "auth/too-many-requests") return AUTH_ERRORS.accountLocked;
+    if (code === "unavailable" || code === "auth/network-request-failed") return AUTH_ERRORS.network;
+    if (err?.message?.includes("ERR_BLOCKED") || err?.message?.includes("Failed to fetch")) return AUTH_ERRORS.network;
+    return AUTH_ERRORS.wrongCredentials;
+  }
+
+  async function handleLogin(event: React.FormEvent) {
+    event.preventDefault();
     if (!selectedRole) return;
+
+    const nextFieldErrors: { email?: string; password?: string } = {};
+    if (!email.trim()) nextFieldErrors.email = AUTH_ERRORS.emptyField;
+    if (!password.trim()) nextFieldErrors.password = AUTH_ERRORS.emptyField;
+    if (nextFieldErrors.email || nextFieldErrors.password) {
+      setFieldErrors(nextFieldErrors);
+      setError("");
+      return;
+    }
+
     setError("");
     setLoading(true);
 
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
       const user = cred.user;
-
       const profile = await getUserProfile(user.uid);
+
       if (!profile) {
         await signOut(auth);
-        setError(t("login.noProfile"));
+        setError(AUTH_ERRORS.wrongCredentials);
         setLoading(false);
         return;
       }
@@ -96,7 +175,7 @@ export default function LoginPage() {
       const allowedRoles = profile.roles?.length ? profile.roles : [profile.role];
       if (!allowedRoles.includes(selectedRole)) {
         await signOut(auth);
-        setError(t("login.wrongRole").replace("{role}", ROLE_CONFIG[profile.role]?.label || profile.role));
+        setError(AUTH_ERRORS.wrongCredentials);
         setLoading(false);
         return;
       }
@@ -106,360 +185,122 @@ export default function LoginPage() {
       router.push("/");
     } catch (err: any) {
       console.error("[Login] Error:", err);
-      const msgs: Record<string, string> = {
-        "auth/user-not-found": t("login.userNotFound"),
-        "auth/wrong-password": t("login.wrongPassword"),
-        "auth/invalid-email": t("login.invalidEmail"),
-        "auth/too-many-requests": t("login.tooManyRequests"),
-        "auth/invalid-credential": t("login.invalidCredential"),
-        "permission-denied": t("login.permissionDenied"),
-        "unavailable": t("login.unavailable"),
-      };
-      const errorCode = err.code?.replace("firestore/", "") || "";
-      const friendlyMsg = msgs[errorCode] || msgs[err.code] || null;
-      if (friendlyMsg) {
-        setError(friendlyMsg);
-      } else if (err.message?.includes("ERR_BLOCKED") || err.message?.includes("Failed to fetch")) {
-        setError(t("login.blocked"));
-      } else {
-        setError(`${t("login.failed")}: ${err.message}`);
-      }
+      setError(mapAuthError(err));
     } finally {
       setLoading(false);
     }
   }
 
   const roleConfig = selectedRole ? ROLE_CONFIG[selectedRole] : null;
+  const roleEntries = (Object.entries(ROLE_CONFIG) as [UserRole, typeof ROLE_CONFIG["admin"]][]);
 
   return (
     <CookieConsent>
-      <div style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #090a0d 0%, #101218 48%, #0b1110 100%)",
-        fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
-        position: "relative",
-        overflow: "hidden",
-        /* Mobil: padding ayarı */
-        padding: isMobile ? "20px 12px" : 0,
-      }}>
-
-        {/* Arka plan dokusu */}
-        <div style={{
-          position: "absolute",
-          inset: 0,
-          background: "linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0) 32%), linear-gradient(90deg, rgba(76,201,166,0.07), rgba(90,169,255,0.045), rgba(247,185,85,0.035))",
-          pointerEvents: "none",
-        }} />
-
-        <div style={{
-          position: "relative",
-          zIndex: 1,
-          width: "100%",
-          /* Mobil: tam genişlik, desktop: sabit max */
-          maxWidth: isMobile ? "100%" : (step === "select_role" ? 920 : 420),
-          padding: isMobile ? 0 : "0 20px",
-        }}>
-          {/* Logo */}
-          <div style={{ textAlign: "center", marginBottom: isMobile ? 20 : 32 }}>
-            <span style={{ fontSize: isMobile ? 36 : 44 }}>🦺</span>
-            <h1 style={{
-              fontSize: isMobile ? 20 : 24,
-              fontWeight: 700,
-              color: "#f1f5f9",
-              marginTop: 8,
-              letterSpacing: 0,
-            }}>
-              İSG <span style={{ color: "#4cc9a6" }}>Otomasyon</span>
-            </h1>
-            <p style={{ fontSize: isMobile ? 12 : 14, color: "rgba(244,246,251,0.54)", marginTop: 4 }}>
-              {t("app.subtitle")}
-            </p>
+      <main className="isg-login-page">
+        <section className="isg-login-brand" aria-label="İSG Otomasyon tanıtım">
+          <svg className="isg-login-pattern" viewBox="0 0 760 760" aria-hidden="true">
+            <path d="M92 119h156l78 135-78 135H92L14 254 92 119Z" />
+            <path d="M422 70h178l89 154-89 154H422l-89-154 89-154Z" />
+            <path d="M255 360h210l105 182-105 182H255L150 542 255 360Z" />
+            <path d="M573 410h126l63 109-63 109H573l-63-109 63-109Z" />
+            <path d="M58 542h122l61 106-61 106H58L-3 648 58 542Z" />
+          </svg>
+          <div className="isg-login-brand-copy">
+            <p>İSG Otomasyon</p>
+            <h1>Güvenli iş ortamları için akıllı yönetim.</h1>
           </div>
+        </section>
 
-          {/* Bilgi mesajı */}
-          {infoMessage && (
-            <div style={{
-              backgroundColor: "rgba(76,201,166,0.12)",
-              border: "1px solid rgba(76,201,166,0.24)",
-              borderRadius: 8,
-              padding: "12px 16px",
-              marginBottom: 20,
-              fontSize: 13,
-              color: "#8ee7c8",
-              textAlign: "center",
-            }}>
-              {infoMessage}
+        <section className="isg-login-panel">
+          <div className="isg-login-card">
+            <div className="isg-login-heading">
+              <p>Giriş Yap</p>
+              <h2>İSG yönetim panelinize hoş geldiniz.</h2>
             </div>
-          )}
 
-          {/* ── ADIM 1: Rol Seçimi ── */}
-          {step === "select_role" && (
-            <div>
-              <p style={{ textAlign: "center", fontSize: isMobile ? 13 : 15, color: "rgba(244,246,251,0.62)", marginBottom: isMobile ? 16 : 24 }}>
-                {t("login.selectRole")}
-              </p>
-              {/* Mobil: dikey layout (1 kolon), Desktop: 4 kolon */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)",
-                gap: isMobile ? 10 : 16,
-              }}>
-                {(Object.entries(ROLE_CONFIG) as [UserRole, typeof ROLE_CONFIG["admin"]][])
-                  .filter(([role]) => role !== "admin")
-                  .map(([role, config]) => (
-                  <button
-                    key={role}
-                    onClick={() => selectRole(role)}
-                    style={{
-                      backgroundColor: "rgba(22,24,31,0.9)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: 8,
-                      /* Mobil: yatay layout, Desktop: dikey */
-                      padding: isMobile ? "16px 16px" : "32px 20px",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                      textAlign: isMobile ? "left" : "center",
-                      position: "relative",
-                      overflow: "hidden",
-                      display: isMobile ? "flex" : "block",
-                      alignItems: "center",
-                      gap: isMobile ? 12 : 0,
-                      boxShadow: "0 18px 50px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04)",
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = config.color;
-                      (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
-                      (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${config.color}22`;
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.1)";
-                      (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-                      (e.currentTarget as HTMLElement).style.boxShadow = "0 18px 50px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04)";
-                    }}
-                  >
-                    <div style={{ fontSize: isMobile ? 28 : 40, marginBottom: isMobile ? 0 : 12 }}>{config.icon}</div>
-                    <div>
-                      <div style={{ fontSize: isMobile ? 14 : 16, fontWeight: 750, color: "#f4f6fb", marginBottom: isMobile ? 2 : 6 }}>
-                        {roleLabels[role].label}
-                      </div>
-                      <div style={{ fontSize: 11, color: "rgba(244,246,251,0.48)", lineHeight: 1.4 }}>
-                        {roleLabels[role].desc}
-                      </div>
-                    </div>
-                    <div style={{
-                      position: "absolute",
-                      bottom: 0,
-                      left: isMobile ? 0 : "20%",
-                      right: isMobile ? 0 : "20%",
-                      height: 3,
-                      backgroundColor: config.color,
-                      borderRadius: "3px 3px 0 0",
-                      opacity: 0.6,
-                    }} />
-                  </button>
-                ))}
+            {infoMessage && (
+              <div className="isg-login-info">
+                {infoMessage}
               </div>
-              <div style={{
-                display: "flex",
-                flexDirection: isMobile ? "column" : "row",
-                justifyContent: "space-between",
-                alignItems: isMobile ? "stretch" : "center",
-                gap: isMobile ? 10 : 0,
-                marginTop: isMobile ? 16 : 24,
-              }}>
-                <p style={{ fontSize: 11, color: "rgba(244,246,251,0.36)", textAlign: isMobile ? "center" : "left" }}>
-                  🔒 {t("login.singleDevice")}
-                </p>
-                <button
-                  onClick={() => selectRole("admin")}
-                  style={{
-                    background: "none",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    borderRadius: 8,
-                    color: "rgba(244,246,251,0.58)",
-                    fontSize: 12,
-                    padding: isMobile ? "10px 14px" : "5px 14px",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = "#5aa9ff";
-                    (e.currentTarget as HTMLElement).style.color = "#9ccaff";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.12)";
-                    (e.currentTarget as HTMLElement).style.color = "rgba(244,246,251,0.58)";
-                  }}
-                >
-                  🛡️ Admin
-                </button>
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* ── ADIM 2: Giriş Formu ── */}
-          {step === "enter_credentials" && roleConfig && (
-            <div style={{
-              backgroundColor: "rgba(22,24,31,0.9)",
-              border: `1px solid ${roleConfig.color}33`,
-              borderRadius: 8,
-              padding: isMobile ? 20 : 32,
-              boxShadow: "0 22px 60px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)",
-            }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: isMobile ? 8 : 12,
-                marginBottom: isMobile ? 16 : 24,
-                flexWrap: "wrap",
-              }}>
-                <button
-                  onClick={goBack}
-                  style={{
-                    backgroundColor: "transparent",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: 8,
-                    color: "rgba(244,246,251,0.62)",
-                    padding: "6px 12px",
-                    fontSize: 13,
-                    cursor: "pointer",
-                  }}
-                >
-                  ← {t("back")}
-                </button>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: isMobile ? 20 : 24 }}>{roleConfig.icon}</span>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{
-                      fontSize: isMobile ? 14 : 16,
-                      fontWeight: 700,
-                      color: "#f4f6fb",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}>
-                      {roleLabels[selectedRole!].label} {t("role.login")}
-                    </div>
-                    <div style={{ fontSize: 11, color: "rgba(244,246,251,0.48)" }}>
-                      {roleLabels[selectedRole!].desc}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {error && (
-                <div style={{
-                  backgroundColor: "#dc262615",
-                  border: "1px solid #dc262633",
-                  borderRadius: 8,
-                  padding: "10px 14px",
-                  marginBottom: 16,
-                  fontSize: 13,
-                  color: "#fca5a5",
-                  lineHeight: 1.5,
-                }}>
-                  {error}
-                </div>
-              )}
-
-              <form onSubmit={handleLogin}>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 12, color: "rgba(244,246,251,0.62)", marginBottom: 6 }}>
-                    {t("login.email")}
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    autoFocus={!isMobile}
-                    style={{
-                      width: "100%",
-                      backgroundColor: "rgba(255,255,255,0.055)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: 8,
-                      color: "#f4f6fb",
-                      padding: isMobile ? "14px" : "12px 14px",
-                      fontSize: 16, /* 16px: iOS zoom engelleyici */
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                    placeholder={t("login.emailPlaceholder")}
-                  />
-                </div>
-
-                <div style={{ marginBottom: 24 }}>
-                  <label style={{ display: "block", fontSize: 12, color: "rgba(244,246,251,0.62)", marginBottom: 6 }}>
-                    {t("login.password")}
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      style={{
-                        width: "100%",
-                        backgroundColor: "rgba(255,255,255,0.055)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        borderRadius: 8,
-                        color: "#f4f6fb",
-                        padding: isMobile ? "14px 82px 14px 14px" : "12px 82px 12px 14px",
-                        fontSize: 16, /* 16px: iOS zoom engelleyici */
-                        outline: "none",
-                        boxSizing: "border-box",
-                      }}
-                      placeholder={t("login.passwordPlaceholder")}
-                    />
+            {step === "select_role" && (
+              <div className="isg-role-step">
+                <div className="isg-role-intro">Devam etmek için rolünüzü seçin.</div>
+                <div className="isg-role-grid">
+                  {roleEntries.map(([role, config]) => (
                     <button
+                      key={role}
+                      className="isg-role-card"
+                      onClick={() => selectRole(role)}
                       type="button"
-                      onClick={() => setShowPassword(prev => !prev)}
-                      style={{
-                        position: "absolute",
-                        right: 8,
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        backgroundColor: "rgba(255,255,255,0.08)",
-                        color: "#dbeafe",
-                        borderRadius: 6,
-                        padding: "6px 9px",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                      }}
                     >
-                      {showPassword ? "Gizle" : "Göster"}
+                      <span className="isg-role-icon">{config.icon}</span>
+                      <span>
+                        <strong>{roleLabels[role].label}</strong>
+                        <small>{roleLabels[role].desc}</small>
+                      </span>
                     </button>
-                  </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {step === "enter_credentials" && roleConfig && (
+              <form className="isg-login-form" onSubmit={handleLogin} noValidate>
+                <div className="isg-selected-role">
+                  <button className="isg-role-back" onClick={goBack} type="button">← Rol değiştir</button>
+                  <span>{roleConfig.icon}</span>
+                  <strong>{roleLabels[selectedRole!].label}</strong>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{
-                    width: "100%",
-                    backgroundColor: loading ? `${roleConfig.color}88` : roleConfig.color,
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: isMobile ? "15px 0" : "13px 0",
-                    fontSize: isMobile ? 15 : 14,
-                    fontWeight: 600,
-                    cursor: loading ? "not-allowed" : "pointer",
-                    transition: "opacity 0.2s",
-                  }}
+                <FloatingField
+                  autoComplete="email"
+                  autoFocus
+                  error={fieldErrors.email}
+                  label="E-posta"
+                  onChange={updateEmail}
+                  type="email"
+                  value={email}
+                />
+
+                <FloatingField
+                  autoComplete="current-password"
+                  error={fieldErrors.password}
+                  label="Şifre"
+                  onChange={updatePassword}
+                  type={showPassword ? "text" : "password"}
+                  value={password}
                 >
-                  {loading ? t("login.signingIn") : t("login.signIn")}
+                  <button
+                    aria-label={showPassword ? "Şifreyi gizle" : "Şifreyi göster"}
+                    className="isg-password-toggle"
+                    onClick={() => setShowPassword(current => !current)}
+                    type="button"
+                  >
+                    <EyeIcon visible={showPassword} />
+                  </button>
+                </FloatingField>
+
+                <a className="isg-forgot-link" href="mailto:admin@isg-otomasyon.local?subject=Şifre sıfırlama talebi">
+                  Şifremi unuttum
+                </a>
+
+                <button className="isg-login-submit" disabled={loading} type="submit">
+                  {loading ? <span className="isg-login-spinner" aria-label="Giriş yapılıyor" /> : "Giriş Yap"}
                 </button>
+
+                {error && (
+                  <div className="isg-login-error" role="alert">
+                    <span aria-hidden="true">⚠</span>
+                    <p>{error}</p>
+                  </div>
+                )}
               </form>
-            </div>
-          )}
-        </div>
-      </div>
+            )}
+          </div>
+        </section>
+      </main>
     </CookieConsent>
   );
 }

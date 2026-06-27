@@ -1,4 +1,5 @@
 import React from "react";
+import { EmptyTableRow } from "./EmptyState";
 import type { Company, TaskItem, TaskPriority } from "./types";
 
 type GorevlerTabProps = {
@@ -26,10 +27,10 @@ function Badge({ text, color }: { text: string; color: string }) {
 }
 
 const PRIORITY_COLORS: Record<TaskPriority, string> = {
-  Kritik: "#dc2626",
-  Yüksek: "#d97706",
-  Orta: "#0ea5e9",
-  Düşük: "#16a34a",
+  Kritik: "#C0392B",
+  Yüksek: "#D4A017",
+  Orta: "#1B4332",
+  Düşük: "#2D6A4F",
 };
 
 export function GorevlerTab({
@@ -47,9 +48,9 @@ export function GorevlerTab({
     <div>
       <div style={styles.statGrid}>
         {[
-          { value: taskItems.length, label: "Toplam Görev", color: "#0ea5e9" },
-          { value: taskItems.filter(t => t.priority === "Kritik").length, label: "Kritik", color: "#dc2626" },
-          { value: taskItems.filter(t => t.priority === "Yüksek").length, label: "Yüksek", color: "#d97706" },
+          { value: taskItems.length, label: "Toplam Görev", color: "#1B4332" },
+          { value: taskItems.filter(t => t.priority === "Kritik").length, label: "Kritik", color: "#C0392B" },
+          { value: taskItems.filter(t => t.priority === "Yüksek").length, label: "Yüksek", color: "#D4A017" },
           { value: taskItems.filter(t => t.category === "Personel").length, label: "Personel Görevi", color: "#a78bfa" },
         ].map(({ value, label, color }) => (
           <div key={label} style={styles.statCard} className="isg-stat-card">
@@ -106,7 +107,7 @@ export function GorevlerTab({
                     <Badge text={task.priority} color={PRIORITY_COLORS[task.priority]} />
                   </td>
                   <td style={styles.td} className="isg-td">
-                    <Badge text={task.category} color="#64748b" />
+                    <Badge text={task.category} color="#6B7280" />
                   </td>
                   <td style={{ ...styles.td, minWidth: 280 }} className="isg-td">
                     <div style={{ fontWeight: 800, marginBottom: 4 }}>{task.title}</div>
@@ -128,11 +129,7 @@ export function GorevlerTab({
               );
             })}
             {filteredTaskItems.length === 0 && (
-              <tr>
-                <td colSpan={7} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>
-                  Şu an takip gerektiren görev bulunamadı.
-                </td>
-              </tr>
+              <EmptyTableRow colSpan={7} message="Şu an takip gerektiren görev yok. Yeni görevler oluştuğunda burada görünecek." />
             )}
           </tbody>
         </table>

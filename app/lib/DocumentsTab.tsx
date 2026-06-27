@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { documentTemplates } from "./constants";
 import { daysUntil, getDateStatus, statusColor } from "./dashboardUtils";
+import { EmptyTableRow } from "./EmptyState";
 import type { Company, DocumentRecord, Employee } from "./types";
 
 type DocumentDraft = {
@@ -126,7 +127,7 @@ export function DocumentsTab({
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-        <span style={{ color: "#64748b", fontSize: 13 }}>{filteredDocuments.length} belge</span>
+        <span style={{ color: "#6B7280", fontSize: 13 }}>{filteredDocuments.length} belge</span>
       </div>
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
@@ -144,11 +145,14 @@ export function DocumentsTab({
                   <td style={{ ...styles.td, fontSize: 12, color: "var(--isg-text-muted)" }}>{emp ? `${emp.firstName} ${emp.lastName}` : "—"}</td>
                   <td style={{ ...styles.td, fontSize: 12 }}>{d.issueDate}</td>
                   <td style={{ ...styles.td, fontSize: 12 }}>{d.expiryDate || "—"}</td>
-                  <td style={styles.td} className="isg-td">{d.expiryDate ? <div><Badge text={ds} color={statusColor(ds)} />{days !== null && days >= 0 && <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{days} gün</div>}</div> : "—"}</td>
+                  <td style={styles.td} className="isg-td">{d.expiryDate ? <div><Badge text={ds} color={statusColor(ds)} />{days !== null && days >= 0 && <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>{days} gün</div>}</div> : "—"}</td>
                   <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteDocument(d.id)}>Sil</button></td>
                 </tr>
               );
             })}
+            {filteredDocuments.length === 0 && (
+              <EmptyTableRow colSpan={7} message="Yeni belge eklemek için yukarıdaki formu kullanın." />
+            )}
           </tbody>
         </table>
       </div>

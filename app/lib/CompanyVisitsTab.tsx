@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { EmptyTableRow } from "./EmptyState";
 import { generateCompanyVisitPDF } from "./pdf";
 import type { Company, CompanyVisitPurpose, CompanyVisitRecord, CompanyVisitStatus } from "./types";
 
@@ -171,7 +172,7 @@ export function CompanyVisitsTab({
                 <tr key={visit.id}>
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
                   <td style={styles.td} className="isg-td">{visit.visitDate ? new Date(visit.visitDate).toLocaleDateString("tr-TR") : "—"}</td>
-                  <td style={styles.td} className="isg-td"><Badge text={visit.purpose} color="#0ea5e9" /></td>
+                  <td style={styles.td} className="isg-td"><Badge text={visit.purpose} color="#1B4332" /></td>
                   <td style={styles.td} className="isg-td">{visit.visitor || "—"}</td>
                   <td style={styles.td} className="isg-td">{visit.contactedPerson || "—"}</td>
                   <td style={styles.td} className="isg-td">
@@ -190,9 +191,7 @@ export function CompanyVisitsTab({
               );
             })}
             {filteredCompanyVisits.length === 0 && (
-              <tr>
-                <td colSpan={10} style={{ ...styles.td, color: "var(--isg-text-muted)", textAlign: "center", padding: 24 }}>Henüz firma ziyareti kaydı yok.</td>
-              </tr>
+              <EmptyTableRow colSpan={10} message="Yeni firma ziyareti eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>
         </table>

@@ -32,7 +32,7 @@ import React from "react";
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
-  app: { minHeight: "100vh", height: "100dvh", background: "var(--isg-bg)", color: "var(--isg-text)", fontFamily: "-apple-system, BlinkMacSystemFont, 'Roboto', 'Segoe UI', sans-serif", overflow: "hidden" as const },
+  app: { minHeight: "100vh", height: "100dvh", background: "var(--isg-bg)", color: "var(--isg-text)", fontFamily: "var(--isg-font-sans)", overflow: "hidden" as const },
   header: { backgroundColor: "var(--isg-header)", borderBottom: "1px solid var(--isg-border)", padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 58, gap: 10, backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", position: "sticky" as const, top: 0, zIndex: 50, boxShadow: "0 12px 34px rgba(0,0,0,0.22)" },
   nav: { display: "flex", gap: 6, padding: "0 28px", borderBottom: "1px solid var(--isg-border)", backgroundColor: "var(--isg-nav)", overflowX: "auto" as const, WebkitOverflowScrolling: "touch" as const, msOverflowStyle: "none" as const, scrollbarWidth: "none" as const, backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", position: "sticky" as const, top: 58, zIndex: 40, height: 50, alignItems: "center" },
   shell: { display: "flex", alignItems: "stretch", minHeight: "calc(100vh - 58px)", width: "100%", overflow: "hidden" as const },
@@ -47,9 +47,9 @@ const styles: Record<string, React.CSSProperties> = {
   input: { height: 44, border: "1px solid var(--isg-border)", borderRadius: 10, backgroundColor: "var(--isg-input-bg)", color: "var(--isg-text)", padding: "0 12px", fontSize: 16, width: "100%", outline: "none", boxSizing: "border-box" as const },
   select: { height: 44, border: "1px solid var(--isg-border)", borderRadius: 10, backgroundColor: "var(--isg-input-bg)", color: "var(--isg-text)", padding: "0 12px", fontSize: 16, width: "100%", outline: "none", boxSizing: "border-box" as const },
   textarea: { border: "1px solid var(--isg-border)", borderRadius: 10, backgroundColor: "var(--isg-input-bg)", color: "var(--isg-text)", padding: "10px 12px", fontSize: 16, width: "100%", outline: "none", resize: "vertical" as const, fontFamily: "inherit", boxSizing: "border-box" as const },
-  btnPrimary: { minHeight: 44, backgroundColor: "var(--isg-accent)", color: "#fff", border: "none", borderRadius: 10, padding: "0 16px", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, whiteSpace: "nowrap" as const },
+  btnPrimary: { minHeight: 44, backgroundColor: "var(--isg-primary)", color: "#fff", border: "none", borderRadius: 10, padding: "0 16px", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, whiteSpace: "nowrap" as const },
   btnSecondary: { minHeight: 44, backgroundColor: "var(--isg-btn-secondary)", color: "var(--isg-text)", border: "1px solid var(--isg-border)", borderRadius: 10, padding: "0 14px", fontSize: 15, fontWeight: 650, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, whiteSpace: "nowrap" as const },
-  btnDanger: { minHeight: 44, backgroundColor: "rgba(220,38,38,0.1)", color: "var(--isg-danger)", border: "1px solid rgba(220,38,38,0.2)", borderRadius: 10, padding: "0 14px", fontSize: 15, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" as const },
+  btnDanger: { minHeight: 44, backgroundColor: "rgba(192,57,43,0.1)", color: "var(--isg-danger)", border: "1px solid rgba(192,57,43,0.22)", borderRadius: 10, padding: "0 14px", fontSize: 15, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" as const },
   table: { width: "100%", borderCollapse: "collapse" as const, fontSize: 13 },
   th: { padding: "10px 12px", textAlign: "left" as const, fontWeight: 800, fontSize: 11, textTransform: "uppercase" as const, letterSpacing: "0.07em", borderBottom: "1px solid var(--isg-border)", color: "var(--isg-text-muted)", whiteSpace: "nowrap" as const },
   td: { padding: "10px 12px", borderBottom: "1px solid var(--isg-border)", verticalAlign: "top" as const },
@@ -57,7 +57,7 @@ const styles: Record<string, React.CSSProperties> = {
   formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))", gap: 12, marginBottom: 14 },
   label: { fontSize: 11, fontWeight: 700, color: "var(--isg-text-subtle)", textTransform: "uppercase" as const, letterSpacing: "0.07em", display: "block", marginBottom: 5 },
   statGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(160px, 100%), 1fr))", gap: 12, marginBottom: 20 },
-  statCard: { backgroundColor: "var(--isg-card)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "16px 18px", transition: "border-color 0.2s, transform 0.2s" },
+  statCard: { backgroundColor: "var(--isg-card)", border: "1px solid var(--isg-border)", borderRadius: 12, padding: "16px 18px", transition: "border-color 0.2s, transform 0.2s" },
   statValue: { fontSize: 28, fontWeight: 900, lineHeight: 1, marginBottom: 6 },
   statLabel: { fontSize: 12, color: "var(--isg-text-muted)", fontWeight: 600 },
   badge: { display: "inline-flex", alignItems: "center", padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" as const },
@@ -205,6 +205,12 @@ export default function Page() {
 
   const [lockedModuleNotice, setLockedModuleNotice] = React.useState<string | null>(null);
 
+  React.useEffect(() => {
+    const activeLabel = tabs.find(tab => tab.id === activeTab)?.label || "Panel";
+    const cleanLabel = activeLabel.replace(/^[^\p{L}\p{N}]+/u, "").trim() || "Panel";
+    document.title = `${cleanLabel} | İSG Otomasyon`;
+  }, [activeTab, tabs]);
+
   function handleTabChange(tab: { id: string; label: string; disabled?: boolean; locked?: boolean }) {
     if (tab.disabled) return;
     setActiveTab(tab.id);
@@ -247,13 +253,13 @@ export default function Page() {
         tabs={tabs}
       >
         {loadError && (
-          <div style={{ backgroundColor: "#dc262615", border: "1px solid #dc262633", borderRadius: 8, color: "#fca5a5", fontSize: 13, marginBottom: 16, padding: "10px 12px" }}>
+          <div style={{ backgroundColor: "#C0392B15", border: "1px solid #C0392B33", borderRadius: 8, color: "#C0392B", fontSize: 13, marginBottom: 16, padding: "10px 12px" }}>
             {loadError}
           </div>
         )}
 
         {planError && (
-          <div style={{ backgroundColor: "#d9770615", border: "1px solid #d9770633", borderRadius: 8, color: "#fcd34d", fontSize: 13, marginBottom: 16, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+          <div style={{ backgroundColor: "#D4A01715", border: "1px solid #D4A01733", borderRadius: 8, color: "#D4A017", fontSize: 13, marginBottom: 16, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <span>{planError}</span>
           </div>
         )}
@@ -272,7 +278,7 @@ export default function Page() {
             <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 10 }}>Bu modül paket yükseltmesi gerektiriyor</div>
             <div style={{ color: "var(--isg-text-muted)", fontSize: 14, marginBottom: 16, lineHeight: 1.7 }}>
               <strong style={{ color: "var(--isg-text)" }}>{tabs.find(t => t.id === activeTab)?.label}</strong> modülü{" "}
-              <strong style={{ color: "#0ea5e9" }}>⭐ Uzman</strong> veya{" "}
+              <strong style={{ color: "#1B4332" }}>⭐ Uzman</strong> veya{" "}
               <strong style={{ color: "#a78bfa" }}>🏆 OSGB</strong> paketinde mevcuttur.
               <br />Mevcut paketiniz: <strong style={{ color: currentPlan.color }}>{currentPlan.emoji} {currentPlan.label}</strong>
             </div>

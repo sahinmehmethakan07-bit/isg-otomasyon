@@ -349,6 +349,22 @@ export function buildTaskItems(input: TaskInput): TaskItem[] {
     });
   });
 
+  input.companies.forEach(company => {
+    if (!company.contractEnd || !isSoon(company.contractEnd)) return;
+    const expired = isPast(company.contractEnd);
+    items.push({
+      id: `company-contract-${company.id}`,
+      companyId: company.id,
+      title: expired ? "Süresi dolmuş sözleşme" : "Yaklaşan sözleşme bitişi",
+      detail: `${company.nickName} · ${company.serviceType}`,
+      owner: "Sözleşme sorumlusu",
+      dueDate: company.contractEnd,
+      priority: expired ? "Kritik" : "Yüksek",
+      sourceTab: "firmalar",
+      category: "Belge",
+    });
+  });
+
   input.employees.forEach(employee => {
     const onboarding = employee.onboarding || createOnboardingFromChecklist(employee.checklist);
     if (onboarding.status === "completed") return;

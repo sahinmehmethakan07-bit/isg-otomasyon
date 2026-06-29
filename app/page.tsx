@@ -389,6 +389,7 @@ export default function Page() {
             styles={styles}
             companies={companies}
             employees={employees}
+            trainings={trainings}
             filteredDocuments={filteredDocuments}
             newDocument={newDocument}
             setNewDocument={setNewDocument}

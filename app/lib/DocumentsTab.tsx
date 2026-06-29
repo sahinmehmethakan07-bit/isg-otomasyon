@@ -4,7 +4,8 @@ import { documentTemplates } from "./constants";
 import { daysUntil, getDateStatus, statusColor } from "./dashboardUtils";
 import { formatDate, formatRelativeDays } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
-import type { Company, DocumentRecord, Employee } from "./types";
+import { buildValidityCalendar } from "./validityCalendar";
+import type { Company, DocumentRecord, Employee, TrainingRecord } from "./types";
 
 type DocumentDraft = {
   companyId: string;
@@ -18,6 +19,7 @@ type DocumentsTabProps = {
   styles: Record<string, React.CSSProperties>;
   companies: Company[];
   employees: Employee[];
+  trainings: TrainingRecord[];
   filteredDocuments: DocumentRecord[];
   newDocument: DocumentDraft;
   setNewDocument: React.Dispatch<React.SetStateAction<DocumentDraft>>;
@@ -48,6 +50,7 @@ export function DocumentsTab({
   styles,
   companies,
   employees,
+  trainings,
   filteredDocuments,
   newDocument,
   setNewDocument,
@@ -58,6 +61,14 @@ export function DocumentsTab({
   addDocument,
   deleteDocument,
 }: DocumentsTabProps) {
+  const filteredCompanies = selectedCompanyId === "all" ? companies : companies.filter(company => company.id === selectedCompanyId);
+  const filteredTrainings = selectedCompanyId === "all" ? trainings : trainings.filter(training => training.companyId === selectedCompanyId);
+  const validityItems = buildValidityCalendar({ companies: filteredCompanies, documents: filteredDocuments, trainings: filteredTrainings });
+  const expiredCount = validityItems.filter(item => item.status === "Süresi Dolmuş").length;
+  const soonCount = validityItems.filter(item => item.status === "Yaklaşıyor").length;
+  const validCount = validityItems.filter(item => item.status === "Geçerli").length;
+  const topValidityItems = validityItems.slice(0, 8);
+
   return (
     <div>
       <div style={styles.card} className="isg-card">
@@ -70,6 +81,40 @@ export function DocumentsTab({
           <FormField label="Geçerlilik Tarihi"><IsoTarihSecici allowFuture styles={styles} value={newDocument.expiryDate} onChange={v => setNewDocument({ ...newDocument, expiryDate: v })} /></FormField>
         </div>
         <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addDocument}>Belge Ekle</button></div>
+      </div>
+      <div style={styles.card} className="isg-card">
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+          <div>
+            <p style={styles.sectionTitle} className="isg-text-muted">Geçerlilik Takvimi</p>
+            <div style={{ fontSize: 12, color: "var(--isg-text-muted)" }}>Belgeler, firma sözleşmeleri ve planlı eğitim tarihleri tek listede izlenir.</div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Badge text={`${expiredCount} süresi dolmuş`} color={statusColor("Süresi Dolmuş")} />
+            <Badge text={`${soonCount} yaklaşıyor`} color={statusColor("Yaklaşıyor")} />
+            <Badge text={`${validCount} geçerli`} color={statusColor("Geçerli")} />
+          </div>
+        </div>
+        {topValidityItems.length > 0 ? (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(260px, 100%), 1fr))", gap: 10 }}>
+            {topValidityItems.map(item => (
+              <div key={item.id} style={{ border: "1px solid var(--isg-border)", borderRadius: 10, padding: 12, backgroundColor: "var(--isg-input-bg)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 12, color: "var(--isg-text-muted)", fontWeight: 700 }}>{item.type}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, marginTop: 3 }}>{item.title}</div>
+                  </div>
+                  <Badge text={item.status} color={statusColor(item.status)} />
+                </div>
+                <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginTop: 8 }}>{item.owner}</div>
+                <div style={{ fontSize: 12, color: "var(--isg-text-subtle)", marginTop: 4 }}>
+                  {formatDate(item.dueDate)} · {item.daysRemaining >= 0 ? formatRelativeDays(item.daysRemaining) : `${Math.abs(item.daysRemaining)} gün geçti`}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ fontSize: 13, color: "var(--isg-text-muted)" }}>Takvimde izlenecek tarihli kayıt yok.</div>
+        )}
       </div>
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />

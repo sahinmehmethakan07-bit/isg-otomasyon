@@ -61,13 +61,22 @@ export function DocumentsTab({
   addDocument,
   deleteDocument,
 }: DocumentsTabProps) {
+  const [validityStatusFilter, setValidityStatusFilter] = React.useState("all");
   const filteredCompanies = selectedCompanyId === "all" ? companies : companies.filter(company => company.id === selectedCompanyId);
   const filteredTrainings = selectedCompanyId === "all" ? trainings : trainings.filter(training => training.companyId === selectedCompanyId);
   const validityItems = buildValidityCalendar({ companies: filteredCompanies, documents: filteredDocuments, trainings: filteredTrainings });
   const expiredCount = validityItems.filter(item => item.status === "Süresi Dolmuş").length;
   const soonCount = validityItems.filter(item => item.status === "Yaklaşıyor").length;
   const validCount = validityItems.filter(item => item.status === "Geçerli").length;
-  const topValidityItems = validityItems.slice(0, 8);
+  const visibleValidityItems = validityItems
+    .filter(item => validityStatusFilter === "all" || item.status === validityStatusFilter)
+    .slice(0, 8);
+  const validityFilters = [
+    { value: "all", label: "Tümü", count: validityItems.length, color: "#52d3b5" },
+    { value: "Süresi Dolmuş", label: "Süresi Dolmuş", count: expiredCount, color: statusColor("Süresi Dolmuş") },
+    { value: "Yaklaşıyor", label: "Yaklaşıyor", count: soonCount, color: statusColor("Yaklaşıyor") },
+    { value: "Geçerli", label: "Geçerli", count: validCount, color: statusColor("Geçerli") },
+  ];
 
   return (
     <div>
@@ -94,9 +103,32 @@ export function DocumentsTab({
             <Badge text={`${validCount} geçerli`} color={statusColor("Geçerli")} />
           </div>
         </div>
-        {topValidityItems.length > 0 ? (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          {validityFilters.map(filter => {
+            const active = validityStatusFilter === filter.value;
+            const activeBackground = filter.value === "all" ? "rgba(82, 211, 181, 0.16)" : `${filter.color}18`;
+            const activeBorder = filter.value === "all" ? "rgba(82, 211, 181, 0.45)" : `${filter.color}55`;
+            return (
+              <button
+                key={filter.value}
+                type="button"
+                onClick={() => setValidityStatusFilter(filter.value)}
+                style={{
+                  ...styles.btnSecondary,
+                  minHeight: 38,
+                  backgroundColor: active ? activeBackground : "var(--isg-btn-secondary)",
+                  borderColor: active ? activeBorder : "var(--isg-border)",
+                  color: active ? filter.color : "var(--isg-text)",
+                }}
+              >
+                {filter.label} ({filter.count})
+              </button>
+            );
+          })}
+        </div>
+        {visibleValidityItems.length > 0 ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(260px, 100%), 1fr))", gap: 10 }}>
-            {topValidityItems.map(item => (
+            {visibleValidityItems.map(item => (
               <div key={item.id} style={{ border: "1px solid var(--isg-border)", borderRadius: 10, padding: 12, backgroundColor: "var(--isg-input-bg)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                   <div style={{ minWidth: 0 }}>
@@ -113,7 +145,7 @@ export function DocumentsTab({
             ))}
           </div>
         ) : (
-          <div style={{ fontSize: 13, color: "var(--isg-text-muted)" }}>Takvimde izlenecek tarihli kayıt yok.</div>
+          <div style={{ fontSize: 13, color: "var(--isg-text-muted)" }}>Seçili filtrede izlenecek tarihli kayıt yok.</div>
         )}
       </div>
       <div style={styles.searchBar}>

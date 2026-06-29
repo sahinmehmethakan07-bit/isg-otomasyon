@@ -103,6 +103,7 @@ export function OzetTab({
               const color: Record<TaskPriority, string> = {
                 Kritik: "#C0392B", Yüksek: "#D4A017", Orta: "#1B4332", Düşük: "#2D6A4F",
               };
+              const escalationColor = task.escalationLevel === "Gecikti" || task.escalationLevel === "Acil" ? "#C0392B" : task.escalationLevel === "Yakında" ? "#D4A017" : "#2D6A4F";
               return (
                 <div
                   key={task.id}
@@ -113,10 +114,13 @@ export function OzetTab({
                       <div style={{ fontWeight: 800, marginBottom: 4 }}>{task.title}</div>
                       <div style={{ color: "var(--isg-text-muted)", fontSize: 12, lineHeight: 1.45 }}>{task.detail}</div>
                       <div style={{ color: "var(--isg-text-subtle)", fontSize: 11, marginTop: 6 }}>
-                        {company?.nickName || "Firma"} · {task.dueDate ? formatDate(task.dueDate) : "Termin yok"}
+                        {company?.nickName || "Firma"} · {task.dueDate ? formatDate(task.dueDate) : "Termin yok"} · {task.escalationLabel || "Termin yok"}
                       </div>
                     </div>
-                    <Badge text={task.priority} color={color[task.priority]} />
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      <Badge text={task.escalationLevel || "Tarihsiz"} color={escalationColor} />
+                      <Badge text={task.priority} color={color[task.priority]} />
+                    </div>
                   </div>
                 </div>
               );

@@ -13,6 +13,7 @@ import type {
   Employee,
   PpeRecord,
   RiskRecord,
+  TaskEscalation,
   TaskItem,
   TaskPriority,
   TrainingRecord,
@@ -283,6 +284,41 @@ type TaskInput = Omit<ArchiveInput, "ppeRecords" | "emergencyPlans" | "committee
   activeRole?: string;
 };
 
+function parseTaskDate(date?: string) {
+  if (!date) return null;
+  const parsed = new Date(`${date}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function daysUntilTaskDate(date?: string) {
+  const target = parseTaskDate(date);
+  if (!target) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+export function getTaskEscalation(dueDate?: string): { level: TaskEscalation; label: string; daysRemaining: number | null } {
+  const days = daysUntilTaskDate(dueDate);
+  if (days === null) return { level: "Tarihsiz", label: "Termin yok", daysRemaining: null };
+  if (days < 0) return { level: "Gecikti", label: `${Math.abs(days)} gün gecikti`, daysRemaining: days };
+  if (days <= 1) return { level: "Acil", label: days === 0 ? "Bugün son gün" : "Yarın son gün", daysRemaining: days };
+  if (days <= 7) return { level: "Yakında", label: `${days} gün kaldı`, daysRemaining: days };
+  if (days <= 30) return { level: "İzlemede", label: `${days} gün kaldı`, daysRemaining: days };
+  return { level: "Planlı", label: `${days} gün kaldı`, daysRemaining: days };
+}
+
+function withEscalation(task: TaskItem): TaskItem {
+  const escalation = getTaskEscalation(task.dueDate);
+  return {
+    ...task,
+    escalationLevel: escalation.level,
+    escalationLabel: escalation.label,
+    daysRemaining: escalation.daysRemaining,
+  };
+}
+
 export function buildTaskItems(input: TaskInput): TaskItem[] {
   const items: TaskItem[] = [];
   const today = new Date();
@@ -430,7 +466,10 @@ export function buildTaskItems(input: TaskInput): TaskItem[] {
     }
   });
 
-  return items.sort((a, b) => {
+  return items.map(withEscalation).sort((a, b) => {
+    const escalationWeight: Record<TaskEscalation, number> = { Gecikti: 0, Acil: 1, Yakında: 2, İzlemede: 3, Planlı: 4, Tarihsiz: 5 };
+    const byEscalation = escalationWeight[a.escalationLevel || "Tarihsiz"] - escalationWeight[b.escalationLevel || "Tarihsiz"];
+    if (byEscalation !== 0) return byEscalation;
     const priorityWeight: Record<TaskPriority, number> = { Kritik: 0, Yüksek: 1, Orta: 2, Düşük: 3 };
     const byPriority = priorityWeight[a.priority] - priorityWeight[b.priority];
     if (byPriority !== 0) return byPriority;
@@ -442,7 +481,7 @@ export function filterTaskItems(taskItems: TaskItem[], companies: Company[], sel
   return taskItems.filter(task => {
     const company = companies.find(c => c.id === task.companyId);
     const matchesCompany = selectedCompanyId === "all" || task.companyId === selectedCompanyId;
-    return matchesCompany && matchesSearch([task.category, task.title, task.detail, task.owner, task.priority, company?.nickName, company?.officialName], search);
+    return matchesCompany && matchesSearch([task.category, task.title, task.detail, task.owner, task.priority, task.escalationLevel, task.escalationLabel, company?.nickName, company?.officialName], search);
   });
 }
 

@@ -338,6 +338,7 @@ export type ArchiveItem = {
 };
 
 export type TaskPriority = "Kritik" | "Yüksek" | "Orta" | "Düşük";
+export type TaskEscalation = "Gecikti" | "Acil" | "Yakında" | "İzlemede" | "Planlı" | "Tarihsiz";
 
 export type TaskItem = {
   id: string;
@@ -347,6 +348,9 @@ export type TaskItem = {
   owner: string;
   dueDate: string;
   priority: TaskPriority;
+  escalationLevel?: TaskEscalation;
+  escalationLabel?: string;
+  daysRemaining?: number | null;
   sourceTab: string;
   category: string;
 };

@@ -45,6 +45,8 @@ export function getDashboardOverview(input: DashboardOverviewInput) {
   const incompleteEmployees = input.employees.filter(employee => !employee.trainingComplete).length;
   const criticalTasks = input.taskItems.filter(task => task.priority === "Kritik");
   const highPriorityTasks = input.taskItems.filter(task => task.priority === "Yüksek");
+  const overdueTasks = input.taskItems.filter(task => task.escalationLevel === "Gecikti").length;
+  const urgentTasks = input.taskItems.filter(task => task.escalationLevel === "Acil").length;
   const upcomingTrainings = input.trainings.filter(training => training.status === "Planlandı").length;
   const openAccidentReports = input.accidentReports.filter(report => report.status !== "Kapandı").length;
   const followUpVisits = input.companyVisits.filter(visit => visit.status === "Takip Gerekli" || visit.status === "Planlandı").length;
@@ -79,33 +81,35 @@ export function getDashboardOverview(input: DashboardOverviewInput) {
     ? [
       { value: ek2PendingEmployees, label: "EK-2 Bekleyen", color: ek2PendingEmployees > 0 ? "#D4A017" : "#2D6A4F" },
       { value: openAccidentReports, label: "Açık Olay", color: openAccidentReports > 0 ? "#C0392B" : "#2D6A4F" },
+      { value: overdueTasks, label: "Geciken Görev", color: overdueTasks > 0 ? "#C0392B" : "#2D6A4F" },
       { value: input.employees.length, label: "Personel", color: "#a78bfa" },
-      { value: totalSoonDocs, label: "Yaklaşan Belge", color: totalSoonDocs > 0 ? "#D4A017" : "#2D6A4F" },
     ]
     : input.activeRole === "nurse"
       ? [
         { value: input.employees.length, label: "Personel", color: "#a78bfa" },
         { value: input.ppeRecords.length, label: "KKD Kaydı", color: "#2D6A4F" },
+        { value: urgentTasks, label: "Acil Termin", color: urgentTasks > 0 ? "#C0392B" : "#2D6A4F" },
         { value: upcomingTrainings, label: "Planlı Eğitim", color: upcomingTrainings > 0 ? "#1B4332" : "#2D6A4F" },
-        { value: totalSoonDocs, label: "Yaklaşan Belge", color: totalSoonDocs > 0 ? "#D4A017" : "#2D6A4F" },
       ]
       : input.activeRole === "safety_expert"
         ? [
           { value: openDofs, label: "Açık DÖF", color: openDofs > 0 ? "#D4A017" : "#2D6A4F" },
           { value: highRisks, label: "Yüksek Risk", color: highRisks > 0 ? "#C0392B" : "#2D6A4F" },
+          { value: overdueTasks, label: "Geciken Görev", color: overdueTasks > 0 ? "#C0392B" : "#2D6A4F" },
           { value: upcomingTrainings, label: "Planlı Eğitim", color: upcomingTrainings > 0 ? "#1B4332" : "#2D6A4F" },
-          { value: plannedCompanyVisits, label: "Ziyaret Takibi", color: plannedCompanyVisits > 0 ? "#D4A017" : "#2D6A4F" },
         ]
         : input.activeRole === "human_resources"
           ? [
             { value: input.employees.length, label: "Personel", color: "#a78bfa" },
             { value: incompleteEmployees, label: "Onboarding Eksik", color: incompleteEmployees > 0 ? "#D4A017" : "#2D6A4F" },
+            { value: urgentTasks, label: "Acil Termin", color: urgentTasks > 0 ? "#C0392B" : "#2D6A4F" },
             { value: ek2PendingEmployees, label: "EK-2 Bekleyen", color: ek2PendingEmployees > 0 ? "#D4A017" : "#2D6A4F" },
-            { value: safetyPendingEmployees, label: "İSG Evrak/Eğitim", color: safetyPendingEmployees > 0 ? "#D4A017" : "#2D6A4F" },
           ]
           : [
             { value: input.companies.length, label: "Firma", color: "#38bdf8" },
             { value: input.employees.length, label: "Personel", color: "#a78bfa" },
+            { value: overdueTasks, label: "Geciken Görev", color: overdueTasks > 0 ? "#C0392B" : "#2D6A4F" },
+            { value: urgentTasks, label: "Acil Termin", color: urgentTasks > 0 ? "#C0392B" : "#2D6A4F" },
             { value: criticalTasks.length, label: "Kritik Görev", color: criticalTasks.length > 0 ? "#C0392B" : "#2D6A4F" },
             { value: highPriorityTasks.length, label: "Yüksek Öncelik", color: highPriorityTasks.length > 0 ? "#D4A017" : "#2D6A4F" },
             { value: totalExpiredDocs, label: "Süresi Dolmuş Belge", color: totalExpiredDocs > 0 ? "#C0392B" : "#2D6A4F" },

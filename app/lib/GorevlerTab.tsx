@@ -1,7 +1,7 @@
 import React from "react";
 import { formatDate } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
-import type { Company, TaskItem, TaskPriority } from "./types";
+import type { Company, TaskEscalation, TaskItem, TaskPriority } from "./types";
 
 type GorevlerTabProps = {
   styles: Record<string, React.CSSProperties>;
@@ -34,6 +34,15 @@ const PRIORITY_COLORS: Record<TaskPriority, string> = {
   Düşük: "#2D6A4F",
 };
 
+const ESCALATION_COLORS: Record<TaskEscalation, string> = {
+  Gecikti: "#C0392B",
+  Acil: "#C0392B",
+  Yakında: "#D4A017",
+  İzlemede: "#1B4332",
+  Planlı: "#2D6A4F",
+  Tarihsiz: "#6B7280",
+};
+
 export function GorevlerTab({
   styles,
   taskItems,
@@ -50,8 +59,8 @@ export function GorevlerTab({
       <div style={styles.statGrid}>
         {[
           { value: taskItems.length, label: "Toplam Görev", color: "#1B4332" },
-          { value: taskItems.filter(t => t.priority === "Kritik").length, label: "Kritik", color: "#C0392B" },
-          { value: taskItems.filter(t => t.priority === "Yüksek").length, label: "Yüksek", color: "#D4A017" },
+          { value: taskItems.filter(t => t.escalationLevel === "Gecikti").length, label: "Geciken", color: "#C0392B" },
+          { value: taskItems.filter(t => t.escalationLevel === "Acil").length, label: "Acil Termin", color: "#C0392B" },
           { value: taskItems.filter(t => t.category === "Personel").length, label: "Personel Görevi", color: "#a78bfa" },
         ].map(({ value, label, color }) => (
           <div key={label} style={styles.statCard} className="isg-stat-card">
@@ -94,7 +103,7 @@ export function GorevlerTab({
         <table style={styles.table}>
           <thead>
             <tr>
-              {["Öncelik", "Kategori", "Görev", "Firma", "Sorumlu", "Termin", "İşlem"].map(h => (
+              {["Eskalasyon", "Öncelik", "Kategori", "Görev", "Firma", "Sorumlu", "Termin", "İşlem"].map(h => (
                 <th key={h} style={styles.th} className="isg-th">{h}</th>
               ))}
             </tr>
@@ -104,6 +113,9 @@ export function GorevlerTab({
               const company = companies.find(c => c.id === task.companyId);
               return (
                 <tr key={task.id}>
+                  <td style={styles.td} className="isg-td">
+                    <Badge text={task.escalationLevel || "Tarihsiz"} color={ESCALATION_COLORS[task.escalationLevel || "Tarihsiz"]} />
+                  </td>
                   <td style={styles.td} className="isg-td">
                     <Badge text={task.priority} color={PRIORITY_COLORS[task.priority]} />
                   </td>
@@ -119,7 +131,8 @@ export function GorevlerTab({
                     {task.owner}
                   </td>
                   <td style={styles.td} className="isg-td">
-                    {formatDate(task.dueDate)}
+                    <div>{formatDate(task.dueDate)}</div>
+                    <div style={{ color: "var(--isg-text-muted)", fontSize: 11, marginTop: 2 }}>{task.escalationLabel || "Termin yok"}</div>
                   </td>
                   <td style={styles.td} className="isg-td">
                     <button style={styles.btnSecondary} onClick={() => setActiveTab(task.sourceTab)}>
@@ -130,7 +143,7 @@ export function GorevlerTab({
               );
             })}
             {filteredTaskItems.length === 0 && (
-              <EmptyTableRow colSpan={7} message="Şu an takip gerektiren görev yok. Yeni görevler oluştuğunda burada görünecek." />
+              <EmptyTableRow colSpan={8} message="Şu an takip gerektiren görev yok. Yeni görevler oluştuğunda burada görünecek." />
             )}
           </tbody>
         </table>

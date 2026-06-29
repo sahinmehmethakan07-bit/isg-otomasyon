@@ -303,6 +303,11 @@ export default function Page() {
             archiveItems={archiveItems}
             companies={companies}
             employees={employees}
+            documents={documents}
+            dofs={dofs}
+            risks={risks}
+            accidentReports={accidentReports}
+            companyVisits={companyVisits}
             getCompanyIndicator={getCompanyIndicator}
             getCompanyDocSummary={getCompanyDocSummary}
             setActiveTab={setActiveTab}

@@ -1,7 +1,8 @@
 import React from "react";
+import { getCompanyRiskRadar } from "./companyRiskRadar";
 import { formatDate } from "./dateUtils";
 import { EmptyState } from "./EmptyState";
-import type { Company, Employee, ArchiveItem, TaskItem, TaskPriority } from "./types";
+import type { AccidentReportRecord, Company, CompanyVisitRecord, DocumentRecord, DofRecord, Employee, ArchiveItem, RiskRecord, TaskItem, TaskPriority } from "./types";
 import type { DashboardCard, QuickAction } from "./dashboardOverview";
 
 type CompanyIndicator = { text: string; color: string };
@@ -20,6 +21,11 @@ type OzetTabProps = {
   archiveItems: ArchiveItem[];
   companies: Company[];
   employees: Employee[];
+  documents: DocumentRecord[];
+  dofs: DofRecord[];
+  risks: RiskRecord[];
+  accidentReports: AccidentReportRecord[];
+  companyVisits: CompanyVisitRecord[];
   getCompanyIndicator: (id: string) => CompanyIndicator;
   getCompanyDocSummary: (id: string) => DocSummary;
   setActiveTab: (tab: string) => void;
@@ -57,10 +63,17 @@ export function OzetTab({
   archiveItems,
   companies,
   employees,
+  documents,
+  dofs,
+  risks,
+  accidentReports,
+  companyVisits,
   getCompanyIndicator,
   getCompanyDocSummary,
   setActiveTab,
 }: OzetTabProps) {
+  const companyRiskRadar = getCompanyRiskRadar({ companies, documents, dofs, risks, accidentReports, companyVisits });
+
   return (
     <div>
       <div style={styles.card} className="isg-card">
@@ -192,6 +205,58 @@ export function OzetTab({
               <div>Arşiv kaydı: <strong style={{ color: "var(--isg-text)" }}>{archiveItems.length}</strong></div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div style={styles.card} className="isg-card">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 14 }}>
+          <div>
+            <p style={{ ...styles.sectionTitle, marginBottom: 6 }} className="isg-text-muted">
+              Yönetim Risk Radarı
+            </p>
+            <div style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>
+              Belge, DÖF, risk, olay ve ziyaret takibine göre en çok ilgi isteyen firmalar.
+            </div>
+          </div>
+          <button style={styles.btnSecondary} onClick={() => setActiveTab("firmalar")}>
+            Firmalar
+          </button>
+        </div>
+        <div style={{ display: "grid", gap: 10 }}>
+          {companyRiskRadar.map(item => (
+            <button
+              key={item.companyId}
+              type="button"
+              onClick={() => setActiveTab("firmalar")}
+              style={{
+                border: "1px solid var(--isg-border)",
+                borderLeft: `4px solid ${item.color}`,
+                borderRadius: 10,
+                background: "var(--isg-input-bg)",
+                color: "var(--isg-text)",
+                cursor: "pointer",
+                display: "grid",
+                gap: 8,
+                minHeight: 64,
+                padding: "12px 14px",
+                textAlign: "left",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <strong>{item.companyName}</strong>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <Badge text={`${item.score} puan`} color={item.color} />
+                  <Badge text={item.level} color={item.color} />
+                </div>
+              </div>
+              <div style={{ color: "var(--isg-text-muted)", fontSize: 12, lineHeight: 1.45 }}>
+                {item.reasons.join(" · ")}
+              </div>
+            </button>
+          ))}
+          {companyRiskRadar.length === 0 && (
+            <EmptyState title="Risk radarı temiz." message="Açık risk, DÖF, olay veya belge problemi oluştuğunda burada listelenir." />
+          )}
         </div>
       </div>
 

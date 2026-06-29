@@ -54,6 +54,25 @@ export function GorevlerTab({
   setSelectedCompanyId,
   setActiveTab,
 }: GorevlerTabProps) {
+  const [categoryFilter, setCategoryFilter] = React.useState("all");
+  const [escalationFilter, setEscalationFilter] = React.useState("all");
+  const categoryOptions = React.useMemo(
+    () => Array.from(new Set(taskItems.map(task => task.category))).sort((a, b) => a.localeCompare(b, "tr")),
+    [taskItems]
+  );
+  const escalationOptions = React.useMemo(
+    () => Array.from(new Set(taskItems.map(task => task.escalationLevel || "Tarihsiz"))),
+    [taskItems]
+  );
+  const visibleTaskItems = React.useMemo(
+    () => filteredTaskItems.filter(task => {
+      const matchesCategory = categoryFilter === "all" || task.category === categoryFilter;
+      const matchesEscalation = escalationFilter === "all" || (task.escalationLevel || "Tarihsiz") === escalationFilter;
+      return matchesCategory && matchesEscalation;
+    }),
+    [categoryFilter, escalationFilter, filteredTaskItems]
+  );
+
   return (
     <div>
       <div style={styles.statGrid}>
@@ -95,8 +114,62 @@ export function GorevlerTab({
           {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
         </select>
         <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>
-          {filteredTaskItems.length} görev
+          {visibleTaskItems.length} görev
         </span>
+      </div>
+
+      <div style={{ ...styles.card, display: "grid", gap: 12, marginBottom: 16 }} className="isg-card">
+        <div>
+          <p style={{ ...styles.sectionTitle, marginBottom: 8 }} className="isg-text-muted">Kategori Filtresi</p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {["all", ...categoryOptions].map(category => {
+              const active = categoryFilter === category;
+              return (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => setCategoryFilter(category)}
+                  style={{
+                    ...styles.btnSecondary,
+                    minHeight: 38,
+                    backgroundColor: active ? "rgba(82, 211, 181, 0.16)" : "var(--isg-btn-secondary)",
+                    borderColor: active ? "rgba(82, 211, 181, 0.45)" : "var(--isg-border)",
+                    color: active ? "var(--isg-primary)" : "var(--isg-text)",
+                  }}
+                >
+                  {category === "all" ? "Tüm Kategoriler" : category}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <p style={{ ...styles.sectionTitle, marginBottom: 8 }} className="isg-text-muted">Termin Filtresi</p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {["all", ...escalationOptions].map(escalation => {
+              const active = escalationFilter === escalation;
+              const color = escalation === "all" ? "var(--isg-primary)" : ESCALATION_COLORS[escalation as TaskEscalation] || "#6B7280";
+              const activeBackground = escalation === "all" ? "rgba(82, 211, 181, 0.16)" : `${color}18`;
+              const activeBorder = escalation === "all" ? "rgba(82, 211, 181, 0.45)" : `${color}55`;
+              return (
+                <button
+                  key={escalation}
+                  type="button"
+                  onClick={() => setEscalationFilter(escalation)}
+                  style={{
+                    ...styles.btnSecondary,
+                    minHeight: 38,
+                    backgroundColor: active ? activeBackground : "var(--isg-btn-secondary)",
+                    borderColor: active ? activeBorder : "var(--isg-border)",
+                    color: active ? color : "var(--isg-text)",
+                  }}
+                >
+                  {escalation === "all" ? "Tüm Terminler" : escalation}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
@@ -109,7 +182,7 @@ export function GorevlerTab({
             </tr>
           </thead>
           <tbody>
-            {filteredTaskItems.map(task => {
+            {visibleTaskItems.map(task => {
               const company = companies.find(c => c.id === task.companyId);
               return (
                 <tr key={task.id}>
@@ -142,7 +215,7 @@ export function GorevlerTab({
                 </tr>
               );
             })}
-            {filteredTaskItems.length === 0 && (
+            {visibleTaskItems.length === 0 && (
               <EmptyTableRow colSpan={8} message="Şu an takip gerektiren görev yok. Yeni görevler oluştuğunda burada görünecek." />
             )}
           </tbody>

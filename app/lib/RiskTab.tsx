@@ -72,12 +72,38 @@ export function RiskTab({
   deleteRisk,
   setActiveTab,
 }: RiskTabProps) {
+  const [scoreFilter, setScoreFilter] = React.useState("all");
+  const [statusFilter, setStatusFilter] = React.useState("all");
   const setField = (field: keyof NewRiskForm, value: string) => {
     setNewRisk(current => ({ ...current, [field]: value }));
   };
 
   const riskScore = parseInt(newRisk.probability) * parseInt(newRisk.severity);
   const residualScore = parseInt(newRisk.residualProbability) * parseInt(newRisk.residualSeverity);
+  const visibleRisks = React.useMemo(
+    () => filteredRisks.filter(risk => {
+      const matchesScore =
+        scoreFilter === "all" ||
+        (scoreFilter === "high" && risk.score >= 15) ||
+        (scoreFilter === "medium" && risk.score >= 8 && risk.score < 15) ||
+        (scoreFilter === "low" && risk.score < 8);
+      const matchesStatus = statusFilter === "all" || risk.status === statusFilter;
+      return matchesScore && matchesStatus;
+    }),
+    [filteredRisks, scoreFilter, statusFilter]
+  );
+  const scoreFilters = [
+    { value: "all", label: "Tüm Riskler", count: filteredRisks.length, color: "#52d3b5" },
+    { value: "high", label: "Yüksek", count: filteredRisks.filter(risk => risk.score >= 15).length, color: "#C0392B" },
+    { value: "medium", label: "Orta", count: filteredRisks.filter(risk => risk.score >= 8 && risk.score < 15).length, color: "#D4A017" },
+    { value: "low", label: "Düşük", count: filteredRisks.filter(risk => risk.score < 8).length, color: "#2D6A4F" },
+  ];
+  const statusFilters = [
+    { value: "all", label: "Tüm Durumlar", count: filteredRisks.length, color: "#52d3b5" },
+    { value: "Açık", label: "Açık", count: filteredRisks.filter(risk => risk.status === "Açık").length, color: "#C0392B" },
+    { value: "Kontrol Altında", label: "Kontrol Altında", count: filteredRisks.filter(risk => risk.status === "Kontrol Altında").length, color: "#D4A017" },
+    { value: "Kapandı", label: "Kapandı", count: filteredRisks.filter(risk => risk.status === "Kapandı").length, color: "#2D6A4F" },
+  ];
 
   return (
     <div>
@@ -113,7 +139,7 @@ export function RiskTab({
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-        <span style={{ color: "#6B7280", fontSize: 13 }}>{filteredRisks.length} kayıt</span>
+        <span style={{ color: "#6B7280", fontSize: 13 }}>{visibleRisks.length} kayıt</span>
         <button
           style={{ ...styles.btnSuccess, marginLeft: "auto", opacity: pdfLoading || risks.length === 0 ? 0.6 : 1 }}
           disabled={pdfLoading || risks.length === 0}
@@ -132,6 +158,57 @@ export function RiskTab({
         </button>
       </div>
 
+      <div style={{ ...styles.card, display: "grid", gap: 12, marginBottom: 16 }} className="isg-card">
+        <div>
+          <p style={{ ...styles.sectionTitle, marginBottom: 8 }} className="isg-text-muted">Risk Seviyesi Filtresi</p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {scoreFilters.map(filter => {
+              const active = scoreFilter === filter.value;
+              return (
+                <button
+                  key={filter.value}
+                  type="button"
+                  onClick={() => setScoreFilter(filter.value)}
+                  style={{
+                    ...styles.btnSecondary,
+                    minHeight: 38,
+                    backgroundColor: active ? `${filter.color}18` : "var(--isg-btn-secondary)",
+                    borderColor: active ? `${filter.color}55` : "var(--isg-border)",
+                    color: active ? filter.color : "var(--isg-text)",
+                  }}
+                >
+                  {filter.label} ({filter.count})
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <p style={{ ...styles.sectionTitle, marginBottom: 8 }} className="isg-text-muted">Durum Filtresi</p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {statusFilters.map(filter => {
+              const active = statusFilter === filter.value;
+              return (
+                <button
+                  key={filter.value}
+                  type="button"
+                  onClick={() => setStatusFilter(filter.value)}
+                  style={{
+                    ...styles.btnSecondary,
+                    minHeight: 38,
+                    backgroundColor: active ? `${filter.color}18` : "var(--isg-btn-secondary)",
+                    borderColor: active ? `${filter.color}55` : "var(--isg-border)",
+                    color: active ? filter.color : "var(--isg-text)",
+                  }}
+                >
+                  {filter.label} ({filter.count})
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as const }}>
         <table style={styles.table}>
           <thead>
@@ -142,7 +219,7 @@ export function RiskTab({
             </tr>
           </thead>
           <tbody>
-            {filteredRisks.map(r => {
+            {visibleRisks.map(r => {
               const company = companies.find(c => c.id === r.companyId);
               const sourceDof = r.sourceDofId ? dofs.find(d => d.id === r.sourceDofId) : null;
               return (
@@ -178,7 +255,7 @@ export function RiskTab({
                 </tr>
               );
             })}
-            {filteredRisks.length === 0 && (
+            {visibleRisks.length === 0 && (
               <EmptyTableRow colSpan={20} message="Yeni risk kaydı eklemek için yukarıdaki formu kullanın veya DÖF kaydından risk oluşturun." />
             )}
           </tbody>

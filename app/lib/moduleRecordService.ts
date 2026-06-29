@@ -1,5 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, updateDoc, type Firestore } from "firebase/firestore";
-import { withCreatedBy, type UserProfile } from "./roleManager";
+import { withCreatedBy, withUpdatedBy, type UserProfile } from "./roleManager";
 import type {
   AccidentReportRecord,
   AccidentReportStatus,
@@ -346,8 +346,9 @@ export async function createCompanyVisitRecord(db: Firestore, draft: CompanyVisi
   return { id: ref.id, ...data };
 }
 
-export async function updateModuleRecordStatus(db: Firestore, collectionName: string, id: string, status: string) {
-  await updateDoc(doc(db, collectionName, id), { status });
+export async function updateModuleRecordStatus(db: Firestore, collectionName: string, id: string, status: string, userProfile: UserProfile) {
+  const user = creator(userProfile);
+  await updateDoc(doc(db, collectionName, id), { status, ...withUpdatedBy(user.uid, user.role) });
 }
 
 export async function deleteModuleRecord(db: Firestore, collectionName: string, id: string) {

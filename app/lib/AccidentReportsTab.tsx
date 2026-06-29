@@ -3,6 +3,7 @@ import { IsoTarihSecici } from "./TarihSecici";
 import { formatDate } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { generateAccidentReportPDF } from "./pdf";
+import { AuditMeta } from "./AuditMeta";
 import type { AccidentReportRecord, AccidentReportStatus, AccidentSeverity, Company, DofRecord, Employee, RiskRecord } from "./types";
 
 type AccidentReportDraft = {
@@ -152,7 +153,7 @@ export function AccidentReportsTab({
 
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
-          <thead><tr>{["Firma", "Personel", "Tarih", "Yer", "Tür", "Şiddet", "Durum", "Bağlantı", "Açıklama / Aksiyon", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+          <thead><tr>{["Firma", "Personel", "Tarih", "Yer", "Tür", "Şiddet", "Durum", "Bağlantı", "Denetim", "Açıklama / Aksiyon", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
           <tbody>
             {filteredAccidentReports.map(report => {
               const company = companies.find(c => c.id === report.companyId);
@@ -182,6 +183,7 @@ export function AccidentReportsTab({
                       {!relatedRisk && !relatedDof && <span style={{ color: "var(--isg-text-muted)", fontSize: 12 }}>—</span>}
                     </div>
                   </td>
+                  <td style={{ ...styles.td, minWidth: 190 }} className="isg-td"><AuditMeta record={report} /></td>
                   <td style={{ ...styles.td, minWidth: 260, color: "var(--isg-text-muted)" }} className="isg-td">{[report.description, report.rootCause, report.actionPlan].filter(Boolean).join(" / ") || "—"}</td>
                   <td style={styles.td} className="isg-td"><button style={styles.btnSecondary} onClick={() => generateAccidentReportPDF(report, company, employee)}>Rapor PDF</button></td>
                   <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteAccidentReport(report.id)}>Sil</button></td>
@@ -189,7 +191,7 @@ export function AccidentReportsTab({
               );
             })}
             {filteredAccidentReports.length === 0 && (
-              <EmptyTableRow colSpan={11} message="Yeni iş kazası veya ramak kala raporu eklemek için yukarıdaki formu kullanın." />
+              <EmptyTableRow colSpan={12} message="Yeni iş kazası veya ramak kala raporu eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>
         </table>

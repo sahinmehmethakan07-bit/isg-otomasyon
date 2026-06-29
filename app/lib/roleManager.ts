@@ -45,6 +45,15 @@ export type UserProfile = {
   createdAt: any;
 };
 
+export type AuditMetadata = {
+  createdBy?: string;
+  createdAsRole?: UserRole | string;
+  createdAt?: any;
+  updatedBy?: string;
+  updatedAsRole?: UserRole | string;
+  updatedAt?: any;
+};
+
 // ── Rol Bilgileri ────────────────────────────────────────────────────────────
 
 export const ROLE_CONFIG: Record<
@@ -266,5 +275,13 @@ export function withCreatedBy<T extends Record<string, any>>(
     createdBy: uid,
     createdAsRole: activeRole || "admin",
     createdAt: serverTimestamp(),
+  };
+}
+
+export function withUpdatedBy(uid: string, activeRole?: UserRole) {
+  return {
+    updatedBy: uid,
+    updatedAsRole: activeRole || "admin",
+    updatedAt: serverTimestamp(),
   };
 }

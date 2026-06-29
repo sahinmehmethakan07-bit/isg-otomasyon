@@ -4,6 +4,7 @@ import { priorityColor } from "./dashboardUtils";
 import { formatDate } from "./dateUtils";
 import { CHECKLIST, findChecklistItem } from "./dofVisionChecklist";
 import { EmptyState } from "./EmptyState";
+import { AuditMeta } from "./AuditMeta";
 import type { Company, DofRecord, Employee, Observer, RiskRecord } from "./types";
 import { auth } from "../../lib/firebase";
 
@@ -423,6 +424,7 @@ export function DofTab({
                 <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{company?.nickName}</span>
                 {observer && <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{observer.fullName}</span>}
               </div>
+              <AuditMeta record={dof} />
               {(dof.beforePhoto || dof.afterPhoto) && (
                 <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                   {dof.beforePhoto && <div><div style={{ fontSize: 10, color: "#6B7280", marginBottom: 2 }}>Önce</div><img src={dof.beforePhoto} alt="önce" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 4 }} /></div>}

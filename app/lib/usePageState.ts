@@ -134,6 +134,12 @@ export function usePageState() {
   const { user: userProfile, isAdmin, isHumanResources, loading: roleLoading } = useUserRole();
   const { t } = useLanguage();
 
+  const getLocalAuditUpdate = () => ({
+    updatedBy: userProfile?.uid || "",
+    updatedAsRole: userProfile?.activeRole || userProfile?.role || "admin",
+    updatedAt: new Date().toISOString(),
+  });
+
   // ── UI state ──────────────────────────────────────────────────────────────
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -642,18 +648,21 @@ export function usePageState() {
   }
 
   async function updateDofStatus(id: string, status: DofRecord["status"]) {
-    await updateDofStatusRecord(db, id, status);
-    setDofs(prev => prev.map(d => d.id === id ? { ...d, status } : d));
+    await updateDofStatusRecord(db, id, status, userProfile!);
+    const audit = getLocalAuditUpdate();
+    setDofs(prev => prev.map(d => d.id === id ? { ...d, status, ...audit } : d));
   }
 
   async function updateDofPhoto(id: string, field: "beforePhoto" | "afterPhoto", base64: string) {
-    await updateDofPhotoRecord(db, id, field, base64);
-    setDofs(prev => prev.map(d => d.id === id ? { ...d, [field]: base64 } : d));
+    await updateDofPhotoRecord(db, id, field, base64, userProfile!);
+    const audit = getLocalAuditUpdate();
+    setDofs(prev => prev.map(d => d.id === id ? { ...d, [field]: base64, ...audit } : d));
   }
 
   async function removeDofPhoto(id: string, field: "beforePhoto" | "afterPhoto") {
-    await removeDofPhotoRecord(db, id, field);
-    setDofs(prev => prev.map(d => d.id === id ? { ...d, [field]: "" } : d));
+    await removeDofPhotoRecord(db, id, field, userProfile!);
+    const audit = getLocalAuditUpdate();
+    setDofs(prev => prev.map(d => d.id === id ? { ...d, [field]: "", ...audit } : d));
   }
 
   async function createRiskFromDof(dof: DofRecord) {
@@ -664,7 +673,8 @@ export function usePageState() {
     if (dof.status !== "Önlem Alındı") return;
     const risk = await createRiskFromDofRecord(db, dof, userProfile!);
     setRisks(prev => [...prev, risk]);
-    setDofs(prev => prev.map(d => d.id === dof.id ? { ...d, status: "Riske Aktarıldı" } : d));
+    const audit = getLocalAuditUpdate();
+    setDofs(prev => prev.map(d => d.id === dof.id ? { ...d, status: "Riske Aktarıldı", ...audit } : d));
     setActiveTab("risk");
   }
 
@@ -702,8 +712,9 @@ export function usePageState() {
   }
 
   async function updateAnnualPlanStatus(id: string, status: AnnualPlanStatus) {
-    await updateModuleRecordStatus(db, "annualPlans", id, status);
-    setAnnualPlans(prev => prev.map(plan => plan.id === id ? { ...plan, status } : plan));
+    await updateModuleRecordStatus(db, "annualPlans", id, status, userProfile!);
+    const audit = getLocalAuditUpdate();
+    setAnnualPlans(prev => prev.map(plan => plan.id === id ? { ...plan, status, ...audit } : plan));
   }
 
   async function deleteAnnualPlan(id: string) {
@@ -729,8 +740,9 @@ export function usePageState() {
   }
 
   async function updateTrainingStatus(id: string, status: TrainingStatus) {
-    await updateModuleRecordStatus(db, "trainings", id, status);
-    setTrainings(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+    await updateModuleRecordStatus(db, "trainings", id, status, userProfile!);
+    const audit = getLocalAuditUpdate();
+    setTrainings(prev => prev.map(t => t.id === id ? { ...t, status, ...audit } : t));
   }
 
   async function deleteTraining(id: string) {
@@ -747,8 +759,9 @@ export function usePageState() {
   }
 
   async function updatePpeStatus(id: string, status: PpeStatus) {
-    await updateModuleRecordStatus(db, "ppeRecords", id, status);
-    setPpeRecords(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+    await updateModuleRecordStatus(db, "ppeRecords", id, status, userProfile!);
+    const audit = getLocalAuditUpdate();
+    setPpeRecords(prev => prev.map(r => r.id === id ? { ...r, status, ...audit } : r));
   }
 
   async function deletePpeRecord(id: string) {
@@ -765,8 +778,9 @@ export function usePageState() {
   }
 
   async function updateEmergencyPlanStatus(id: string, status: EmergencyPlanStatus) {
-    await updateModuleRecordStatus(db, "emergencyPlans", id, status);
-    setEmergencyPlans(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+    await updateModuleRecordStatus(db, "emergencyPlans", id, status, userProfile!);
+    const audit = getLocalAuditUpdate();
+    setEmergencyPlans(prev => prev.map(p => p.id === id ? { ...p, status, ...audit } : p));
   }
 
   async function deleteEmergencyPlan(id: string) {
@@ -792,8 +806,9 @@ export function usePageState() {
   }
 
   async function updateCommitteeMeetingStatus(id: string, status: CommitteeMeetingStatus) {
-    await updateModuleRecordStatus(db, "committeeMeetings", id, status);
-    setCommitteeMeetings(prev => prev.map(m => m.id === id ? { ...m, status } : m));
+    await updateModuleRecordStatus(db, "committeeMeetings", id, status, userProfile!);
+    const audit = getLocalAuditUpdate();
+    setCommitteeMeetings(prev => prev.map(m => m.id === id ? { ...m, status, ...audit } : m));
   }
 
   async function deleteCommitteeMeeting(id: string) {
@@ -810,8 +825,9 @@ export function usePageState() {
   }
 
   async function updateAccidentReportStatus(id: string, status: AccidentReportStatus) {
-    await updateModuleRecordStatus(db, "accidentReports", id, status);
-    setAccidentReports(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+    await updateModuleRecordStatus(db, "accidentReports", id, status, userProfile!);
+    const audit = getLocalAuditUpdate();
+    setAccidentReports(prev => prev.map(r => r.id === id ? { ...r, status, ...audit } : r));
   }
 
   async function deleteAccidentReport(id: string) {
@@ -828,8 +844,9 @@ export function usePageState() {
   }
 
   async function updateCompanyVisitStatus(id: string, status: CompanyVisitStatus) {
-    await updateModuleRecordStatus(db, "companyVisits", id, status);
-    setCompanyVisits(prev => prev.map(v => v.id === id ? { ...v, status } : v));
+    await updateModuleRecordStatus(db, "companyVisits", id, status, userProfile!);
+    const audit = getLocalAuditUpdate();
+    setCompanyVisits(prev => prev.map(v => v.id === id ? { ...v, status, ...audit } : v));
   }
 
   async function deleteCompanyVisit(id: string) {

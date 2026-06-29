@@ -1,3 +1,5 @@
+import type { AuditMetadata } from "./roleManager";
+
 export type DangerClass = "Az Tehlikeli" | "Tehlikeli" | "Çok Tehlikeli";
 export type ServiceType = "İş Güvenliği" | "İş Güvenliği + İşyeri Hekimliği";
 
@@ -151,7 +153,7 @@ export type Observer = {
   phone: string;
 };
 
-export type DofRecord = {
+export type DofRecord = AuditMetadata & {
   id: string;
   companyId: string;
   observerId: string;
@@ -188,7 +190,7 @@ export type Signer = {
   fullName: string;
 };
 
-export type RiskRecord = {
+export type RiskRecord = AuditMetadata & {
   id: string;
   companyId: string;
   sourceDofId: string | null;
@@ -214,7 +216,7 @@ export type RiskRecord = {
 export type AnnualPlanType = "Eğitim" | "Muayene" | "Risk Değerlendirme" | "Acil Durum Tatbikatı" | "Kurul Toplantısı" | "Saha Ziyareti" | "Belge Yenileme";
 export type AnnualPlanStatus = "Planlandı" | "Devam Ediyor" | "Tamamlandı" | "Gecikti";
 
-export type AnnualPlanRecord = {
+export type AnnualPlanRecord = AuditMetadata & {
   id: string;
   companyId: string;
   year: number;
@@ -229,7 +231,7 @@ export type AnnualPlanRecord = {
 export type TrainingType = "Temel İSG Eğitimi" | "İşe Giriş Eğitimi" | "Yenileme Eğitimi" | "Acil Durum Eğitimi" | "KKD Eğitimi" | "Hijyen Eğitimi";
 export type TrainingStatus = "Planlandı" | "Tamamlandı" | "İptal";
 
-export type TrainingRecord = {
+export type TrainingRecord = AuditMetadata & {
   id: string;
   companyId: string;
   title: string;
@@ -245,7 +247,7 @@ export type TrainingRecord = {
 
 export type PpeStatus = "Teslim Edildi" | "İade Edildi" | "Hasarlı / Kayıp";
 
-export type PpeRecord = {
+export type PpeRecord = AuditMetadata & {
   id: string;
   companyId: string;
   employeeId: string;
@@ -260,7 +262,7 @@ export type PpeRecord = {
 
 export type EmergencyPlanStatus = "Taslak" | "Yürürlükte" | "Tatbikat Planlandı" | "Güncelleme Gerekli";
 
-export type EmergencyPlanRecord = {
+export type EmergencyPlanRecord = AuditMetadata & {
   id: string;
   companyId: string;
   title: string;
@@ -276,7 +278,7 @@ export type EmergencyPlanRecord = {
 
 export type CommitteeMeetingStatus = "Planlandı" | "Yapıldı" | "Ertelendi" | "Kararlar Takipte";
 
-export type CommitteeMeetingRecord = {
+export type CommitteeMeetingRecord = AuditMetadata & {
   id: string;
   companyId: string;
   meetingNo: string;
@@ -293,7 +295,7 @@ export type CommitteeMeetingRecord = {
 export type AccidentReportStatus = "Açık" | "İncelemede" | "Aksiyon Planlandı" | "Kapandı";
 export type AccidentSeverity = "Ramak Kala" | "Hafif" | "Orta" | "Ağır";
 
-export type AccidentReportRecord = {
+export type AccidentReportRecord = AuditMetadata & {
   id: string;
   companyId: string;
   employeeId: string;
@@ -315,7 +317,7 @@ export type AccidentReportRecord = {
 export type CompanyVisitStatus = "Planlandı" | "Tamamlandı" | "Ertelendi" | "Takip Gerekli";
 export type CompanyVisitPurpose = "Rutin Ziyaret" | "Risk Kontrolü" | "Eğitim / Bilgilendirme" | "DÖF Takibi" | "Acil Ziyaret";
 
-export type CompanyVisitRecord = {
+export type CompanyVisitRecord = AuditMetadata & {
   id: string;
   companyId: string;
   visitDate: string;

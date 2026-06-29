@@ -1,5 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, updateDoc, type Firestore } from "firebase/firestore";
-import { withCreatedBy, type UserProfile } from "./roleManager";
+import { withCreatedBy, withUpdatedBy, type UserProfile } from "./roleManager";
 import type { DofRecord, RiskRecord } from "./types";
 
 export type DofDraft = {
@@ -108,16 +108,16 @@ export async function deleteDofRecord(db: Firestore, id: string) {
   await deleteDoc(doc(db, "dofs", id));
 }
 
-export async function updateDofStatusRecord(db: Firestore, id: string, status: DofRecord["status"]) {
-  await updateDoc(doc(db, "dofs", id), { status });
+export async function updateDofStatusRecord(db: Firestore, id: string, status: DofRecord["status"], userProfile: UserProfile) {
+  await updateDoc(doc(db, "dofs", id), { status, ...withUpdatedBy(userProfile.uid, userProfile.activeRole || userProfile.role) });
 }
 
-export async function updateDofPhotoRecord(db: Firestore, id: string, field: "beforePhoto" | "afterPhoto", base64: string) {
-  await updateDoc(doc(db, "dofs", id), { [field]: base64 });
+export async function updateDofPhotoRecord(db: Firestore, id: string, field: "beforePhoto" | "afterPhoto", base64: string, userProfile: UserProfile) {
+  await updateDoc(doc(db, "dofs", id), { [field]: base64, ...withUpdatedBy(userProfile.uid, userProfile.activeRole || userProfile.role) });
 }
 
-export async function removeDofPhotoRecord(db: Firestore, id: string, field: "beforePhoto" | "afterPhoto") {
-  await updateDoc(doc(db, "dofs", id), { [field]: "" });
+export async function removeDofPhotoRecord(db: Firestore, id: string, field: "beforePhoto" | "afterPhoto", userProfile: UserProfile) {
+  await updateDoc(doc(db, "dofs", id), { [field]: "", ...withUpdatedBy(userProfile.uid, userProfile.activeRole || userProfile.role) });
 }
 
 export function buildRiskFromDof(dof: DofRecord): Omit<RiskRecord, "id"> {
@@ -151,7 +151,7 @@ export function buildRiskFromDof(dof: DofRecord): Omit<RiskRecord, "id"> {
 export async function createRiskFromDofRecord(db: Firestore, dof: DofRecord, userProfile: UserProfile): Promise<RiskRecord> {
   const data = buildRiskFromDof(dof);
   const ref = await addDoc(collection(db, "risks"), withCreatedBy(data, userProfile.uid, userProfile.activeRole || userProfile.role));
-  await updateDoc(doc(db, "dofs", dof.id), { status: "Riske Aktarıldı" });
+  await updateDoc(doc(db, "dofs", dof.id), { status: "Riske Aktarıldı", ...withUpdatedBy(userProfile.uid, userProfile.activeRole || userProfile.role) });
   return { id: ref.id, ...data };
 }
 

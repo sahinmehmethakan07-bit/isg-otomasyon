@@ -37,6 +37,13 @@ function Badge({ text, color }: { text: string; color: string }) {
   );
 }
 
+const FIELD_ACTIONS = [
+  { label: "DÖF Aç", detail: "Fotoğraflı uygunsuzluk kaydı", tab: "dof", color: "#C0392B" },
+  { label: "Risk Ekle", detail: "Tehlike ve aksiyon planı", tab: "risk", color: "#D4A017" },
+  { label: "Ziyaret Kaydı", detail: "Saha ziyareti ve takip", tab: "firma-ziyaretleri", color: "#0ea5e9" },
+  { label: "Olay Raporu", detail: "İş kazası / ramak kala", tab: "is-kazasi-raporu", color: "#7c3aed" },
+];
+
 export function OzetTab({
   styles,
   roleDashboardTitle,
@@ -133,6 +140,35 @@ export function OzetTab({
 
         {/* Hızlı Aksiyonlar */}
         <div style={styles.card} className="isg-card">
+          <div style={{ marginBottom: 18 }}>
+            <p style={styles.sectionTitle} className="isg-text-muted">Mobil Saha Kaydı</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(160px, 100%), 1fr))", gap: 10 }}>
+              {FIELD_ACTIONS.map(action => (
+                <button
+                  key={action.tab}
+                  type="button"
+                  onClick={() => setActiveTab(action.tab)}
+                  style={{
+                    minHeight: 74,
+                    border: `1px solid ${action.color}55`,
+                    borderRadius: 12,
+                    background: `${action.color}16`,
+                    color: "var(--isg-text)",
+                    padding: "12px 14px",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    gap: 4,
+                  }}
+                >
+                  <span style={{ fontSize: 15, fontWeight: 900, color: action.color }}>{action.label}</span>
+                  <span style={{ fontSize: 12, color: "var(--isg-text-muted)", lineHeight: 1.35 }}>{action.detail}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <p style={styles.sectionTitle} className="isg-text-muted">Hızlı Aksiyonlar</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
             {roleQuickActions.map(action => (

@@ -62,7 +62,7 @@ export function filterDofs(dofs: DofRecord[], companies: Company[], selectedComp
   return dofs.filter(dof => {
     const company = companies.find(c => c.id === dof.companyId);
     const matchesCompany = selectedCompanyId === "all" || dof.companyId === selectedCompanyId;
-    return matchesCompany && matchesSearch([dof.title, dof.description, dof.location, company?.nickName], search);
+    return matchesCompany && matchesSearch([dof.title, dof.description, dof.location, dof.sourceRiskId, company?.nickName], search);
   });
 }
 
@@ -70,7 +70,7 @@ export function filterRisks(risks: RiskRecord[], companies: Company[], selectedC
   return risks.filter(risk => {
     const company = companies.find(c => c.id === risk.companyId);
     const matchesCompany = selectedCompanyId === "all" || risk.companyId === selectedCompanyId;
-    return matchesCompany && matchesSearch([risk.section, risk.hazard, risk.risk, risk.actionToTake, company?.nickName], search);
+    return matchesCompany && matchesSearch([risk.section, risk.hazard, risk.risk, risk.actionToTake, risk.sourceDofId, company?.nickName], search);
   });
 }
 
@@ -130,7 +130,7 @@ export function filterAccidentReports(accidentReports: AccidentReportRecord[], c
     const company = companies.find(c => c.id === report.companyId);
     const employee = employees.find(e => e.id === report.employeeId);
     const matchesCompany = selectedCompanyId === "all" || report.companyId === selectedCompanyId;
-    return matchesCompany && matchesSearch([report.incidentType, report.location, report.severity, report.description, report.rootCause, report.actionPlan, report.responsible, report.status, report.notes, company?.nickName, employee?.firstName, employee?.lastName], search);
+    return matchesCompany && matchesSearch([report.incidentType, report.location, report.severity, report.description, report.rootCause, report.actionPlan, report.responsible, report.status, report.notes, report.relatedRiskId, report.relatedDofId, company?.nickName, employee?.firstName, employee?.lastName], search);
   });
 }
 

@@ -155,6 +155,7 @@ export type DofRecord = {
   id: string;
   companyId: string;
   observerId: string;
+  sourceRiskId?: string;
   title: string;
   description: string;
   lawReference: string;
@@ -296,6 +297,8 @@ export type AccidentReportRecord = {
   id: string;
   companyId: string;
   employeeId: string;
+  relatedRiskId?: string;
+  relatedDofId?: string;
   accidentDate: string;
   location: string;
   severity: AccidentSeverity;

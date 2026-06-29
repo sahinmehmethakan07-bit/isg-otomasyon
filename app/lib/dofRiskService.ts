@@ -5,6 +5,7 @@ import type { DofRecord, RiskRecord } from "./types";
 export type DofDraft = {
   companyId: string;
   observerId: string;
+  sourceRiskId: string;
   title: string;
   description: string;
   lawReference: string;
@@ -40,6 +41,7 @@ export type RiskDraft = {
 export const emptyDofDraft: DofDraft = {
   companyId: "",
   observerId: "",
+  sourceRiskId: "",
   title: "",
   description: "",
   lawReference: "",
@@ -76,6 +78,7 @@ export function buildDofRecord(draft: DofDraft): Omit<DofRecord, "id"> {
   const data: Omit<DofRecord, "id"> = {
     companyId: draft.companyId,
     observerId: draft.observerId,
+    sourceRiskId: draft.sourceRiskId || "",
     title: draft.title,
     description: draft.description,
     lawReference: draft.lawReference,

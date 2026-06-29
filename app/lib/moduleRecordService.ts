@@ -86,6 +86,8 @@ export type CommitteeMeetingDraft = {
 export type AccidentReportDraft = {
   companyId: string;
   employeeId: string;
+  relatedRiskId: string;
+  relatedDofId: string;
   accidentDate: string;
   location: string;
   severity: AccidentSeverity;
@@ -177,6 +179,8 @@ export const emptyCommitteeMeetingDraft: CommitteeMeetingDraft = {
 export const emptyAccidentReportDraft: AccidentReportDraft = {
   companyId: "",
   employeeId: "",
+  relatedRiskId: "",
+  relatedDofId: "",
   accidentDate: "",
   location: "",
   severity: "Hafif",
@@ -304,6 +308,8 @@ export async function createAccidentReportRecord(db: Firestore, draft: AccidentR
   const data: Omit<AccidentReportRecord, "id"> = {
     companyId: draft.companyId,
     employeeId: draft.employeeId,
+    relatedRiskId: draft.relatedRiskId,
+    relatedDofId: draft.relatedDofId,
     accidentDate: draft.accidentDate,
     location: draft.location,
     severity: draft.severity,

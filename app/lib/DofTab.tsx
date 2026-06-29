@@ -10,6 +10,7 @@ import { auth } from "../../lib/firebase";
 type NewDofForm = {
   companyId: string;
   observerId: string;
+  sourceRiskId: string;
   title: string;
   description: string;
   lawReference: string;
@@ -127,6 +128,7 @@ export function DofTab({
   };
 
   const companyEmployees = employees.filter(emp => emp.companyId === newDof.companyId);
+  const companyRisks = risks.filter(risk => risk.companyId === newDof.companyId);
   const approvedDetections = visionDetections.filter(item => item.approved);
   const uncertainDetections = visionDetections.filter(item => item.confidence < 0.6);
 
@@ -252,8 +254,14 @@ export function DofTab({
       <div style={styles.card} className="isg-card">
         <p style={styles.sectionTitle} className="isg-text-muted">Yeni DÖF Kaydı</p>
         <div style={styles.formGrid}>
-          <FormField styles={styles} label="Firma *"><select style={styles.select} className="isg-input" value={newDof.companyId} onChange={e => setField("companyId", e.target.value)}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
+          <FormField styles={styles} label="Firma *"><select style={styles.select} className="isg-input" value={newDof.companyId} onChange={e => setNewDof(current => ({ ...current, companyId: e.target.value, sourceRiskId: "" }))}><option value="">Seçin...</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select></FormField>
           <FormField styles={styles} label="Gözlemci"><select style={styles.select} className="isg-input" value={newDof.observerId} onChange={e => setField("observerId", e.target.value)}><option value="">Seçin...</option>{observers.map(o => <option key={o.id} value={o.id}>{o.fullName}</option>)}</select></FormField>
+          <FormField styles={styles} label="İlgili Risk">
+            <select style={styles.select} className="isg-input" value={newDof.sourceRiskId} onChange={e => setField("sourceRiskId", e.target.value)}>
+              <option value="">Bağlantı yok</option>
+              {companyRisks.map(risk => <option key={risk.id} value={risk.id}>{risk.hazard || risk.section || risk.id}</option>)}
+            </select>
+          </FormField>
           <FormField styles={styles} label="Başlık *"><input style={styles.input} className="isg-input" value={newDof.title} onChange={e => setField("title", e.target.value)} /></FormField>
           <FormField styles={styles} label="Konum"><input style={styles.input} className="isg-input" value={newDof.location} onChange={e => setField("location", e.target.value)} /></FormField>
           <FormField styles={styles} label="Öncelik"><select style={styles.select} className="isg-input" value={newDof.priority} onChange={e => setNewDof(current => ({ ...current, priority: e.target.value as NewDofForm["priority"] }))}><option>Düşük</option><option>Orta</option><option>Yüksek</option></select></FormField>
@@ -394,6 +402,7 @@ export function DofTab({
         {filteredDofs.map(dof => {
           const company = companies.find(c => c.id === dof.companyId);
           const observer = observers.find(o => o.id === dof.observerId);
+          const linkedRisk = dof.sourceRiskId ? risks.find(r => r.id === dof.sourceRiskId) : null;
           const isEditing = editingDofId === dof.id;
           return (
             <div key={dof.id} style={{ ...styles.card, borderLeft: "3px solid " + priorityColor(dof.priority) }}>
@@ -410,6 +419,7 @@ export function DofTab({
               </div>
               <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
                 <Badge styles={styles} text={dof.status} color={dof.status === "Çözüldü" ? "#2D6A4F" : dof.status === "Riske Aktarıldı" ? "#7c3aed" : dof.status === "Önlem Alındı" ? "#D4A017" : dof.status === "Bildirildi" ? "#1B4332" : "#C0392B"} />
+                {linkedRisk && <Badge styles={styles} text={`Risk: ${linkedRisk.hazard}`} color="#0ea5e9" />}
                 <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{company?.nickName}</span>
                 {observer && <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{observer.fullName}</span>}
               </div>

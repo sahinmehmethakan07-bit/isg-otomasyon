@@ -571,6 +571,8 @@ export default function Page() {
             styles={styles}
             companies={companies}
             employees={employees}
+            risks={risks}
+            dofs={dofs}
             filteredAccidentReports={filteredAccidentReports}
             newAccidentReport={newAccidentReport}
             setNewAccidentReport={setNewAccidentReport}

@@ -3,11 +3,13 @@ import { IsoTarihSecici } from "./TarihSecici";
 import { formatDate } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { generateAccidentReportPDF } from "./pdf";
-import type { AccidentReportRecord, AccidentReportStatus, AccidentSeverity, Company, Employee } from "./types";
+import type { AccidentReportRecord, AccidentReportStatus, AccidentSeverity, Company, DofRecord, Employee, RiskRecord } from "./types";
 
 type AccidentReportDraft = {
   companyId: string;
   employeeId: string;
+  relatedRiskId: string;
+  relatedDofId: string;
   accidentDate: string;
   location: string;
   severity: AccidentSeverity;
@@ -25,6 +27,8 @@ type AccidentReportsTabProps = {
   styles: Record<string, React.CSSProperties>;
   companies: Company[];
   employees: Employee[];
+  risks: RiskRecord[];
+  dofs: DofRecord[];
   filteredAccidentReports: AccidentReportRecord[];
   newAccidentReport: AccidentReportDraft;
   setNewAccidentReport: React.Dispatch<React.SetStateAction<AccidentReportDraft>>;
@@ -56,6 +60,8 @@ export function AccidentReportsTab({
   styles,
   companies,
   employees,
+  risks,
+  dofs,
   filteredAccidentReports,
   newAccidentReport,
   setNewAccidentReport,
@@ -67,13 +73,16 @@ export function AccidentReportsTab({
   updateAccidentReportStatus,
   deleteAccidentReport,
 }: AccidentReportsTabProps) {
+  const companyRisks = risks.filter(risk => risk.companyId === newAccidentReport.companyId);
+  const companyDofs = dofs.filter(dof => dof.companyId === newAccidentReport.companyId);
+
   return (
     <div>
       <div style={styles.card} className="isg-card">
         <p style={styles.sectionTitle} className="isg-text-muted">İş Kazası / Ramak Kala Raporu</p>
         <div style={styles.formGrid}>
           <FormField label="Firma *">
-            <select style={styles.select} className="isg-input" value={newAccidentReport.companyId} onChange={e => setNewAccidentReport({ ...newAccidentReport, companyId: e.target.value, employeeId: "" })}>
+            <select style={styles.select} className="isg-input" value={newAccidentReport.companyId} onChange={e => setNewAccidentReport({ ...newAccidentReport, companyId: e.target.value, employeeId: "", relatedRiskId: "", relatedDofId: "" })}>
               <option value="">Seçin...</option>
               {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
             </select>
@@ -82,6 +91,18 @@ export function AccidentReportsTab({
             <select style={styles.select} className="isg-input" value={newAccidentReport.employeeId} onChange={e => setNewAccidentReport({ ...newAccidentReport, employeeId: e.target.value })}>
               <option value="">Seçin...</option>
               {employees.filter(employee => employee.companyId === newAccidentReport.companyId).map(employee => <option key={employee.id} value={employee.id}>{employee.firstName} {employee.lastName}</option>)}
+            </select>
+          </FormField>
+          <FormField label="İlgili Risk">
+            <select style={styles.select} className="isg-input" value={newAccidentReport.relatedRiskId} onChange={e => setNewAccidentReport({ ...newAccidentReport, relatedRiskId: e.target.value })}>
+              <option value="">Bağlantı yok</option>
+              {companyRisks.map(risk => <option key={risk.id} value={risk.id}>{risk.hazard || risk.section || risk.id}</option>)}
+            </select>
+          </FormField>
+          <FormField label="İlgili DÖF">
+            <select style={styles.select} className="isg-input" value={newAccidentReport.relatedDofId} onChange={e => setNewAccidentReport({ ...newAccidentReport, relatedDofId: e.target.value })}>
+              <option value="">Bağlantı yok</option>
+              {companyDofs.map(dof => <option key={dof.id} value={dof.id}>{dof.title || dof.id}</option>)}
             </select>
           </FormField>
           <FormField label="Olay Tarihi *"><IsoTarihSecici styles={styles} value={newAccidentReport.accidentDate} onChange={v => setNewAccidentReport({ ...newAccidentReport, accidentDate: v })} /></FormField>
@@ -131,11 +152,13 @@ export function AccidentReportsTab({
 
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
-          <thead><tr>{["Firma", "Personel", "Tarih", "Yer", "Tür", "Şiddet", "Durum", "Açıklama / Aksiyon", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+          <thead><tr>{["Firma", "Personel", "Tarih", "Yer", "Tür", "Şiddet", "Durum", "Bağlantı", "Açıklama / Aksiyon", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
           <tbody>
             {filteredAccidentReports.map(report => {
               const company = companies.find(c => c.id === report.companyId);
               const employee = employees.find(e => e.id === report.employeeId);
+              const relatedRisk = report.relatedRiskId ? risks.find(r => r.id === report.relatedRiskId) : null;
+              const relatedDof = report.relatedDofId ? dofs.find(d => d.id === report.relatedDofId) : null;
               return (
                 <tr key={report.id}>
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
@@ -152,6 +175,13 @@ export function AccidentReportsTab({
                       <option>Kapandı</option>
                     </select>
                   </td>
+                  <td style={{ ...styles.td, minWidth: 180 }} className="isg-td">
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {relatedRisk && <Badge text={`Risk: ${relatedRisk.hazard}`} color="#0ea5e9" />}
+                      {relatedDof && <Badge text={`DÖF: ${relatedDof.title}`} color="#7c3aed" />}
+                      {!relatedRisk && !relatedDof && <span style={{ color: "var(--isg-text-muted)", fontSize: 12 }}>—</span>}
+                    </div>
+                  </td>
                   <td style={{ ...styles.td, minWidth: 260, color: "var(--isg-text-muted)" }} className="isg-td">{[report.description, report.rootCause, report.actionPlan].filter(Boolean).join(" / ") || "—"}</td>
                   <td style={styles.td} className="isg-td"><button style={styles.btnSecondary} onClick={() => generateAccidentReportPDF(report, company, employee)}>Rapor PDF</button></td>
                   <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteAccidentReport(report.id)}>Sil</button></td>
@@ -159,7 +189,7 @@ export function AccidentReportsTab({
               );
             })}
             {filteredAccidentReports.length === 0 && (
-              <EmptyTableRow colSpan={10} message="Yeni iş kazası veya ramak kala raporu eklemek için yukarıdaki formu kullanın." />
+              <EmptyTableRow colSpan={11} message="Yeni iş kazası veya ramak kala raporu eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>
         </table>

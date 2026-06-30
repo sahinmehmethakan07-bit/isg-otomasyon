@@ -63,7 +63,38 @@ export function TrainingsTab({
   updateTrainingStatus: (id: string, status: TrainingStatus) => void;
   deleteTraining: (id: string) => void;
 }) {
+  const [typeFilter, setTypeFilter] = React.useState<"all" | TrainingType>("all");
+  const [statusFilter, setStatusFilter] = React.useState<"all" | TrainingStatus>("all");
   const availableParticipants = employees.filter(employee => employee.companyId === newTraining.companyId);
+  const trainingTypeColor = (type: "all" | TrainingType) =>
+    type === "Acil Durum Eğitimi" ? "#C0392B"
+      : type === "KKD Eğitimi" ? "#2D6A4F"
+        : type === "İşe Giriş Eğitimi" ? "#0ea5e9"
+          : type === "Yenileme Eğitimi" ? "#D4A017"
+            : type === "all" ? "#52d3b5"
+              : "#8b5cf6";
+  const trainingStatusColor = (status: "all" | TrainingStatus) =>
+    status === "Tamamlandı" ? "#2D6A4F"
+      : status === "İptal" ? "#C0392B"
+        : status === "all" ? "#52d3b5"
+          : "#D4A017";
+  const visibleTrainings = React.useMemo(() => filteredTrainings.filter(training => {
+    const matchesType = typeFilter === "all" || training.type === typeFilter;
+    const matchesStatus = statusFilter === "all" || training.status === statusFilter;
+    return matchesType && matchesStatus;
+  }), [filteredTrainings, typeFilter, statusFilter]);
+  const typeFilters: Array<{ value: "all" | TrainingType; label: string; count: number; color: string }> = (["all", "Temel İSG Eğitimi", "İşe Giriş Eğitimi", "Yenileme Eğitimi", "Acil Durum Eğitimi", "KKD Eğitimi", "Hijyen Eğitimi"] as const).map(type => ({
+    value: type,
+    label: type === "all" ? "Tüm Türler" : type,
+    count: type === "all" ? filteredTrainings.length : filteredTrainings.filter(training => training.type === type).length,
+    color: trainingTypeColor(type),
+  }));
+  const statusFilters: Array<{ value: "all" | TrainingStatus; label: string; count: number; color: string }> = (["all", "Planlandı", "Tamamlandı", "İptal"] as const).map(status => ({
+    value: status,
+    label: status === "all" ? "Tüm Durumlar" : status,
+    count: status === "all" ? filteredTrainings.length : filteredTrainings.filter(training => training.status === status).length,
+    color: trainingStatusColor(status),
+  }));
 
   return (
     <div>
@@ -140,14 +171,75 @@ export function TrainingsTab({
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredTrainings.length} eğitim</span>
+        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{visibleTrainings.length} eğitim</span>
+      </div>
+
+      <div style={{ ...styles.card, padding: 14, marginBottom: 16 }} className="isg-card">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", gap: 14 }}>
+          <div>
+            <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Eğitim Türü Filtresi</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {typeFilters.map(filter => {
+                const active = typeFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setTypeFilter(filter.value)}
+                    style={{
+                      minHeight: 44,
+                      borderRadius: 12,
+                      border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                      backgroundColor: active ? filter.color + "18" : "var(--isg-input-bg)",
+                      color: active ? filter.color : "var(--isg-text)",
+                      fontWeight: 800,
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Durum Filtresi</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {statusFilters.map(filter => {
+                const active = statusFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setStatusFilter(filter.value)}
+                    style={{
+                      minHeight: 44,
+                      borderRadius: 12,
+                      border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                      backgroundColor: active ? filter.color + "18" : "var(--isg-input-bg)",
+                      color: active ? filter.color : "var(--isg-text)",
+                      fontWeight: 800,
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
           <thead><tr>{["Firma", "Eğitim", "Tür", "Tarih", "Süre / Yer", "Eğitmen", "Katılımcı", "Durum", "Not", "Çıktılar", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
           <tbody>
-            {filteredTrainings.map(training => {
+            {visibleTrainings.map(training => {
               const company = companies.find(c => c.id === training.companyId);
               const participants = training.participantIds
                 .map(id => employees.find(employee => employee.id === id))
@@ -157,7 +249,7 @@ export function TrainingsTab({
                 <tr key={training.id}>
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
                   <td style={{ ...styles.td, minWidth: 180 }} className="isg-td"><strong>{training.title}</strong></td>
-                  <td style={styles.td} className="isg-td"><Badge styles={styles} text={training.type} color="#8b5cf6" /></td>
+                  <td style={styles.td} className="isg-td"><Badge styles={styles} text={training.type} color={trainingTypeColor(training.type)} /></td>
                   <td style={styles.td} className="isg-td">{formatDate(training.trainingDate)}</td>
                   <td style={styles.td} className="isg-td">{training.durationHours || training.location ? (training.durationHours || "—") + " saat / " + (training.location || "—") : "—"}</td>
                   <td style={styles.td} className="isg-td">{training.trainer || "—"}</td>
@@ -180,7 +272,7 @@ export function TrainingsTab({
                 </tr>
               );
             })}
-            {filteredTrainings.length === 0 && (
+            {visibleTrainings.length === 0 && (
               <EmptyTableRow colSpan={11} message="Yeni eğitim kaydı eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>

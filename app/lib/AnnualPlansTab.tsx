@@ -26,6 +26,20 @@ function Badge({ styles, text, color }: { styles: Styles; text: string; color: s
   return <span style={{ ...styles.badge, backgroundColor: color + "22", color, border: "1px solid " + color + "44" }}>{text}</span>;
 }
 
+const planTypeColor = (type: "all" | AnnualPlanType) =>
+  type === "Risk Değerlendirme" ? "#C0392B"
+    : type === "Acil Durum Tatbikatı" ? "#D4A017"
+      : type === "Eğitim" ? "#0ea5e9"
+        : type === "all" ? "#52d3b5"
+          : "#2D6A4F";
+
+const planStatusColor = (status: "all" | AnnualPlanStatus) =>
+  status === "Tamamlandı" ? "#2D6A4F"
+    : status === "Gecikti" ? "#C0392B"
+      : status === "Devam Ediyor" ? "#D4A017"
+        : status === "all" ? "#52d3b5"
+          : "#0ea5e9";
+
 export function AnnualPlansTab({
   styles,
   companies,
@@ -53,6 +67,45 @@ export function AnnualPlansTab({
   updateAnnualPlanStatus: (id: string, status: AnnualPlanStatus) => void;
   deleteAnnualPlan: (id: string) => void;
 }) {
+  const [yearFilter, setYearFilter] = React.useState("all");
+  const [typeFilter, setTypeFilter] = React.useState<"all" | AnnualPlanType>("all");
+  const [statusFilter, setStatusFilter] = React.useState<"all" | AnnualPlanStatus>("all");
+
+  const visibleAnnualPlans = React.useMemo(() => filteredAnnualPlans.filter(plan => {
+    const matchesYear = yearFilter === "all" || String(plan.year) === yearFilter;
+    const matchesType = typeFilter === "all" || plan.type === typeFilter;
+    const matchesStatus = statusFilter === "all" || plan.status === statusFilter;
+    return matchesYear && matchesType && matchesStatus;
+  }), [filteredAnnualPlans, statusFilter, typeFilter, yearFilter]);
+
+  const yearFilters = [
+    { value: "all", label: "Tüm Yıllar", count: filteredAnnualPlans.length, color: "#52d3b5" },
+    ...Array.from(new Set(filteredAnnualPlans.map(plan => String(plan.year)).filter(Boolean))).sort().map(year => ({
+      value: year,
+      label: year,
+      count: filteredAnnualPlans.filter(plan => String(plan.year) === year).length,
+      color: "#0ea5e9",
+    })),
+  ];
+
+  const typeFilters: Array<{ value: "all" | AnnualPlanType; label: string; count: number; color: string }> = (
+    ["all", "Eğitim", "Muayene", "Risk Değerlendirme", "Acil Durum Tatbikatı", "Kurul Toplantısı", "Saha Ziyareti", "Belge Yenileme"] as const
+  ).map(type => ({
+    value: type,
+    label: type === "all" ? "Tüm Türler" : type,
+    count: type === "all" ? filteredAnnualPlans.length : filteredAnnualPlans.filter(plan => plan.type === type).length,
+    color: planTypeColor(type),
+  }));
+
+  const statusFilters: Array<{ value: "all" | AnnualPlanStatus; label: string; count: number; color: string }> = (
+    ["all", "Planlandı", "Devam Ediyor", "Tamamlandı", "Gecikti"] as const
+  ).map(status => ({
+    value: status,
+    label: status === "all" ? "Tüm Durumlar" : status,
+    count: status === "all" ? filteredAnnualPlans.length : filteredAnnualPlans.filter(plan => plan.status === status).length,
+    color: planStatusColor(status),
+  }));
+
   return (
     <div>
       <div style={styles.card} className="isg-card">
@@ -69,27 +122,62 @@ export function AnnualPlansTab({
         </div>
         <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button style={styles.btnPrimary} onClick={addAnnualPlan}>Plan Kalemi Ekle</button>
-          <button style={styles.btnSecondary} onClick={() => generateAnnualPlanPDF(filteredAnnualPlans, companies)}>PDF İndir</button>
+          <button style={styles.btnSecondary} onClick={() => generateAnnualPlanPDF(visibleAnnualPlans, companies)}>PDF İndir</button>
         </div>
       </div>
 
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredAnnualPlans.length} plan kalemi</span>
+        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{visibleAnnualPlans.length} plan kalemi</span>
+      </div>
+
+      <div style={{ ...styles.card, padding: 14, marginBottom: 16 }} className="isg-card">
+        <div style={{ display: "grid", gap: 14 }}>
+          {[
+            { title: "Yıl Filtresi", filters: yearFilters, value: yearFilter, onChange: setYearFilter },
+            { title: "Tür Filtresi", filters: typeFilters, value: typeFilter, onChange: setTypeFilter },
+            { title: "Durum Filtresi", filters: statusFilters, value: statusFilter, onChange: setStatusFilter },
+          ].map(group => (
+            <div key={group.title}>
+              <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">{group.title}</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {group.filters.map(filter => {
+                  const active = group.value === filter.value;
+                  return (
+                    <button
+                      key={filter.value}
+                      type="button"
+                      onClick={() => group.onChange(filter.value as never)}
+                      style={{
+                        ...styles.btnSecondary,
+                        minHeight: 44,
+                        background: active ? `${filter.color}24` : "var(--isg-surface-soft)",
+                        borderColor: active ? `${filter.color}88` : "var(--isg-border)",
+                        color: active ? filter.color : "var(--isg-text)",
+                      }}
+                    >
+                      {filter.label} ({filter.count})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
           <thead><tr>{["Firma", "Yıl", "Tür", "Başlık", "Tarih", "Sorumlu", "Durum", "Not", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
           <tbody>
-            {filteredAnnualPlans.map(plan => {
+            {visibleAnnualPlans.map(plan => {
               const company = companies.find(c => c.id === plan.companyId);
               return (
                 <tr key={plan.id}>
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
                   <td style={styles.td} className="isg-td">{plan.year}</td>
-                  <td style={styles.td} className="isg-td"><Badge styles={styles} text={plan.type} color="#1B4332" /></td>
+                  <td style={styles.td} className="isg-td"><Badge styles={styles} text={plan.type} color={planTypeColor(plan.type)} /></td>
                   <td style={{ ...styles.td, minWidth: 180 }} className="isg-td"><strong>{plan.title}</strong></td>
                   <td style={styles.td} className="isg-td">{formatDate(plan.plannedDate)}</td>
                   <td style={styles.td} className="isg-td">{plan.responsible || "—"}</td>
@@ -99,7 +187,7 @@ export function AnnualPlansTab({
                 </tr>
               );
             })}
-            {filteredAnnualPlans.length === 0 && (
+            {visibleAnnualPlans.length === 0 && (
               <EmptyTableRow colSpan={9} message="Yeni yıllık plan kalemi eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>

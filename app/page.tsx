@@ -341,8 +341,13 @@ export default function Page() {
           <CompaniesTab
             styles={styles}
             isAdmin={isAdmin}
-            companies={companies}
             filteredCompanies={filteredCompanies}
+            employees={employees}
+            documents={documents}
+            dofs={dofs}
+            risks={risks}
+            accidentReports={accidentReports}
+            companyVisits={companyVisits}
             newCompany={newCompany}
             setNewCompany={setNewCompany}
             search={search}
@@ -350,6 +355,8 @@ export default function Page() {
             addCompany={addCompany}
             deleteCompany={deleteCompany}
             getCompanyIndicator={getCompanyIndicator}
+            setActiveTab={setActiveTab}
+            setSelectedCompanyId={setSelectedCompanyId}
           />
         )}
 

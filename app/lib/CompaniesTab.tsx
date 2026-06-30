@@ -1,9 +1,10 @@
 import React from "react";
+import { Company360Panel } from "./Company360Panel";
 import { IsoTarihSecici } from "./TarihSecici";
 import { dangerFromNace, daysUntil, extractNaceFromSgk, getDateStatus, officialNameFromSgk, statusColor } from "./dashboardUtils";
 import { formatDate } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
-import type { Company, DangerClass, ServiceType } from "./types";
+import type { AccidentReportRecord, Company, CompanyVisitRecord, DocumentRecord, DofRecord, Employee, DangerClass, RiskRecord, ServiceType } from "./types";
 
 type CompanyDraft = {
   nickName: string;
@@ -23,8 +24,13 @@ type ContractStatusFilter = "all" | "Süresi Dolmuş" | "Yaklaşıyor" | "Geçer
 type CompaniesTabProps = {
   styles: Record<string, React.CSSProperties>;
   isAdmin: boolean;
-  companies: Company[];
   filteredCompanies: Company[];
+  employees: Employee[];
+  documents: DocumentRecord[];
+  dofs: DofRecord[];
+  risks: RiskRecord[];
+  accidentReports: AccidentReportRecord[];
+  companyVisits: CompanyVisitRecord[];
   newCompany: CompanyDraft;
   setNewCompany: React.Dispatch<React.SetStateAction<CompanyDraft>>;
   search: string;
@@ -32,6 +38,8 @@ type CompaniesTabProps = {
   addCompany: () => void;
   deleteCompany: (id: string) => void;
   getCompanyIndicator: (companyId: string) => CompanyIndicator;
+  setActiveTab: (tab: string) => void;
+  setSelectedCompanyId: (companyId: string) => void;
 };
 
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
@@ -73,8 +81,13 @@ function contractStatusColor(status: ContractStatusFilter) {
 export function CompaniesTab({
   styles,
   isAdmin,
-  companies,
   filteredCompanies,
+  employees,
+  documents,
+  dofs,
+  risks,
+  accidentReports,
+  companyVisits,
   newCompany,
   setNewCompany,
   search,
@@ -82,10 +95,13 @@ export function CompaniesTab({
   addCompany,
   deleteCompany,
   getCompanyIndicator,
+  setActiveTab,
+  setSelectedCompanyId,
 }: CompaniesTabProps) {
   const [dangerFilter, setDangerFilter] = React.useState<"all" | DangerClass>("all");
   const [contractFilter, setContractFilter] = React.useState<ContractStatusFilter>("all");
   const [serviceFilter, setServiceFilter] = React.useState<"all" | ServiceType>("all");
+  const [selectedCompany360Id, setSelectedCompany360Id] = React.useState<string | null>(null);
   const visibleCompanies = React.useMemo(() => filteredCompanies.filter(company => {
     const matchesDanger = dangerFilter === "all" || company.dangerClass === dangerFilter;
     const matchesContract = contractFilter === "all" || companyContractStatus(company) === contractFilter;
@@ -116,6 +132,13 @@ export function CompaniesTab({
     count: serviceType === "all" ? filteredCompanies.length : filteredCompanies.filter(company => company.serviceType === serviceType).length,
     color: serviceColor(serviceType),
   }));
+  const selectedCompany360 = selectedCompany360Id
+    ? visibleCompanies.find(company => company.id === selectedCompany360Id) || null
+    : null;
+  const openCompanyTab = (tab: string) => {
+    if (selectedCompany360) setSelectedCompanyId(selectedCompany360.id);
+    setActiveTab(tab);
+  };
 
   return (
     <div>
@@ -179,9 +202,25 @@ export function CompaniesTab({
           </div>
         ))}
       </div>
-      <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
+
+      {selectedCompany360 && (
+        <Company360Panel
+          styles={styles}
+          company={selectedCompany360}
+          employees={employees}
+          documents={documents}
+          dofs={dofs}
+          risks={risks}
+          accidentReports={accidentReports}
+          companyVisits={companyVisits}
+          openTab={openCompanyTab}
+          onClose={() => setSelectedCompany360Id(null)}
+        />
+      )}
+
+      <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"] }}>
         <table style={styles.table}>
-          <thead><tr>{["Kısa Ad", "Resmi Unvan", "SGK Sicil", "NACE", "Tehlike", "Personel", "Sözleşme", "Hizmet", "Durum", ...(isAdmin ? ["İşlem"] : [])].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
+          <thead><tr>{["Kısa Ad", "Resmi Unvan", "SGK Sicil", "NACE", "Tehlike", "Personel", "Sözleşme", "Hizmet", "Durum", "Detay", ...(isAdmin ? ["İşlem"] : [])].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
           <tbody>
             {visibleCompanies.map(c => {
               const ind = getCompanyIndicator(c.id);
@@ -201,12 +240,15 @@ export function CompaniesTab({
                   </td>
                   <td style={{ ...styles.td, fontSize: 12 }}>{c.serviceType}</td>
                   <td style={styles.td} className="isg-td"><Badge text={ind.text} color={ind.color} /></td>
+                  <td style={styles.td} className="isg-td">
+                    <button type="button" style={styles.btnSecondary} onClick={() => setSelectedCompany360Id(c.id)}>360 Aç</button>
+                  </td>
                   {isAdmin && <td style={styles.td} className="isg-td"><button style={styles.btnDanger} onClick={() => deleteCompany(c.id)}>Sil</button></td>}
                 </tr>
               );
             })}
             {visibleCompanies.length === 0 && (
-              <EmptyTableRow colSpan={isAdmin ? 10 : 9} message="Filtreleri değiştirin veya yeni bir firma eklemek için yukarıdaki formu kullanın." />
+              <EmptyTableRow colSpan={isAdmin ? 11 : 10} message="Filtreleri değiştirin veya yeni bir firma eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>
         </table>

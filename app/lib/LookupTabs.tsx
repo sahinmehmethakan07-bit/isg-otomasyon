@@ -21,13 +21,23 @@ export function NaceLookupTab({
   onApplyToCompany: (code: string, dangerClass: DangerClass) => void;
 }) {
   const [naceSearch, setNaceSearch] = useState("");
+  const [dangerFilter, setDangerFilter] = useState<"all" | DangerClass>("all");
   const filteredNaceRecords = useMemo(() => {
     const term = naceSearch.trim().toLowerCase();
-    if (!term) return naceRecords;
-    return naceRecords.filter(record =>
-      [record.code, record.title, record.dangerClass, record.note].join(" ").toLowerCase().includes(term)
-    );
-  }, [naceSearch]);
+    return naceRecords.filter(record => {
+      const matchesSearch = !term || [record.code, record.title, record.dangerClass, record.note].join(" ").toLowerCase().includes(term);
+      const matchesDanger = dangerFilter === "all" || record.dangerClass === dangerFilter;
+      return matchesSearch && matchesDanger;
+    });
+  }, [dangerFilter, naceSearch]);
+  const dangerFilters: Array<{ value: "all" | DangerClass; label: string; count: number; color: string }> = (
+    ["all", "Az Tehlikeli", "Tehlikeli", "Çok Tehlikeli"] as const
+  ).map(value => ({
+    value,
+    label: value === "all" ? "Tüm Tehlikeler" : value,
+    count: value === "all" ? naceRecords.length : naceRecords.filter(record => record.dangerClass === value).length,
+    color: value === "Çok Tehlikeli" ? "#C0392B" : value === "Tehlikeli" ? "#D4A017" : value === "all" ? "#52d3b5" : "#2D6A4F",
+  }));
 
   return (
     <div>
@@ -45,6 +55,27 @@ export function NaceLookupTab({
             onChange={e => setNaceSearch(e.target.value)}
           />
           <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredNaceRecords.length} sonuç</span>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+          {dangerFilters.map(filter => {
+            const active = dangerFilter === filter.value;
+            return (
+              <button
+                key={filter.value}
+                type="button"
+                onClick={() => setDangerFilter(filter.value)}
+                style={{
+                  ...styles.btnSecondary,
+                  minHeight: 38,
+                  border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                  backgroundColor: active ? `${filter.color}18` : "var(--isg-input-bg)",
+                  color: active ? filter.color : "var(--isg-text)",
+                }}
+              >
+                {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -95,13 +126,20 @@ export function MykLookupTab({
   onOpenEmployee: (employeeId: string) => void;
 }) {
   const [mykSearch, setMykSearch] = useState("");
+  const [mandatoryFilter, setMandatoryFilter] = useState<"all" | "mandatory" | "trackable">("all");
+  const [sectorFilter, setSectorFilter] = useState("all");
   const filteredMykRecords = useMemo(() => {
     const term = mykSearch.trim().toLowerCase();
-    if (!term) return mykRecords;
-    return mykRecords.filter(record =>
-      [record.code, record.title, record.level, record.sector, record.note].join(" ").toLowerCase().includes(term)
-    );
-  }, [mykSearch]);
+    return mykRecords.filter(record => {
+      const matchesSearch = !term || [record.code, record.title, record.level, record.sector, record.note].join(" ").toLowerCase().includes(term);
+      const matchesMandatory =
+        mandatoryFilter === "all" ||
+        (mandatoryFilter === "mandatory" && record.mandatory) ||
+        (mandatoryFilter === "trackable" && !record.mandatory);
+      const matchesSector = sectorFilter === "all" || record.sector === sectorFilter;
+      return matchesSearch && matchesMandatory && matchesSector;
+    });
+  }, [mandatoryFilter, mykSearch, sectorFilter]);
   const mykMatchedEmployees = useMemo(() => {
     const term = mykSearch.trim().toLowerCase();
     if (!term) return employees.slice(0, 6);
@@ -109,6 +147,20 @@ export function MykLookupTab({
       [employee.firstName, employee.lastName, employee.title || "", employee.department || ""].join(" ").toLowerCase().includes(term)
     ).slice(0, 8);
   }, [employees, mykSearch]);
+  const mandatoryFilters = [
+    { value: "all" as const, label: "Tüm MYK", count: mykRecords.length, color: "#52d3b5" },
+    { value: "mandatory" as const, label: "Zorunlu", count: mykRecords.filter(record => record.mandatory).length, color: "#C0392B" },
+    { value: "trackable" as const, label: "Takip Edilebilir", count: mykRecords.filter(record => !record.mandatory).length, color: "#1B4332" },
+  ];
+  const sectorFilters = [
+    { value: "all", label: "Tüm Sektörler", count: mykRecords.length, color: "#52d3b5" },
+    ...Array.from(new Set(mykRecords.map(record => record.sector).filter(Boolean))).map(sector => ({
+      value: sector,
+      label: sector,
+      count: mykRecords.filter(record => record.sector === sector).length,
+      color: "#60a5fa",
+    })),
+  ];
 
   return (
     <div>
@@ -127,6 +179,35 @@ export function MykLookupTab({
           />
           <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredMykRecords.length} yeterlilik</span>
         </div>
+        {[
+          { title: "Zorunluluk Filtresi", filters: mandatoryFilters, value: mandatoryFilter, onChange: setMandatoryFilter },
+          { title: "Sektör Filtresi", filters: sectorFilters, value: sectorFilter, onChange: setSectorFilter },
+        ].map(group => (
+          <div key={group.title} style={{ marginTop: 12 }}>
+            <div style={{ color: "var(--isg-text-muted)", fontSize: 12, fontWeight: 800, marginBottom: 8 }}>{group.title}</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {group.filters.map(filter => {
+                const active = group.value === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => group.onChange(filter.value as never)}
+                    style={{
+                      ...styles.btnSecondary,
+                      minHeight: 38,
+                      border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                      backgroundColor: active ? `${filter.color}18` : "var(--isg-input-bg)",
+                      color: active ? filter.color : "var(--isg-text)",
+                    }}
+                  >
+                    {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: compactLayout ? "1fr" : "minmax(0, 1.4fr) minmax(320px, 0.8fr)", gap: 16, alignItems: "start" }}>

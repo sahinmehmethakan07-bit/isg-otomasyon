@@ -44,6 +44,13 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
+const statusColor = (status: "all" | CommitteeMeetingStatus) =>
+  status === "Yapıldı" ? "#2D6A4F"
+    : status === "Ertelendi" ? "#C0392B"
+      : status === "Kararlar Takipte" ? "#D4A017"
+        : status === "all" ? "#52d3b5"
+          : "#0ea5e9";
+
 export function CommitteeMeetingsTab({
   styles,
   companies,
@@ -60,6 +67,45 @@ export function CommitteeMeetingsTab({
   updateCommitteeMeetingStatus,
   deleteCommitteeMeeting,
 }: CommitteeMeetingsTabProps) {
+  const [statusFilter, setStatusFilter] = React.useState<"all" | CommitteeMeetingStatus>("all");
+  const [participantFilter, setParticipantFilter] = React.useState<"all" | "withParticipants" | "withoutParticipants">("all");
+
+  const visibleCommitteeMeetings = React.useMemo(() => filteredCommitteeMeetings.filter(meeting => {
+    const hasParticipants = meeting.participantIds.length > 0;
+    const matchesStatus = statusFilter === "all" || meeting.status === statusFilter;
+    const matchesParticipants =
+      participantFilter === "all" ||
+      (participantFilter === "withParticipants" && hasParticipants) ||
+      (participantFilter === "withoutParticipants" && !hasParticipants);
+
+    return matchesStatus && matchesParticipants;
+  }), [filteredCommitteeMeetings, participantFilter, statusFilter]);
+
+  const statusFilters: Array<{ value: "all" | CommitteeMeetingStatus; label: string; count: number; color: string }> = (
+    ["all", "Planlandı", "Yapıldı", "Ertelendi", "Kararlar Takipte"] as const
+  ).map(status => ({
+    value: status,
+    label: status === "all" ? "Tüm Durumlar" : status,
+    count: status === "all" ? filteredCommitteeMeetings.length : filteredCommitteeMeetings.filter(meeting => meeting.status === status).length,
+    color: statusColor(status),
+  }));
+
+  const participantFilters = [
+    { value: "all" as const, label: "Tüm Toplantılar", count: filteredCommitteeMeetings.length, color: "#52d3b5" },
+    {
+      value: "withParticipants" as const,
+      label: "Katılımcı Seçili",
+      count: filteredCommitteeMeetings.filter(meeting => meeting.participantIds.length > 0).length,
+      color: "#2D6A4F",
+    },
+    {
+      value: "withoutParticipants" as const,
+      label: "Katılımcı Eksik",
+      count: filteredCommitteeMeetings.filter(meeting => meeting.participantIds.length === 0).length,
+      color: "#C0392B",
+    },
+  ];
+
   return (
     <div>
       <div style={styles.card} className="isg-card">
@@ -133,14 +179,68 @@ export function CommitteeMeetingsTab({
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredCommitteeMeetings.length} toplantı</span>
+        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{visibleCommitteeMeetings.length} toplantı</span>
+      </div>
+
+      <div style={{ ...styles.card, padding: 14, marginBottom: 16 }} className="isg-card">
+        <div style={{ display: "grid", gap: 14 }}>
+          <div>
+            <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Durum Filtresi</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {statusFilters.map(filter => {
+                const active = statusFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setStatusFilter(filter.value)}
+                    style={{
+                      ...styles.btnSecondary,
+                      minHeight: 44,
+                      background: active ? `${filter.color}24` : "var(--isg-surface-soft)",
+                      borderColor: active ? `${filter.color}88` : "var(--isg-border)",
+                      color: active ? filter.color : "var(--isg-text)",
+                    }}
+                  >
+                    {filter.label} ({filter.count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Katılımcı Filtresi</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {participantFilters.map(filter => {
+                const active = participantFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setParticipantFilter(filter.value)}
+                    style={{
+                      ...styles.btnSecondary,
+                      minHeight: 44,
+                      background: active ? `${filter.color}24` : "var(--isg-surface-soft)",
+                      borderColor: active ? `${filter.color}88` : "var(--isg-border)",
+                      color: active ? filter.color : "var(--isg-text)",
+                    }}
+                  >
+                    {filter.label} ({filter.count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
           <thead><tr>{["Firma", "No", "Tarih", "Yer", "Başkan", "Katılımcı", "Durum", "Gündem / Kararlar", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
           <tbody>
-            {filteredCommitteeMeetings.map(meeting => {
+            {visibleCommitteeMeetings.map(meeting => {
               const company = companies.find(c => c.id === meeting.companyId);
               const participants = meeting.participantIds
                 .map(id => employees.find(employee => employee.id === id))
@@ -168,7 +268,7 @@ export function CommitteeMeetingsTab({
                 </tr>
               );
             })}
-            {filteredCommitteeMeetings.length === 0 && (
+            {visibleCommitteeMeetings.length === 0 && (
               <EmptyTableRow colSpan={10} message="Yeni kurul toplantısı kaydı eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>

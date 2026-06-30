@@ -123,6 +123,8 @@ export function DofTab({
   const [visionLoading, setVisionLoading] = useState(false);
   const [visionError, setVisionError] = useState<string | null>(null);
   const [manualChecklistId, setManualChecklistId] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState<"all" | NewDofForm["priority"]>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | DofRecord["status"]>("all");
 
   const setField = (field: keyof NewDofForm, value: string) => {
     setNewDof(current => ({ ...current, [field]: value }));
@@ -132,6 +134,30 @@ export function DofTab({
   const companyRisks = risks.filter(risk => risk.companyId === newDof.companyId);
   const approvedDetections = visionDetections.filter(item => item.approved);
   const uncertainDetections = visionDetections.filter(item => item.confidence < 0.6);
+  const dofStatusColor = (status: "all" | DofRecord["status"]) =>
+    status === "Çözüldü" ? "#2D6A4F"
+      : status === "Riske Aktarıldı" ? "#7c3aed"
+        : status === "Önlem Alındı" ? "#D4A017"
+          : status === "Bildirildi" ? "#1B4332"
+            : status === "all" ? "#52d3b5"
+              : "#C0392B";
+  const visibleDofs = React.useMemo(() => filteredDofs.filter(dof => {
+    const matchesPriority = priorityFilter === "all" || dof.priority === priorityFilter;
+    const matchesStatus = statusFilter === "all" || dof.status === statusFilter;
+    return matchesPriority && matchesStatus;
+  }), [filteredDofs, priorityFilter, statusFilter]);
+  const priorityFilters: Array<{ value: "all" | NewDofForm["priority"]; label: string; count: number; color: string }> = [
+    { value: "all", label: "Tüm Öncelikler", count: filteredDofs.length, color: "#52d3b5" },
+    { value: "Yüksek", label: "Yüksek", count: filteredDofs.filter(dof => dof.priority === "Yüksek").length, color: priorityColor("Yüksek") },
+    { value: "Orta", label: "Orta", count: filteredDofs.filter(dof => dof.priority === "Orta").length, color: priorityColor("Orta") },
+    { value: "Düşük", label: "Düşük", count: filteredDofs.filter(dof => dof.priority === "Düşük").length, color: priorityColor("Düşük") },
+  ];
+  const statusFilters: Array<{ value: "all" | DofRecord["status"]; label: string; count: number; color: string }> = (["all", "Açık", "Bildirildi", "Önlem Alındı", "Çözüldü", "Riske Aktarıldı"] as const).map(status => ({
+    value: status,
+    label: status === "all" ? "Tüm Durumlar" : status,
+    count: status === "all" ? filteredDofs.length : filteredDofs.filter(dof => dof.status === status).length,
+    color: dofStatusColor(status),
+  }));
 
   async function analyzePhoto(base64: string) {
     setVisionLoading(true);
@@ -397,10 +423,70 @@ export function DofTab({
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-        <span style={{ color: "#6B7280", fontSize: 13 }}>{filteredDofs.length} kayıt</span>
+        <span style={{ color: "#6B7280", fontSize: 13 }}>{visibleDofs.length} kayıt</span>
+      </div>
+      <div style={{ ...styles.card, padding: 14, marginBottom: 16 }} className="isg-card">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", gap: 14 }}>
+          <div>
+            <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Öncelik Filtresi</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {priorityFilters.map(filter => {
+                const active = priorityFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setPriorityFilter(filter.value)}
+                    style={{
+                      minHeight: 44,
+                      borderRadius: 12,
+                      border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                      backgroundColor: active ? filter.color + "18" : "var(--isg-input-bg)",
+                      color: active ? filter.color : "var(--isg-text)",
+                      fontWeight: 800,
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Durum Filtresi</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {statusFilters.map(filter => {
+                const active = statusFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setStatusFilter(filter.value)}
+                    style={{
+                      minHeight: 44,
+                      borderRadius: 12,
+                      border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                      backgroundColor: active ? filter.color + "18" : "var(--isg-input-bg)",
+                      color: active ? filter.color : "var(--isg-text)",
+                      fontWeight: 800,
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>
-        {filteredDofs.map(dof => {
+        {visibleDofs.map(dof => {
           const company = companies.find(c => c.id === dof.companyId);
           const observer = observers.find(o => o.id === dof.observerId);
           const linkedRisk = dof.sourceRiskId ? risks.find(r => r.id === dof.sourceRiskId) : null;
@@ -419,7 +505,7 @@ export function DofTab({
                 {dof.affectedPersons && <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>👥 {dof.affectedPersons}</span>}
               </div>
               <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-                <Badge styles={styles} text={dof.status} color={dof.status === "Çözüldü" ? "#2D6A4F" : dof.status === "Riske Aktarıldı" ? "#7c3aed" : dof.status === "Önlem Alındı" ? "#D4A017" : dof.status === "Bildirildi" ? "#1B4332" : "#C0392B"} />
+                <Badge styles={styles} text={dof.status} color={dofStatusColor(dof.status)} />
                 {linkedRisk && <Badge styles={styles} text={`Risk: ${linkedRisk.hazard}`} color="#0ea5e9" />}
                 <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{company?.nickName}</span>
                 {observer && <span style={{ fontSize: 11, color: "var(--isg-text-muted)" }}>{observer.fullName}</span>}
@@ -487,7 +573,7 @@ export function DofTab({
             </div>
           );
         })}
-        {filteredDofs.length === 0 && (
+        {visibleDofs.length === 0 && (
           <div style={{ ...styles.card, gridColumn: "1 / -1" }} className="isg-card">
             <EmptyState message="Yeni bir DÖF kaydı oluşturmak için yukarıdaki formu kullanın." />
           </div>

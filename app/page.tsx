@@ -389,6 +389,11 @@ export default function Page() {
                 styles={styles}
                 selectedEmployee={selectedEmployee}
                 selectedEmployeeCompany={selectedEmployeeCompany}
+                documents={documents}
+                trainings={trainings}
+                ppeRecords={ppeRecords}
+                setActiveTab={setActiveTab}
+                setSelectedCompanyId={setSelectedCompanyId}
                 updateEmployeeChecklist={updateEmployeeChecklist}
                 updateEmployeeTraining={updateEmployeeTraining}
                 printEmployeeCertificate={printEmployeeCertificate}

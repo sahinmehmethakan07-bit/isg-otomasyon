@@ -1,12 +1,18 @@
 import React from "react";
 import { createOnboardingFromChecklist } from "./dashboardUtils";
+import { buildEmployee360Summary } from "./employee360";
 import { TurkishDateInput } from "./TurkishDateInput";
-import type { Company, Employee, EmployeeChecklist } from "./types";
+import type { Company, DocumentRecord, Employee, EmployeeChecklist, PpeRecord, TrainingRecord } from "./types";
 
 type EmployeeDetailPanelProps = {
   styles: Record<string, React.CSSProperties>;
   selectedEmployee: Employee;
   selectedEmployeeCompany: Company | null;
+  documents: DocumentRecord[];
+  trainings: TrainingRecord[];
+  ppeRecords: PpeRecord[];
+  setActiveTab: (tab: string) => void;
+  setSelectedCompanyId: (companyId: string) => void;
   updateEmployeeChecklist: (employeeId: string, checklist: EmployeeChecklist) => void;
   updateEmployeeTraining: (employeeId: string, trainingComplete: boolean) => void;
   printEmployeeCertificate: (employee: Employee, company: Company | null) => void;
@@ -27,23 +33,47 @@ function Badge({ text, color }: { text: string; color: string }) {
   );
 }
 
+const DATE_CHECKLIST_FIELDS: Array<{ key: keyof Pick<EmployeeChecklist, "isgCertificateDate" | "ek2Date" | "orientationDate">; label: string }> = [
+  { key: "isgCertificateDate", label: "İSG Sertifikası Tarihi" },
+  { key: "ek2Date", label: "EK-2 Tarihi" },
+  { key: "orientationDate", label: "Oryantasyon Tarihi" },
+];
+
+const BOOLEAN_CHECKLIST_FIELDS: Array<{ key: keyof Pick<EmployeeChecklist, "preTest" | "postTest" | "undertaking" | "kkdMinutes" | "attendanceDoc">; label: string }> = [
+  { key: "preTest", label: "Ön Test" },
+  { key: "postTest", label: "Son Test" },
+  { key: "undertaking", label: "Taahhütname" },
+  { key: "kkdMinutes", label: "KKD Tutanağı" },
+  { key: "attendanceDoc", label: "Katılım Belgesi" },
+];
+
 export function EmployeeDetailPanel({
   styles,
   selectedEmployee,
   selectedEmployeeCompany,
+  documents,
+  trainings,
+  ppeRecords,
+  setActiveTab,
+  setSelectedCompanyId,
   updateEmployeeChecklist,
   updateEmployeeTraining,
   printEmployeeCertificate,
 }: EmployeeDetailPanelProps) {
   const onboarding = selectedEmployee.onboarding || createOnboardingFromChecklist(selectedEmployee.checklist);
+  const employee360 = buildEmployee360Summary({ employee: selectedEmployee, documents, trainings, ppeRecords });
   const onboardingBorder = onboarding.status === "completed" ? "#2D6A4F33" : "#D4A01733";
   const onboardingBackground = onboarding.status === "completed" ? "#2D6A4F10" : "#D4A01710";
   const scannedDocuments = selectedEmployee.scannedDocuments || [];
+  const openEmployeeTab = (tab: string) => {
+    setSelectedCompanyId(selectedEmployee.companyId);
+    setActiveTab(tab);
+  };
 
   return (
     <div style={{ minWidth: 0, maxWidth: "100%" }}>
       <div style={{ ...styles.card, overflow: "visible" }} className="isg-card">
-        <p style={styles.sectionTitle} className="isg-text-muted">Personel Detayı</p>
+        <p style={styles.sectionTitle} className="isg-text-muted">Personel 360</p>
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           {selectedEmployee.photo ? <img src={selectedEmployee.photo} alt="" style={{ width: 76, height: 92, borderRadius: 8, objectFit: "cover", border: "1px solid var(--isg-border)" }} /> : <div style={{ width: 76, height: 92, borderRadius: 8, backgroundColor: "var(--isg-input-bg)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--isg-text-muted)" }}>👤</div>}
           <div>
@@ -53,6 +83,58 @@ export function EmployeeDetailPanel({
             <div style={{ fontSize: 12, color: "var(--isg-text-muted)", marginTop: 2 }}>{selectedEmployeeCompany?.nickName}</div>
           </div>
         </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(120px, 100%), 1fr))", gap: 8, marginTop: 14 }}>
+          {employee360.metrics.map(metric => (
+            <button
+              key={metric.label}
+              type="button"
+              onClick={() => openEmployeeTab(metric.tab)}
+              style={{
+                minHeight: 64,
+                border: `1px solid ${metric.color}44`,
+                borderRadius: 10,
+                background: `${metric.color}14`,
+                color: "var(--isg-text)",
+                cursor: "pointer",
+                padding: "9px 10px",
+                textAlign: "left",
+              }}
+            >
+              <div style={{ color: metric.color, fontSize: 20, fontWeight: 900, lineHeight: 1 }}>{metric.value}</div>
+              <div style={{ color: "var(--isg-text-muted)", fontSize: 11, fontWeight: 800, marginTop: 6 }}>{metric.label}</div>
+            </button>
+          ))}
+        </div>
+
+        {employee360.issues.length > 0 && (
+          <div style={{ border: "1px solid var(--isg-border)", borderRadius: 10, background: "var(--isg-input-bg)", padding: 12, marginTop: 14 }}>
+            <div style={{ ...styles.label, marginBottom: 8 }}>Öncelikli Takipler</div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {employee360.issues.slice(0, 5).map(issue => (
+                <button
+                  key={`${issue.label}-${issue.detail}`}
+                  type="button"
+                  onClick={() => openEmployeeTab(issue.tab)}
+                  style={{
+                    border: `1px solid ${issue.color}44`,
+                    borderRadius: 10,
+                    background: `${issue.color}12`,
+                    color: "var(--isg-text)",
+                    cursor: "pointer",
+                    minHeight: 46,
+                    padding: "8px 10px",
+                    textAlign: "left",
+                  }}
+                >
+                  <strong style={{ color: issue.color, marginRight: 6 }}>{issue.label}</strong>
+                  <span style={{ color: "var(--isg-text-muted)", fontSize: 12, lineHeight: 1.45 }}>{issue.detail}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6, marginTop: 14, fontSize: 12, color: "var(--isg-text-muted)", lineHeight: 1.45 }}>
           <div><strong style={{ color: "var(--isg-text)" }}>TC:</strong> {selectedEmployee.tcNo || "—"}</div>
           <div><strong style={{ color: "var(--isg-text)" }}>Doğum:</strong> {[selectedEmployee.birthPlace, selectedEmployee.birthDate].filter(Boolean).join(" / ") || "—"}</div>
@@ -104,12 +186,12 @@ export function EmployeeDetailPanel({
         </div>
 
         <p style={{ ...styles.sectionTitle, marginTop: 16 }}>Kontrol Listesi</p>
-        {[{ key: "isgCertificateDate", label: "İSG Sertifikası Tarihi" }, { key: "ek2Date", label: "EK-2 Tarihi" }, { key: "orientationDate", label: "Oryantasyon Tarihi" }].map(({ key, label }) => (
+        {DATE_CHECKLIST_FIELDS.map(({ key, label }) => (
           <FormField key={key} label={label}>
             <div style={{ marginBottom: 8 }}>
               <TurkishDateInput
                 styles={styles}
-                value={(selectedEmployee.checklist as any)[key]}
+                value={selectedEmployee.checklist[key]}
                 onChange={value => {
                   const updated = { ...selectedEmployee.checklist, [key]: value };
                   updateEmployeeChecklist(selectedEmployee.id, updated);
@@ -118,11 +200,11 @@ export function EmployeeDetailPanel({
             </div>
           </FormField>
         ))}
-        {[{ key: "preTest", label: "Ön Test" }, { key: "postTest", label: "Son Test" }, { key: "undertaking", label: "Taahhütname" }, { key: "kkdMinutes", label: "KKD Tutanağı" }, { key: "attendanceDoc", label: "Katılım Belgesi" }].map(({ key, label }) => (
+        {BOOLEAN_CHECKLIST_FIELDS.map(({ key, label }) => (
           <label key={key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, cursor: "pointer", fontSize: 13 }}>
             <input
               type="checkbox"
-              checked={(selectedEmployee.checklist as any)[key]}
+              checked={selectedEmployee.checklist[key]}
               onChange={e => {
                 const updated = { ...selectedEmployee.checklist, [key]: e.target.checked };
                 updateEmployeeChecklist(selectedEmployee.id, updated);
@@ -140,6 +222,12 @@ export function EmployeeDetailPanel({
             🖨 Sertifikayı Yazdır
           </button>
         )}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+          <button type="button" style={styles.btnSecondary} onClick={() => openEmployeeTab("belgeler")}>Belgeleri Aç</button>
+          <button type="button" style={styles.btnSecondary} onClick={() => openEmployeeTab("egitimler")}>Eğitimleri Aç</button>
+          <button type="button" style={styles.btnSecondary} onClick={() => openEmployeeTab("kkd-formu")}>KKD Aç</button>
+          <button type="button" style={styles.btnSecondary} onClick={() => openEmployeeTab("ek2muayene")}>EK-2 Aç</button>
+        </div>
       </div>
     </div>
   );

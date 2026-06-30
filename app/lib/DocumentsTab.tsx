@@ -15,6 +15,9 @@ type DocumentDraft = {
   expiryDate: string;
 };
 
+type DocumentValidityFilter = "all" | "Süresi Dolmuş" | "Yaklaşıyor" | "Geçerli" | "Tarihsiz";
+type DocumentOwnerFilter = "all" | "company" | "employee";
+
 type DocumentsTabProps = {
   styles: Record<string, React.CSSProperties>;
   companies: Company[];
@@ -46,6 +49,14 @@ function Badge({ text, color }: { text: string; color: string }) {
   );
 }
 
+function documentStatus(document: DocumentRecord): DocumentValidityFilter {
+  return document.expiryDate ? getDateStatus(document.expiryDate) as DocumentValidityFilter : "Tarihsiz";
+}
+
+function documentStatusColor(status: DocumentValidityFilter) {
+  return status === "Tarihsiz" ? "#6B7280" : status === "all" ? "#52d3b5" : statusColor(status);
+}
+
 export function DocumentsTab({
   styles,
   companies,
@@ -62,6 +73,9 @@ export function DocumentsTab({
   deleteDocument,
 }: DocumentsTabProps) {
   const [validityStatusFilter, setValidityStatusFilter] = React.useState("all");
+  const [documentTypeFilter, setDocumentTypeFilter] = React.useState("all");
+  const [documentValidityFilter, setDocumentValidityFilter] = React.useState<DocumentValidityFilter>("all");
+  const [documentOwnerFilter, setDocumentOwnerFilter] = React.useState<DocumentOwnerFilter>("all");
   const filteredCompanies = selectedCompanyId === "all" ? companies : companies.filter(company => company.id === selectedCompanyId);
   const filteredTrainings = selectedCompanyId === "all" ? trainings : trainings.filter(training => training.companyId === selectedCompanyId);
   const validityItems = buildValidityCalendar({ companies: filteredCompanies, documents: filteredDocuments, trainings: filteredTrainings });
@@ -76,6 +90,37 @@ export function DocumentsTab({
     { value: "Süresi Dolmuş", label: "Süresi Dolmuş", count: expiredCount, color: statusColor("Süresi Dolmuş") },
     { value: "Yaklaşıyor", label: "Yaklaşıyor", count: soonCount, color: statusColor("Yaklaşıyor") },
     { value: "Geçerli", label: "Geçerli", count: validCount, color: statusColor("Geçerli") },
+  ];
+  const visibleDocuments = React.useMemo(() => filteredDocuments.filter(document => {
+    const matchesType = documentTypeFilter === "all" || document.type === documentTypeFilter;
+    const matchesValidity = documentValidityFilter === "all" || documentStatus(document) === documentValidityFilter;
+    const matchesOwner =
+      documentOwnerFilter === "all" ||
+      (documentOwnerFilter === "company" && !document.employeeId) ||
+      (documentOwnerFilter === "employee" && Boolean(document.employeeId));
+    return matchesType && matchesValidity && matchesOwner;
+  }), [documentOwnerFilter, documentTypeFilter, documentValidityFilter, filteredDocuments]);
+  const documentTypeFilters = [
+    { value: "all", label: "Tüm Belgeler", count: filteredDocuments.length, color: "#52d3b5" },
+    ...Array.from(new Set(filteredDocuments.map(document => document.type).filter(Boolean))).map(type => ({
+      value: type,
+      label: type,
+      count: filteredDocuments.filter(document => document.type === type).length,
+      color: "#60a5fa",
+    })),
+  ];
+  const documentValidityFilters: Array<{ value: DocumentValidityFilter; label: string; count: number; color: string }> = (
+    ["all", "Süresi Dolmuş", "Yaklaşıyor", "Geçerli", "Tarihsiz"] as const
+  ).map(status => ({
+    value: status,
+    label: status === "all" ? "Tüm Durumlar" : status,
+    count: status === "all" ? filteredDocuments.length : filteredDocuments.filter(document => documentStatus(document) === status).length,
+    color: documentStatusColor(status),
+  }));
+  const documentOwnerFilters: Array<{ value: DocumentOwnerFilter; label: string; count: number; color: string }> = [
+    { value: "all", label: "Tüm Kapsamlar", count: filteredDocuments.length, color: "#52d3b5" },
+    { value: "company", label: "Firma Belgesi", count: filteredDocuments.filter(document => !document.employeeId).length, color: "#D4A017" },
+    { value: "employee", label: "Personel Belgesi", count: filteredDocuments.filter(document => Boolean(document.employeeId)).length, color: "#a78bfa" },
   ];
 
   return (
@@ -151,13 +196,45 @@ export function DocumentsTab({
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-        <span style={{ color: "#6B7280", fontSize: 13 }}>{filteredDocuments.length} belge</span>
+        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{visibleDocuments.length} belge</span>
+      </div>
+      <div style={{ ...styles.card, padding: 16 }} className="isg-card">
+        {[
+          { title: "Belge Türü Filtresi", filters: documentTypeFilters, value: documentTypeFilter, onChange: setDocumentTypeFilter },
+          { title: "Geçerlilik Filtresi", filters: documentValidityFilters, value: documentValidityFilter, onChange: setDocumentValidityFilter },
+          { title: "Kapsam Filtresi", filters: documentOwnerFilters, value: documentOwnerFilter, onChange: setDocumentOwnerFilter },
+        ].map(group => (
+          <div key={group.title} style={{ marginBottom: 12 }}>
+            <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">{group.title}</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {group.filters.map(filter => {
+                const active = group.value === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => group.onChange(filter.value as never)}
+                    style={{
+                      ...styles.btnSecondary,
+                      minHeight: 38,
+                      border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                      backgroundColor: active ? `${filter.color}18` : "var(--isg-input-bg)",
+                      color: active ? filter.color : "var(--isg-text)",
+                    }}
+                  >
+                    {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
           <thead><tr>{["Belge Türü", "Firma", "Personel", "Düzenleme", "Geçerlilik", "Durum", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
           <tbody>
-            {filteredDocuments.map(d => {
+            {visibleDocuments.map(d => {
               const company = companies.find(c => c.id === d.companyId);
               const emp = employees.find(e => e.id === d.employeeId);
               const ds = d.expiryDate ? getDateStatus(d.expiryDate) : "—";
@@ -174,8 +251,8 @@ export function DocumentsTab({
                 </tr>
               );
             })}
-            {filteredDocuments.length === 0 && (
-              <EmptyTableRow colSpan={7} message="Yeni belge eklemek için yukarıdaki formu kullanın." />
+            {visibleDocuments.length === 0 && (
+              <EmptyTableRow colSpan={7} message="Filtreleri değiştirin veya yeni belge eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>
         </table>

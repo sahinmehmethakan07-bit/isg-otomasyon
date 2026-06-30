@@ -197,6 +197,7 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedCompanyFilter, setSelectedCompanyFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "draft">("all");
   const [quickEmployeeId, setQuickEmployeeId] = useState("");
 
   const isDoctor = userRole === "doctor";
@@ -334,10 +335,18 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
 
   // Filtreleme
   const filteredForms = forms.filter(f => {
-    const matchSearch = !search || f.employeeName?.toLowerCase().includes(search.toLowerCase()) || f.companyName?.toLowerCase().includes(search.toLowerCase());
+    const normalizedSearch = search.trim().toLocaleLowerCase("tr-TR");
+    const matchSearch = !normalizedSearch || f.employeeName?.toLocaleLowerCase("tr-TR").includes(normalizedSearch) || f.companyName?.toLocaleLowerCase("tr-TR").includes(normalizedSearch);
     const matchCompany = selectedCompanyFilter === "all" || f.companyId === selectedCompanyFilter;
-    return matchSearch && matchCompany;
+    const matchStatus = statusFilter === "all" || (statusFilter === "completed" ? Boolean(f.kanaatSonuc) : !f.kanaatSonuc);
+    return matchSearch && matchCompany && matchStatus;
   });
+
+  const statusFilters = [
+    { value: "all" as const, label: "Tüm Formlar", count: forms.length, color: "#52d3b5" },
+    { value: "completed" as const, label: "Tamamlandı", count: forms.filter(f => Boolean(f.kanaatSonuc)).length, color: "#2D6A4F" },
+    { value: "draft" as const, label: "Taslak", count: forms.filter(f => !f.kanaatSonuc).length, color: "#D4A017" },
+  ];
 
   if (loading) return <div style={{ color: "var(--isg-text-muted)", padding: 20 }}>EK-2 formları yükleniyor...</div>;
 
@@ -358,6 +367,34 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
             <option value="all">Tüm Firmalar</option>
             {companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}
           </select>
+          <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredForms.length} form</span>
+        </div>
+
+        <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.08em", color: "var(--isg-text-muted)", textTransform: "uppercase" }}>
+            Durum Filtresi
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {statusFilters.map(filter => {
+              const active = statusFilter === filter.value;
+              return (
+                <button
+                  key={filter.value}
+                  type="button"
+                  onClick={() => setStatusFilter(filter.value)}
+                  style={{
+                    ...styles.btnSecondary,
+                    minHeight: 44,
+                    border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                    backgroundColor: active ? `${filter.color}18` : "var(--isg-input-bg)",
+                    color: active ? filter.color : "var(--isg-text)",
+                  }}
+                >
+                  {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {canEdit && (

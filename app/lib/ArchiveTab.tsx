@@ -59,6 +59,36 @@ export function ArchiveTab({
   setSelectedCompanyId,
   setActiveTab,
 }: ArchiveTabProps) {
+  const statusColor = (status: string) =>
+    status === "Süresi Dolmuş" || status === "Açık" ? "#C0392B"
+      : status === "Tamamlandı" || status === "Kapandı" || status === "Geçerli" ? "#2D6A4F"
+        : status === "all" ? "#52d3b5"
+          : "#D4A017";
+  const typeColor = (type: string) =>
+    type === "Risk" || type === "DÖF" || type === "İş Kazası" ? "#C0392B"
+      : type === "Belge" || type === "KKD" ? "#2D6A4F"
+        : type === "Eğitim" || type === "Yıllık Plan" ? "#D4A017"
+          : type === "all" ? "#52d3b5"
+            : "#1B4332";
+  const typeFilters = [
+    { value: "all", label: "Tüm Türler", count: archiveItems.length, color: typeColor("all") },
+    ...archiveTypes.map(type => ({
+      value: type,
+      label: type,
+      count: archiveItems.filter(item => item.type === type).length,
+      color: typeColor(type),
+    })),
+  ];
+  const statusFilters = [
+    { value: "all", label: "Tüm Durumlar", count: archiveItems.length, color: statusColor("all") },
+    ...archiveStatuses.map(status => ({
+      value: status,
+      label: status,
+      count: archiveItems.filter(item => item.status === status).length,
+      color: statusColor(status),
+    })),
+  ];
+
   return (
     <div>
       <div style={styles.statGrid}>
@@ -112,16 +142,77 @@ export function ArchiveTab({
         <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredArchiveItems.length} kayıt</span>
       </div>
 
+      <div style={{ ...styles.card, padding: 14, marginBottom: 16 }} className="isg-card">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", gap: 14 }}>
+          <div>
+            <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Tür Hızlı Filtresi</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {typeFilters.map(filter => {
+                const active = archiveTypeFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setArchiveTypeFilter(filter.value)}
+                    style={{
+                      minHeight: 44,
+                      borderRadius: 12,
+                      border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                      backgroundColor: active ? filter.color + "18" : "var(--isg-input-bg)",
+                      color: active ? filter.color : "var(--isg-text)",
+                      fontWeight: 800,
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Durum Hızlı Filtresi</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {statusFilters.map(filter => {
+                const active = archiveStatusFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setArchiveStatusFilter(filter.value)}
+                    style={{
+                      minHeight: 44,
+                      borderRadius: 12,
+                      border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                      backgroundColor: active ? filter.color + "18" : "var(--isg-input-bg)",
+                      color: active ? filter.color : "var(--isg-text)",
+                      fontWeight: 800,
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
           <thead><tr>{["Tür", "Başlık", "Firma", "İlgili", "Tarih", "Durum", "Kaynak"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
           <tbody>
             {filteredArchiveItems.map(item => {
               const company = companies.find(c => c.id === item.companyId);
-              const color = item.status === "Süresi Dolmuş" || item.status === "Açık" ? "#C0392B" : item.status === "Tamamlandı" || item.status === "Kapandı" || item.status === "Geçerli" ? "#2D6A4F" : "#D4A017";
+              const color = statusColor(item.status);
               return (
                 <tr key={`${item.type}-${item.id}`}>
-                  <td style={styles.td} className="isg-td"><Badge text={item.type} color="#1B4332" /></td>
+                  <td style={styles.td} className="isg-td"><Badge text={item.type} color={typeColor(item.type)} /></td>
                   <td style={{ ...styles.td, minWidth: 220, fontWeight: 700 }} className="isg-td">{item.title || "—"}</td>
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
                   <td style={{ ...styles.td, color: "var(--isg-text-muted)" }} className="isg-td">{item.owner || "—"}</td>

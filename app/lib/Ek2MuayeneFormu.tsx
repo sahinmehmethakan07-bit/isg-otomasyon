@@ -597,7 +597,7 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
 
         <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
           <Ek2YesNo label="3. Hastanede yattınız mı?" data={form.hastaneYatis} onChange={(val) => updateField("hastaneYatis", val)} readOnly={readOnly} />
-          {form.hastaneYatis.evet && <Ek2Field label="Tanı" value={(form as any)["hastaneYatis"] || ""} onChange={(val) => updateField("hastaneYatis", val)} readOnly={readOnly} styles={styles} />}
+          {form.hastaneYatis.evet && <Ek2Field label="Tanı" value={form.hastaneYatis.tani || ""} onChange={(val) => updateField("hastaneYatis", { ...form.hastaneYatis, tani: val })} readOnly={readOnly} styles={styles} />}
 
           <Ek2YesNo label="4. Ameliyat geçirdiniz mi?" data={form.ameliyat} onChange={(val) => updateField("ameliyat", val)} readOnly={readOnly} />
           <Ek2YesNo label="5. İş kazası geçirdiniz mi?" data={form.isKazasi} onChange={(val) => updateField("isKazasi", val)} readOnly={readOnly} />
@@ -617,8 +617,8 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
           </div>
           {form.sigara.durum !== "hayir" && (
             <>
-              <Ek2Field label="Kaç yıldır" value={(form as any)["sigara"] || ""} onChange={(val) => updateField("sigara", val)} readOnly={readOnly} styles={styles} />
-              <Ek2Field label="Adet/gün" value={(form as any)["sigara"] || ""} onChange={(val) => updateField("sigara", val)} readOnly={readOnly} styles={styles} />
+              <Ek2Field label="Kaç yıldır" value={form.sigara.yil || ""} onChange={(val) => updateField("sigara", { ...form.sigara, yil: val })} readOnly={readOnly} styles={styles} />
+              <Ek2Field label="Adet/gün" value={form.sigara.adetGun || ""} onChange={(val) => updateField("sigara", { ...form.sigara, adetGun: val })} readOnly={readOnly} styles={styles} />
             </>
           )}
           <div>
@@ -629,6 +629,12 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
               <option value="evet">Evet</option>
             </select>
           </div>
+          {form.alkol.durum !== "hayir" && (
+            <>
+              <Ek2Field label="Kaç yıldır" value={form.alkol.yil || ""} onChange={(val) => updateField("alkol", { ...form.alkol, yil: val })} readOnly={readOnly} styles={styles} />
+              <Ek2Field label="Sıklık" value={form.alkol.siklik || ""} onChange={(val) => updateField("alkol", { ...form.alkol, siklik: val })} readOnly={readOnly} styles={styles} />
+            </>
+          )}
         </div>
 
         {/* ── FİZİK MUAYENE ── */}

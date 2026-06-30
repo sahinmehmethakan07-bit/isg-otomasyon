@@ -62,6 +62,39 @@ export function CompanyVisitsTab({
   updateCompanyVisitStatus,
   deleteCompanyVisit,
 }: CompanyVisitsTabProps) {
+  const [purposeFilter, setPurposeFilter] = React.useState<"all" | CompanyVisitPurpose>("all");
+  const [statusFilter, setStatusFilter] = React.useState<"all" | CompanyVisitStatus>("all");
+  const visitStatusColor = (status: "all" | CompanyVisitStatus) =>
+    status === "Tamamlandı" ? "#2D6A4F"
+      : status === "Takip Gerekli" ? "#D4A017"
+        : status === "Ertelendi" ? "#C0392B"
+          : status === "all" ? "#52d3b5"
+            : "#1B4332";
+  const visitPurposeColor = (purpose: "all" | CompanyVisitPurpose) =>
+    purpose === "Acil Ziyaret" ? "#C0392B"
+      : purpose === "Risk Kontrolü" ? "#D4A017"
+        : purpose === "DÖF Takibi" ? "#7c3aed"
+          : purpose === "Eğitim / Bilgilendirme" ? "#0ea5e9"
+            : purpose === "all" ? "#52d3b5"
+              : "#1B4332";
+  const visibleCompanyVisits = React.useMemo(() => filteredCompanyVisits.filter(visit => {
+    const matchesPurpose = purposeFilter === "all" || visit.purpose === purposeFilter;
+    const matchesStatus = statusFilter === "all" || visit.status === statusFilter;
+    return matchesPurpose && matchesStatus;
+  }), [filteredCompanyVisits, purposeFilter, statusFilter]);
+  const purposeFilters: Array<{ value: "all" | CompanyVisitPurpose; label: string; count: number; color: string }> = (["all", "Rutin Ziyaret", "Risk Kontrolü", "Eğitim / Bilgilendirme", "DÖF Takibi", "Acil Ziyaret"] as const).map(purpose => ({
+    value: purpose,
+    label: purpose === "all" ? "Tüm Amaçlar" : purpose,
+    count: purpose === "all" ? filteredCompanyVisits.length : filteredCompanyVisits.filter(visit => visit.purpose === purpose).length,
+    color: visitPurposeColor(purpose),
+  }));
+  const statusFilters: Array<{ value: "all" | CompanyVisitStatus; label: string; count: number; color: string }> = (["all", "Planlandı", "Tamamlandı", "Ertelendi", "Takip Gerekli"] as const).map(status => ({
+    value: status,
+    label: status === "all" ? "Tüm Durumlar" : status,
+    count: status === "all" ? filteredCompanyVisits.length : filteredCompanyVisits.filter(visit => visit.status === status).length,
+    color: visitStatusColor(status),
+  }));
+
   return (
     <div>
       <div style={styles.card} className="isg-card">
@@ -106,20 +139,81 @@ export function CompanyVisitsTab({
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredCompanyVisits.length} ziyaret</span>
+        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{visibleCompanyVisits.length} ziyaret</span>
+      </div>
+
+      <div style={{ ...styles.card, padding: 14, marginBottom: 16 }} className="isg-card">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", gap: 14 }}>
+          <div>
+            <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Amaç Filtresi</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {purposeFilters.map(filter => {
+                const active = purposeFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setPurposeFilter(filter.value)}
+                    style={{
+                      minHeight: 44,
+                      borderRadius: 12,
+                      border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                      backgroundColor: active ? filter.color + "18" : "var(--isg-input-bg)",
+                      color: active ? filter.color : "var(--isg-text)",
+                      fontWeight: 800,
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Durum Filtresi</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {statusFilters.map(filter => {
+                const active = statusFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setStatusFilter(filter.value)}
+                    style={{
+                      minHeight: 44,
+                      borderRadius: 12,
+                      border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                      backgroundColor: active ? filter.color + "18" : "var(--isg-input-bg)",
+                      color: active ? filter.color : "var(--isg-text)",
+                      fontWeight: 800,
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
           <thead><tr>{["Firma", "Tarih", "Amaç", "Ziyaret Eden", "Görüşülen", "Durum", "Tespit / Aksiyon", "Sonraki", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
           <tbody>
-            {filteredCompanyVisits.map(visit => {
+            {visibleCompanyVisits.map(visit => {
               const company = companies.find(c => c.id === visit.companyId);
               return (
                 <tr key={visit.id}>
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
                   <td style={styles.td} className="isg-td">{formatDate(visit.visitDate)}</td>
-                  <td style={styles.td} className="isg-td"><Badge text={visit.purpose} color="#1B4332" /></td>
+                  <td style={styles.td} className="isg-td"><Badge text={visit.purpose} color={visitPurposeColor(visit.purpose)} /></td>
                   <td style={styles.td} className="isg-td">{visit.visitor || "—"}</td>
                   <td style={styles.td} className="isg-td">{visit.contactedPerson || "—"}</td>
                   <td style={styles.td} className="isg-td">
@@ -137,7 +231,7 @@ export function CompanyVisitsTab({
                 </tr>
               );
             })}
-            {filteredCompanyVisits.length === 0 && (
+            {visibleCompanyVisits.length === 0 && (
               <EmptyTableRow colSpan={10} message="Yeni firma ziyareti eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>

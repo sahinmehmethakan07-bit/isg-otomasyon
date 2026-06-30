@@ -63,6 +63,47 @@ export function PpeTab({
   updatePpeStatus,
   deletePpeRecord,
 }: PpeTabProps) {
+  const [equipmentFilter, setEquipmentFilter] = React.useState("all");
+  const [statusFilter, setStatusFilter] = React.useState<"all" | PpeStatus>("all");
+
+  const equipmentColor = (equipment: string) =>
+    equipment === "Emniyet Kemeri" ? "#C0392B"
+      : equipment === "Baret" || equipment === "İş Ayakkabısı" ? "#D4A017"
+        : equipment === "Koruyucu Gözlük" || equipment === "Kulak Koruyucu" || equipment === "Toz Maskesi" ? "#0ea5e9"
+          : equipment === "all" ? "#52d3b5"
+            : "#2D6A4F";
+
+  const ppeStatusColor = (status: "all" | PpeStatus) =>
+    status === "İade Edildi" ? "#2D6A4F"
+      : status === "Hasarlı / Kayıp" ? "#C0392B"
+        : status === "all" ? "#52d3b5"
+          : "#D4A017";
+
+  const visiblePpeRecords = React.useMemo(() => filteredPpeRecords.filter(record => {
+    const matchesEquipment = equipmentFilter === "all" || record.equipment === equipmentFilter;
+    const matchesStatus = statusFilter === "all" || record.status === statusFilter;
+    return matchesEquipment && matchesStatus;
+  }), [filteredPpeRecords, equipmentFilter, statusFilter]);
+
+  const equipmentFilters = [
+    { value: "all", label: "Tüm KKD", count: filteredPpeRecords.length, color: equipmentColor("all") },
+    ...Array.from(new Set(filteredPpeRecords.map(record => record.equipment).filter(Boolean))).map(equipment => ({
+      value: equipment,
+      label: equipment,
+      count: filteredPpeRecords.filter(record => record.equipment === equipment).length,
+      color: equipmentColor(equipment),
+    })),
+  ];
+
+  const statusFilters: Array<{ value: "all" | PpeStatus; label: string; count: number; color: string }> = (
+    ["all", "Teslim Edildi", "İade Edildi", "Hasarlı / Kayıp"] as const
+  ).map(status => ({
+    value: status,
+    label: status === "all" ? "Tüm Durumlar" : status,
+    count: status === "all" ? filteredPpeRecords.length : filteredPpeRecords.filter(record => record.status === status).length,
+    color: ppeStatusColor(status),
+  }));
+
   return (
     <div>
       <div style={styles.card} className="isg-card">
@@ -114,21 +155,75 @@ export function PpeTab({
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredPpeRecords.length} KKD kaydı</span>
+        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{visiblePpeRecords.length} KKD kaydı</span>
+      </div>
+
+      <div style={{ ...styles.card, padding: 14, marginBottom: 16 }} className="isg-card">
+        <div style={{ display: "grid", gap: 14 }}>
+          <div>
+            <p style={{ ...styles.sectionTitle, marginBottom: 10 }} className="isg-text-muted">KKD Filtresi</p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {equipmentFilters.map(filter => {
+                const active = equipmentFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setEquipmentFilter(filter.value)}
+                    style={{
+                      ...styles.btnSecondary,
+                      minHeight: 44,
+                      background: active ? `${filter.color}24` : "var(--isg-surface-soft)",
+                      borderColor: active ? `${filter.color}88` : "var(--isg-border)",
+                      color: active ? filter.color : "var(--isg-text)",
+                    }}
+                  >
+                    {filter.label} ({filter.count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p style={{ ...styles.sectionTitle, marginBottom: 10 }} className="isg-text-muted">Durum Filtresi</p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {statusFilters.map(filter => {
+                const active = statusFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setStatusFilter(filter.value)}
+                    style={{
+                      ...styles.btnSecondary,
+                      minHeight: 44,
+                      background: active ? `${filter.color}24` : "var(--isg-surface-soft)",
+                      borderColor: active ? `${filter.color}88` : "var(--isg-border)",
+                      color: active ? filter.color : "var(--isg-text)",
+                    }}
+                  >
+                    {filter.label} ({filter.count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
           <thead><tr>{["Firma", "Personel", "KKD", "Adet", "Teslim", "İade", "Durum", "Seri / Not", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
           <tbody>
-            {filteredPpeRecords.map(record => {
+            {visiblePpeRecords.map(record => {
               const company = companies.find(c => c.id === record.companyId);
               const employee = employees.find(e => e.id === record.employeeId);
               return (
                 <tr key={record.id}>
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
                   <td style={styles.td} className="isg-td"><strong>{employee ? `${employee.firstName} ${employee.lastName}` : "—"}</strong></td>
-                  <td style={styles.td} className="isg-td"><Badge text={record.equipment} color="#f59e0b" /></td>
+                  <td style={styles.td} className="isg-td"><Badge text={record.equipment} color={equipmentColor(record.equipment)} /></td>
                   <td style={styles.td} className="isg-td">{record.quantity}</td>
                   <td style={styles.td} className="isg-td">{formatDate(record.issueDate)}</td>
                   <td style={styles.td} className="isg-td">{formatDate(record.returnDate)}</td>
@@ -145,7 +240,7 @@ export function PpeTab({
                 </tr>
               );
             })}
-            {filteredPpeRecords.length === 0 && (
+            {visiblePpeRecords.length === 0 && (
               <EmptyTableRow colSpan={10} message="Yeni KKD kaydı eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>

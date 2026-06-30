@@ -49,6 +49,21 @@ function Badge({ text, color }: { text: string; color: string }) {
   );
 }
 
+const scenarioColor = (scenario: string) =>
+  scenario === "Yangın" ? "#C0392B"
+    : scenario === "Deprem" ? "#D4A017"
+      : scenario === "Kimyasal Sızıntı" ? "#7c3aed"
+        : scenario === "İlk Yardım / Yaralanma" ? "#0ea5e9"
+          : scenario === "all" ? "#52d3b5"
+            : "#2D6A4F";
+
+const statusColor = (status: "all" | EmergencyPlanStatus) =>
+  status === "Yürürlükte" ? "#2D6A4F"
+    : status === "Güncelleme Gerekli" ? "#C0392B"
+      : status === "Tatbikat Planlandı" ? "#D4A017"
+        : status === "all" ? "#52d3b5"
+          : "#0ea5e9";
+
 export function EmergencyPlansTab({
   styles,
   companies,
@@ -64,6 +79,34 @@ export function EmergencyPlansTab({
   updateEmergencyPlanStatus,
   deleteEmergencyPlan,
 }: EmergencyPlansTabProps) {
+  const [scenarioFilter, setScenarioFilter] = React.useState("all");
+  const [statusFilter, setStatusFilter] = React.useState<"all" | EmergencyPlanStatus>("all");
+
+  const visibleEmergencyPlans = React.useMemo(() => filteredEmergencyPlans.filter(plan => {
+    const matchesScenario = scenarioFilter === "all" || plan.scenario === scenarioFilter;
+    const matchesStatus = statusFilter === "all" || plan.status === statusFilter;
+    return matchesScenario && matchesStatus;
+  }), [filteredEmergencyPlans, scenarioFilter, statusFilter]);
+
+  const scenarioFilters = [
+    { value: "all", label: "Tüm Senaryolar", count: filteredEmergencyPlans.length, color: scenarioColor("all") },
+    ...Array.from(new Set(filteredEmergencyPlans.map(plan => plan.scenario).filter(Boolean))).map(scenario => ({
+      value: scenario,
+      label: scenario,
+      count: filteredEmergencyPlans.filter(plan => plan.scenario === scenario).length,
+      color: scenarioColor(scenario),
+    })),
+  ];
+
+  const statusFilters: Array<{ value: "all" | EmergencyPlanStatus; label: string; count: number; color: string }> = (
+    ["all", "Taslak", "Yürürlükte", "Tatbikat Planlandı", "Güncelleme Gerekli"] as const
+  ).map(status => ({
+    value: status,
+    label: status === "all" ? "Tüm Durumlar" : status,
+    count: status === "all" ? filteredEmergencyPlans.length : filteredEmergencyPlans.filter(plan => plan.status === status).length,
+    color: statusColor(status),
+  }));
+
   return (
     <div>
       <div style={styles.card} className="isg-card">
@@ -110,20 +153,74 @@ export function EmergencyPlansTab({
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredEmergencyPlans.length} plan</span>
+        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{visibleEmergencyPlans.length} plan</span>
+      </div>
+
+      <div style={{ ...styles.card, padding: 14, marginBottom: 16 }} className="isg-card">
+        <div style={{ display: "grid", gap: 14 }}>
+          <div>
+            <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Senaryo Filtresi</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {scenarioFilters.map(filter => {
+                const active = scenarioFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setScenarioFilter(filter.value)}
+                    style={{
+                      ...styles.btnSecondary,
+                      minHeight: 44,
+                      background: active ? `${filter.color}24` : "var(--isg-surface-soft)",
+                      borderColor: active ? `${filter.color}88` : "var(--isg-border)",
+                      color: active ? filter.color : "var(--isg-text)",
+                    }}
+                  >
+                    {filter.label} ({filter.count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">Durum Filtresi</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {statusFilters.map(filter => {
+                const active = statusFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setStatusFilter(filter.value)}
+                    style={{
+                      ...styles.btnSecondary,
+                      minHeight: 44,
+                      background: active ? `${filter.color}24` : "var(--isg-surface-soft)",
+                      borderColor: active ? `${filter.color}88` : "var(--isg-border)",
+                      color: active ? filter.color : "var(--isg-text)",
+                    }}
+                  >
+                    {filter.label} ({filter.count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
           <thead><tr>{["Firma", "Başlık", "Senaryo", "Toplanma Alanı", "Plan", "Tatbikat", "Sorumlu", "Durum", "Ekip / Not", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
           <tbody>
-            {filteredEmergencyPlans.map(plan => {
+            {visibleEmergencyPlans.map(plan => {
               const company = companies.find(c => c.id === plan.companyId);
               return (
                 <tr key={plan.id}>
                   <td style={styles.td} className="isg-td">{company?.nickName || "—"}</td>
                   <td style={{ ...styles.td, minWidth: 170 }} className="isg-td"><strong>{plan.title}</strong></td>
-                  <td style={styles.td} className="isg-td"><Badge text={plan.scenario} color="#f97316" /></td>
+                  <td style={styles.td} className="isg-td"><Badge text={plan.scenario} color={scenarioColor(plan.scenario)} /></td>
                   <td style={styles.td} className="isg-td">{plan.assemblyArea || "—"}</td>
                   <td style={styles.td} className="isg-td">{formatDate(plan.planDate)}</td>
                   <td style={styles.td} className="isg-td">{formatDate(plan.drillDate)}</td>
@@ -142,7 +239,7 @@ export function EmergencyPlansTab({
                 </tr>
               );
             })}
-            {filteredEmergencyPlans.length === 0 && (
+            {visibleEmergencyPlans.length === 0 && (
               <EmptyTableRow colSpan={11} message="Yeni acil durum planı eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>

@@ -600,10 +600,20 @@ export function Ek2MuayeneFormu({ styles, companies, employees, userRole, userId
           {form.hastaneYatis.evet && <Ek2Field label="Tanı" value={form.hastaneYatis.tani || ""} onChange={(val) => updateField("hastaneYatis", { ...form.hastaneYatis, tani: val })} readOnly={readOnly} styles={styles} />}
 
           <Ek2YesNo label="4. Ameliyat geçirdiniz mi?" data={form.ameliyat} onChange={(val) => updateField("ameliyat", val)} readOnly={readOnly} />
+          {form.ameliyat.evet && <Ek2Field label="Ameliyat nedeni" value={form.ameliyat.neden || ""} onChange={(val) => updateField("ameliyat", { ...form.ameliyat, neden: val })} readOnly={readOnly} styles={styles} />}
           <Ek2YesNo label="5. İş kazası geçirdiniz mi?" data={form.isKazasi} onChange={(val) => updateField("isKazasi", val)} readOnly={readOnly} />
+          {form.isKazasi.evet && <Ek2Field label="Ne oldu?" value={form.isKazasi.neOldu || ""} onChange={(val) => updateField("isKazasi", { ...form.isKazasi, neOldu: val })} readOnly={readOnly} styles={styles} />}
           <Ek2YesNo label="6. Meslek hastalığı şüphesi ile tetkik/muayeneye tabi tutuldunuz mu?" data={form.meslekHastaligi} onChange={(val) => updateField("meslekHastaligi", val)} readOnly={readOnly} />
+          {form.meslekHastaligi.evet && <Ek2Field label="Sonuç" value={form.meslekHastaligi.sonuc || ""} onChange={(val) => updateField("meslekHastaligi", { ...form.meslekHastaligi, sonuc: val })} readOnly={readOnly} styles={styles} />}
           <Ek2YesNo label="7. Maluliyet aldınız mı?" data={form.maluliyet} onChange={(val) => updateField("maluliyet", val)} readOnly={readOnly} />
+          {form.maluliyet.evet && (
+            <div style={styles.formGrid}>
+              <Ek2Field label="Maluliyet nedir?" value={form.maluliyet.nedir || ""} onChange={(val) => updateField("maluliyet", { ...form.maluliyet, nedir: val })} readOnly={readOnly} styles={styles} />
+              <Ek2Field label="Oranı" value={form.maluliyet.orani || ""} onChange={(val) => updateField("maluliyet", { ...form.maluliyet, orani: val })} readOnly={readOnly} styles={styles} />
+            </div>
+          )}
           <Ek2YesNo label="8. Şu anda herhangi bir tedavi görüyor musunuz?" data={form.tedavi} onChange={(val) => updateField("tedavi", val)} readOnly={readOnly} />
+          {form.tedavi.evet && <Ek2Field label="Tedavi nedir?" value={form.tedavi.nedir || ""} onChange={(val) => updateField("tedavi", { ...form.tedavi, nedir: val })} readOnly={readOnly} styles={styles} />}
         </div>
 
         <div style={styles.formGrid}>

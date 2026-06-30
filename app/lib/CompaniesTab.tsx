@@ -18,6 +18,7 @@ type CompanyDraft = {
 };
 
 type CompanyIndicator = { text: string; color: string };
+type ContractStatusFilter = "all" | "Süresi Dolmuş" | "Yaklaşıyor" | "Geçerli" | "Tarihsiz";
 
 type CompaniesTabProps = {
   styles: Record<string, React.CSSProperties>;
@@ -48,6 +49,27 @@ function Badge({ text, color }: { text: string; color: string }) {
   );
 }
 
+function dangerColor(dangerClass: "all" | DangerClass) {
+  return dangerClass === "Çok Tehlikeli" ? "#C0392B"
+    : dangerClass === "Tehlikeli" ? "#D4A017"
+      : dangerClass === "all" ? "#52d3b5"
+        : "#2D6A4F";
+}
+
+function serviceColor(serviceType: "all" | ServiceType) {
+  return serviceType === "İş Güvenliği + İşyeri Hekimliği" ? "#a78bfa"
+    : serviceType === "all" ? "#52d3b5"
+      : "#60a5fa";
+}
+
+function companyContractStatus(company: Company): ContractStatusFilter {
+  return company.contractEnd ? getDateStatus(company.contractEnd) as ContractStatusFilter : "Tarihsiz";
+}
+
+function contractStatusColor(status: ContractStatusFilter) {
+  return status === "Tarihsiz" ? "#6B7280" : status === "all" ? "#52d3b5" : statusColor(status);
+}
+
 export function CompaniesTab({
   styles,
   isAdmin,
@@ -61,6 +83,40 @@ export function CompaniesTab({
   deleteCompany,
   getCompanyIndicator,
 }: CompaniesTabProps) {
+  const [dangerFilter, setDangerFilter] = React.useState<"all" | DangerClass>("all");
+  const [contractFilter, setContractFilter] = React.useState<ContractStatusFilter>("all");
+  const [serviceFilter, setServiceFilter] = React.useState<"all" | ServiceType>("all");
+  const visibleCompanies = React.useMemo(() => filteredCompanies.filter(company => {
+    const matchesDanger = dangerFilter === "all" || company.dangerClass === dangerFilter;
+    const matchesContract = contractFilter === "all" || companyContractStatus(company) === contractFilter;
+    const matchesService = serviceFilter === "all" || company.serviceType === serviceFilter;
+    return matchesDanger && matchesContract && matchesService;
+  }), [contractFilter, dangerFilter, filteredCompanies, serviceFilter]);
+  const dangerFilters: Array<{ value: "all" | DangerClass; label: string; count: number; color: string }> = (
+    ["all", "Az Tehlikeli", "Tehlikeli", "Çok Tehlikeli"] as const
+  ).map(dangerClass => ({
+    value: dangerClass,
+    label: dangerClass === "all" ? "Tüm Tehlikeler" : dangerClass,
+    count: dangerClass === "all" ? filteredCompanies.length : filteredCompanies.filter(company => company.dangerClass === dangerClass).length,
+    color: dangerColor(dangerClass),
+  }));
+  const contractFilters: Array<{ value: ContractStatusFilter; label: string; count: number; color: string }> = (
+    ["all", "Süresi Dolmuş", "Yaklaşıyor", "Geçerli", "Tarihsiz"] as const
+  ).map(status => ({
+    value: status,
+    label: status === "all" ? "Tüm Sözleşmeler" : status,
+    count: status === "all" ? filteredCompanies.length : filteredCompanies.filter(company => companyContractStatus(company) === status).length,
+    color: contractStatusColor(status),
+  }));
+  const serviceFilters: Array<{ value: "all" | ServiceType; label: string; count: number; color: string }> = (
+    ["all", "İş Güvenliği", "İş Güvenliği + İşyeri Hekimliği"] as const
+  ).map(serviceType => ({
+    value: serviceType,
+    label: serviceType === "all" ? "Tüm Hizmetler" : serviceType,
+    count: serviceType === "all" ? filteredCompanies.length : filteredCompanies.filter(company => company.serviceType === serviceType).length,
+    color: serviceColor(serviceType),
+  }));
+
   return (
     <div>
       {isAdmin ? (
@@ -89,13 +145,45 @@ export function CompaniesTab({
       )}
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
-        <span style={{ color: "#6B7280", fontSize: 13 }}>{filteredCompanies.length} firma</span>
+        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{visibleCompanies.length} firma</span>
+      </div>
+      <div style={{ ...styles.card, padding: 16 }} className="isg-card">
+        {[
+          { title: "Tehlike Sınıfı Filtresi", filters: dangerFilters, value: dangerFilter, onChange: setDangerFilter },
+          { title: "Sözleşme Filtresi", filters: contractFilters, value: contractFilter, onChange: setContractFilter },
+          { title: "Hizmet Türü Filtresi", filters: serviceFilters, value: serviceFilter, onChange: setServiceFilter },
+        ].map(group => (
+          <div key={group.title} style={{ marginBottom: 12 }}>
+            <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">{group.title}</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {group.filters.map(filter => {
+                const active = group.value === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => group.onChange(filter.value as never)}
+                    style={{
+                      ...styles.btnSecondary,
+                      minHeight: 38,
+                      border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                      backgroundColor: active ? `${filter.color}18` : "var(--isg-input-bg)",
+                      color: active ? filter.color : "var(--isg-text)",
+                    }}
+                  >
+                    {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
           <thead><tr>{["Kısa Ad", "Resmi Unvan", "SGK Sicil", "NACE", "Tehlike", "Personel", "Sözleşme", "Hizmet", "Durum", ...(isAdmin ? ["İşlem"] : [])].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
           <tbody>
-            {filteredCompanies.map(c => {
+            {visibleCompanies.map(c => {
               const ind = getCompanyIndicator(c.id);
               const cs = getDateStatus(c.contractEnd);
               const remainingDays = c.contractEnd ? daysUntil(c.contractEnd) : null;
@@ -105,7 +193,7 @@ export function CompaniesTab({
                   <td style={{ ...styles.td, maxWidth: 180, fontSize: 12, color: "var(--isg-text-muted)" }}>{c.officialName}</td>
                   <td style={{ ...styles.td, fontSize: 11, color: "var(--isg-text-muted)" }}>{c.sgkSicil}</td>
                   <td style={styles.td} className="isg-td">{c.naceCode}</td>
-                  <td style={styles.td} className="isg-td"><Badge text={c.dangerClass} color={c.dangerClass === "Çok Tehlikeli" ? "#C0392B" : c.dangerClass === "Tehlikeli" ? "#D4A017" : "#2D6A4F"} /></td>
+                  <td style={styles.td} className="isg-td"><Badge text={c.dangerClass} color={dangerColor(c.dangerClass)} /></td>
                   <td style={styles.td} className="isg-td">{c.employeeCount}</td>
                   <td style={styles.td} className="isg-td">
                     <span style={{ fontSize: 12 }}>{formatDate(c.contractEnd)}</span> <Badge text={cs} color={statusColor(cs)} />
@@ -117,8 +205,8 @@ export function CompaniesTab({
                 </tr>
               );
             })}
-            {filteredCompanies.length === 0 && (
-              <EmptyTableRow colSpan={isAdmin ? 10 : 9} message="Yeni bir firma eklemek için yukarıdaki formu kullanın." />
+            {visibleCompanies.length === 0 && (
+              <EmptyTableRow colSpan={isAdmin ? 10 : 9} message="Filtreleri değiştirin veya yeni bir firma eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>
         </table>

@@ -1,8 +1,9 @@
 import React from "react";
+import { buildActionCenterItems, getActionCenterHealth, getActionCenterMetrics, getEscalationColor, getPriorityColor } from "./actionCenter";
 import { getCompanyRiskRadar } from "./companyRiskRadar";
 import { formatDate } from "./dateUtils";
 import { EmptyState } from "./EmptyState";
-import type { AccidentReportRecord, Company, CompanyVisitRecord, DocumentRecord, DofRecord, Employee, ArchiveItem, RiskRecord, TaskItem, TaskPriority } from "./types";
+import type { AccidentReportRecord, Company, CompanyVisitRecord, DocumentRecord, DofRecord, Employee, ArchiveItem, RiskRecord, TaskItem } from "./types";
 import type { DashboardCard, QuickAction } from "./dashboardOverview";
 
 type CompanyIndicator = { text: string; color: string };
@@ -15,6 +16,7 @@ type OzetTabProps = {
   roleDashboardCards: DashboardCard[];
   roleQuickActions: QuickAction[];
   topDashboardTasks: TaskItem[];
+  taskItems: TaskItem[];
   upcomingTrainings: number;
   openAccidentReports: number;
   followUpVisits: number;
@@ -57,6 +59,7 @@ export function OzetTab({
   roleDashboardCards,
   roleQuickActions,
   topDashboardTasks,
+  taskItems,
   upcomingTrainings,
   openAccidentReports,
   followUpVisits,
@@ -73,6 +76,10 @@ export function OzetTab({
   setActiveTab,
 }: OzetTabProps) {
   const companyRiskRadar = getCompanyRiskRadar({ companies, documents, dofs, risks, accidentReports, companyVisits });
+  const actionCenterItems = buildActionCenterItems(taskItems, companies);
+  const actionCenterMetrics = getActionCenterMetrics(actionCenterItems);
+  const actionCenterHealth = getActionCenterHealth(actionCenterItems);
+  const visibleActionItems = actionCenterItems.slice(0, 8);
 
   return (
     <div>
@@ -106,6 +113,97 @@ export function OzetTab({
         ))}
       </div>
 
+      <div style={styles.card} className="isg-card">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+          <div>
+            <p style={{ ...styles.sectionTitle, marginBottom: 6 }} className="isg-text-muted">
+              Acil Aksiyon Merkezi
+            </p>
+            <div style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.55 }}>
+              Geciken, kritik ve yaklaşan takipleri tek ekranda topla; satıra dokununca ilgili modüle geç.
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <Badge text={actionCenterHealth.label} color={actionCenterHealth.color} />
+            <button style={styles.btnSecondary} onClick={() => setActiveTab("gorevler")}>
+              Görev Merkezi
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(150px, 100%), 1fr))", gap: 10, marginBottom: 14 }}>
+          {actionCenterMetrics.map(metric => (
+            <button
+              key={metric.label}
+              type="button"
+              onClick={() => setActiveTab("gorevler")}
+              style={{
+                minHeight: 64,
+                border: `1px solid ${metric.color}44`,
+                borderRadius: 12,
+                background: `${metric.color}14`,
+                color: "var(--isg-text)",
+                cursor: "pointer",
+                padding: "10px 12px",
+                textAlign: "left",
+              }}
+            >
+              <div style={{ color: metric.color, fontSize: 22, fontWeight: 900, lineHeight: 1 }}>{metric.value}</div>
+              <div style={{ color: "var(--isg-text-muted)", fontSize: 12, fontWeight: 800, marginTop: 6 }}>{metric.label}</div>
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: "grid", gap: 10 }}>
+          {visibleActionItems.map(item => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setActiveTab(item.sourceTab)}
+              style={{
+                border: "1px solid var(--isg-border)",
+                borderLeft: `4px solid ${item.urgencyColor}`,
+                borderRadius: 12,
+                background: "var(--isg-input-bg)",
+                color: "var(--isg-text)",
+                cursor: "pointer",
+                minHeight: 72,
+                padding: "12px 14px",
+                textAlign: "left",
+                transition: "border-color 220ms ease, transform 220ms ease",
+              }}
+            >
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 12, alignItems: "start" }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 5 }}>
+                    <Badge text={item.category} color="#0ea5e9" />
+                    <strong>{item.title}</strong>
+                  </div>
+                  <div style={{ color: "var(--isg-text-muted)", fontSize: 12, lineHeight: 1.45 }}>
+                    {item.companyName} · {item.detail}
+                  </div>
+                  <div style={{ color: "var(--isg-text-subtle)", fontSize: 11, marginTop: 6 }}>
+                    Sorumlu: {item.owner || "Sorumlu girilmedi"} · Termin: {item.dueDate ? formatDate(item.dueDate) : "Termin yok"} · {item.escalationLabel || "Termin yok"}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  <Badge text={item.escalationLevel || "Tarihsiz"} color={getEscalationColor(item.escalationLevel)} />
+                  <Badge text={item.priority} color={getPriorityColor(item.priority)} />
+                </div>
+              </div>
+            </button>
+          ))}
+          {visibleActionItems.length === 0 && (
+            <EmptyState title="Acil aksiyon görünmüyor." message="Geciken, kritik veya yaklaşan iş oluştuğunda burada modül bağlantısıyla listelenecek." />
+          )}
+          {actionCenterItems.length > visibleActionItems.length && (
+            <button style={{ ...styles.btnSecondary, justifyContent: "center" as const }} onClick={() => setActiveTab("gorevler")}>
+              {actionCenterItems.length - visibleActionItems.length} aksiyon daha var
+            </button>
+          )}
+        </div>
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(360px, 100%), 1fr))", gap: 16, marginBottom: 24 }}>
         {/* Bugünün Öncelikleri */}
         <div style={styles.card} className="isg-card">
@@ -120,10 +218,6 @@ export function OzetTab({
           <div style={{ display: "grid", gap: 10 }}>
             {topDashboardTasks.map(task => {
               const company = companies.find(c => c.id === task.companyId);
-              const color: Record<TaskPriority, string> = {
-                Kritik: "#C0392B", Yüksek: "#D4A017", Orta: "#1B4332", Düşük: "#2D6A4F",
-              };
-              const escalationColor = task.escalationLevel === "Gecikti" || task.escalationLevel === "Acil" ? "#C0392B" : task.escalationLevel === "Yakında" ? "#D4A017" : "#2D6A4F";
               return (
                 <div
                   key={task.id}
@@ -138,8 +232,8 @@ export function OzetTab({
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                      <Badge text={task.escalationLevel || "Tarihsiz"} color={escalationColor} />
-                      <Badge text={task.priority} color={color[task.priority]} />
+                      <Badge text={task.escalationLevel || "Tarihsiz"} color={getEscalationColor(task.escalationLevel)} />
+                      <Badge text={task.priority} color={getPriorityColor(task.priority)} />
                     </div>
                   </div>
                 </div>
@@ -187,7 +281,7 @@ export function OzetTab({
             {roleQuickActions.map(action => (
               <button
                 key={action.tab}
-                style={{ ...styles.btnSecondary, width: "100%", justifyContent: "center" as any }}
+                style={{ ...styles.btnSecondary, width: "100%", justifyContent: "center" as React.CSSProperties["justifyContent"] }}
                 onClick={() => setActiveTab(action.tab)}
               >
                 {action.label}

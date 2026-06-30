@@ -297,6 +297,7 @@ export default function Page() {
             roleDashboardCards={roleDashboardCards}
             roleQuickActions={roleQuickActions}
             topDashboardTasks={topDashboardTasks}
+            taskItems={taskItems}
             upcomingTrainings={upcomingTrainings}
             openAccidentReports={openAccidentReports}
             followUpVisits={followUpVisits}

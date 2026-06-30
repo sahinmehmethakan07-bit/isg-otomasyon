@@ -74,8 +74,55 @@ export function AccidentReportsTab({
   updateAccidentReportStatus,
   deleteAccidentReport,
 }: AccidentReportsTabProps) {
+  const [incidentTypeFilter, setIncidentTypeFilter] = React.useState("all");
+  const [severityFilter, setSeverityFilter] = React.useState<"all" | AccidentSeverity>("all");
+  const [statusFilter, setStatusFilter] = React.useState<"all" | AccidentReportStatus>("all");
   const companyRisks = risks.filter(risk => risk.companyId === newAccidentReport.companyId);
   const companyDofs = dofs.filter(dof => dof.companyId === newAccidentReport.companyId);
+  const incidentTypeColor = (incidentType: string) =>
+    incidentType === "İş Kazası" ? "#C0392B"
+      : incidentType === "Ramak Kala" ? "#D4A017"
+        : incidentType === "Meslek Hastalığı Şüphesi" ? "#7c3aed"
+          : incidentType === "all" ? "#52d3b5"
+            : "#0ea5e9";
+  const severityColor = (severity: "all" | AccidentSeverity) =>
+    severity === "Ağır" ? "#C0392B"
+      : severity === "Orta" ? "#D4A017"
+        : severity === "all" ? "#52d3b5"
+          : "#2D6A4F";
+  const reportStatusColor = (status: "all" | AccidentReportStatus) =>
+    status === "Kapandı" ? "#2D6A4F"
+      : status === "Aksiyon Planlandı" ? "#D4A017"
+        : status === "İncelemede" ? "#0ea5e9"
+          : status === "all" ? "#52d3b5"
+            : "#C0392B";
+  const visibleAccidentReports = React.useMemo(() => filteredAccidentReports.filter(report => {
+    const matchesIncidentType = incidentTypeFilter === "all" || report.incidentType === incidentTypeFilter;
+    const matchesSeverity = severityFilter === "all" || report.severity === severityFilter;
+    const matchesStatus = statusFilter === "all" || report.status === statusFilter;
+    return matchesIncidentType && matchesSeverity && matchesStatus;
+  }), [filteredAccidentReports, incidentTypeFilter, severityFilter, statusFilter]);
+  const incidentTypeFilters = [
+    { value: "all", label: "Tüm Türler", count: filteredAccidentReports.length, color: incidentTypeColor("all") },
+    ...Array.from(new Set(filteredAccidentReports.map(report => report.incidentType).filter(Boolean))).map(incidentType => ({
+      value: incidentType,
+      label: incidentType,
+      count: filteredAccidentReports.filter(report => report.incidentType === incidentType).length,
+      color: incidentTypeColor(incidentType),
+    })),
+  ];
+  const severityFilters: Array<{ value: "all" | AccidentSeverity; label: string; count: number; color: string }> = (["all", "Ramak Kala", "Hafif", "Orta", "Ağır"] as const).map(severity => ({
+    value: severity,
+    label: severity === "all" ? "Tüm Şiddetler" : severity,
+    count: severity === "all" ? filteredAccidentReports.length : filteredAccidentReports.filter(report => report.severity === severity).length,
+    color: severityColor(severity),
+  }));
+  const statusFilters: Array<{ value: "all" | AccidentReportStatus; label: string; count: number; color: string }> = (["all", "Açık", "İncelemede", "Aksiyon Planlandı", "Kapandı"] as const).map(status => ({
+    value: status,
+    label: status === "all" ? "Tüm Durumlar" : status,
+    count: status === "all" ? filteredAccidentReports.length : filteredAccidentReports.filter(report => report.status === status).length,
+    color: reportStatusColor(status),
+  }));
 
   return (
     <div>
@@ -148,14 +195,53 @@ export function AccidentReportsTab({
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 300 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>
-        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{filteredAccidentReports.length} rapor</span>
+        <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>{visibleAccidentReports.length} rapor</span>
+      </div>
+
+      <div style={{ ...styles.card, padding: 14, marginBottom: 16 }} className="isg-card">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(260px, 100%), 1fr))", gap: 14 }}>
+          {[
+            { title: "Tür Filtresi", filters: incidentTypeFilters, value: incidentTypeFilter, onChange: setIncidentTypeFilter },
+            { title: "Şiddet Filtresi", filters: severityFilters, value: severityFilter, onChange: setSeverityFilter },
+            { title: "Durum Filtresi", filters: statusFilters, value: statusFilter, onChange: setStatusFilter },
+          ].map(group => (
+            <div key={group.title}>
+              <div style={{ ...styles.label, marginBottom: 8 }} className="isg-label">{group.title}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {group.filters.map(filter => {
+                  const active = group.value === filter.value;
+                  return (
+                    <button
+                      key={filter.value}
+                      type="button"
+                      onClick={() => group.onChange(filter.value as never)}
+                      style={{
+                        minHeight: 44,
+                        borderRadius: 12,
+                        border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                        backgroundColor: active ? filter.color + "18" : "var(--isg-input-bg)",
+                        color: active ? filter.color : "var(--isg-text)",
+                        fontWeight: 800,
+                        padding: "8px 12px",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
         <table style={styles.table}>
           <thead><tr>{["Firma", "Personel", "Tarih", "Yer", "Tür", "Şiddet", "Durum", "Bağlantı", "Denetim", "Açıklama / Aksiyon", "Çıktı", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
           <tbody>
-            {filteredAccidentReports.map(report => {
+            {visibleAccidentReports.map(report => {
               const company = companies.find(c => c.id === report.companyId);
               const employee = employees.find(e => e.id === report.employeeId);
               const relatedRisk = report.relatedRiskId ? risks.find(r => r.id === report.relatedRiskId) : null;
@@ -166,8 +252,8 @@ export function AccidentReportsTab({
                   <td style={styles.td} className="isg-td">{employee ? `${employee.firstName} ${employee.lastName}` : "—"}</td>
                   <td style={styles.td} className="isg-td">{formatDate(report.accidentDate)}</td>
                   <td style={styles.td} className="isg-td">{report.location || "—"}</td>
-                  <td style={styles.td} className="isg-td"><Badge text={report.incidentType} color="#ef4444" /></td>
-                  <td style={styles.td} className="isg-td"><Badge text={report.severity} color={report.severity === "Ağır" ? "#C0392B" : report.severity === "Orta" ? "#D4A017" : "#2D6A4F"} /></td>
+                  <td style={styles.td} className="isg-td"><Badge text={report.incidentType} color={incidentTypeColor(report.incidentType)} /></td>
+                  <td style={styles.td} className="isg-td"><Badge text={report.severity} color={severityColor(report.severity)} /></td>
                   <td style={styles.td} className="isg-td">
                     <select style={{ ...styles.select, minWidth: 150 }} value={report.status} onChange={e => updateAccidentReportStatus(report.id, e.target.value as AccidentReportStatus)}>
                       <option>Açık</option>
@@ -190,7 +276,7 @@ export function AccidentReportsTab({
                 </tr>
               );
             })}
-            {filteredAccidentReports.length === 0 && (
+            {visibleAccidentReports.length === 0 && (
               <EmptyTableRow colSpan={12} message="Yeni iş kazası veya ramak kala raporu eklemek için yukarıdaki formu kullanın." />
             )}
           </tbody>

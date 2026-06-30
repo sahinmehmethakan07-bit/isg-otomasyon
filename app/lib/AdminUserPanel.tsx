@@ -438,6 +438,8 @@ export function AdminUserPanel({ styles, companies }: Props) {
   const [showNewAccountForm, setShowNewAccountForm] = useState(false);
   const [newAccount, setNewAccount] = useState({ name: "", plan: "free" as PlanId, companyIds: [] as string[] });
   const [savingAccount, setSavingAccount] = useState(false);
+  const [accountSearch, setAccountSearch] = useState("");
+  const [planFilter, setPlanFilter] = useState<"all" | PlanId>("all");
 
   useEffect(() => { loadAll(); }, []);
 
@@ -520,6 +522,30 @@ export function AdminUserPanel({ styles, companies }: Props) {
   const unassignedUsers = users.filter(u =>
     !u.accountId && !normalizeRoles(u).includes("admin")
   );
+  const normalizedAccountSearch = accountSearch.trim().toLocaleLowerCase("tr-TR");
+  const visibleAccounts = accounts.filter(account => {
+    const accountUsers = users.filter(u => u.accountId === account.id);
+    const accountCompanies = account.companyIds
+      .map(companyId => companies.find(company => company.id === companyId))
+      .filter(Boolean);
+    const matchSearch = !normalizedAccountSearch || [
+      account.name,
+      getPlan(account.plan).label,
+      ...accountUsers.flatMap(user => [user.displayName, user.email]),
+      ...accountCompanies.flatMap(company => [company?.nickName, company?.officialName]),
+    ].some(value => value?.toLocaleLowerCase("tr-TR").includes(normalizedAccountSearch));
+    const matchPlan = planFilter === "all" || account.plan === planFilter;
+    return matchSearch && matchPlan;
+  });
+  const planFilters = [
+    { value: "all" as const, label: "Tüm Paketler", count: accounts.length, color: "var(--isg-accent)" },
+    ...(Object.values(PLANS) as Array<(typeof PLANS)[PlanId]>).map(plan => ({
+      value: plan.id,
+      label: `${plan.emoji} ${plan.label}`,
+      count: accounts.filter(account => account.plan === plan.id).length,
+      color: plan.color,
+    })),
+  ];
 
   if (loading) return <div style={{ color: "var(--isg-text-muted)", padding: 20 }}>Yükleniyor...</div>;
 
@@ -619,13 +645,61 @@ export function AdminUserPanel({ styles, companies }: Props) {
         </div>
       )}
 
+      {/* Hesap filtreleri */}
+      {accounts.length > 0 && (
+        <div style={{ ...styles.card, marginBottom: 16 }}>
+          <div style={{ ...styles.searchBar, marginBottom: 12 }}>
+            <input
+              style={{ ...styles.input, maxWidth: 320 }}
+              placeholder="Hesap, firma veya kullanıcı ara..."
+              value={accountSearch}
+              onChange={e => setAccountSearch(e.target.value)}
+            />
+            <span style={{ color: "var(--isg-text-muted)", fontSize: 13 }}>
+              {visibleAccounts.length} hesap
+            </span>
+          </div>
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.08em", color: "var(--isg-text-muted)", textTransform: "uppercase" as const }}>
+              Paket Filtresi
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
+              {planFilters.map(filter => {
+                const active = planFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setPlanFilter(filter.value)}
+                    style={{
+                      ...styles.btnSecondary,
+                      minHeight: 44,
+                      border: `1px solid ${active ? filter.color : "var(--isg-border)"}`,
+                      backgroundColor: active ? `${filter.color}18` : "var(--isg-input-bg)",
+                      color: active ? filter.color : "var(--isg-text)",
+                    }}
+                  >
+                    {filter.label} <span style={{ color: active ? filter.color : "var(--isg-text-muted)" }}>({filter.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hesap kartları */}
       {accounts.length === 0 && !showNewAccountForm && (
         <div style={styles.card} className="isg-card">
           <EmptyState title="Henüz hesap yok." message="Yeni hesap oluşturmak için + Yeni Hesap butonuyla başlayın." />
         </div>
       )}
-      {accounts.map(account => (
+      {accounts.length > 0 && visibleAccounts.length === 0 && (
+        <div style={styles.card} className="isg-card">
+          <EmptyState title="Filtreye uygun hesap yok." message="Arama veya paket filtresini değiştirerek tekrar deneyin." />
+        </div>
+      )}
+      {visibleAccounts.map(account => (
         <AccountCard
           key={account.id}
           account={account}

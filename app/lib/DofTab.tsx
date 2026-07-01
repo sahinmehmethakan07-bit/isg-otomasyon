@@ -1,10 +1,11 @@
-import React, { ChangeEvent, useEffect, useState } from "react";
+import React, { ChangeEvent, useState } from "react";
 import { IsoTarihSecici } from "./TarihSecici";
 import { priorityColor } from "./dashboardUtils";
 import { formatDate } from "./dateUtils";
 import { CHECKLIST, findChecklistItem } from "./dofVisionChecklist";
 import { EmptyState } from "./EmptyState";
 import { AuditMeta } from "./AuditMeta";
+import { DofActionPipelinePanel } from "./DofActionPipelinePanel";
 import type { Company, DofRecord, Employee, Observer, RiskRecord } from "./types";
 import { auth } from "../../lib/firebase";
 
@@ -51,6 +52,7 @@ type DofTabProps = {
   generateDofPDF: (dof: DofRecord) => void;
   deleteDof: (id: string) => void;
   handleImageToBase64: (event: ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => void;
+  setActiveTab: (tab: string) => void;
 };
 
 type VisionDetection = {
@@ -118,6 +120,7 @@ export function DofTab({
   generateDofPDF,
   deleteDof,
   handleImageToBase64,
+  setActiveTab,
 }: DofTabProps) {
   const [visionDetections, setVisionDetections] = useState<VisionDetection[]>([]);
   const [visionLoading, setVisionLoading] = useState(false);
@@ -402,11 +405,11 @@ export function DofTab({
             </div>
           )}
           {uncertainDetections.length > 0 && (
-            <div style={{ marginTop: 10, fontSize: 12, color: "var(--isg-warning)" }}>Manuel kontrol önerilir: {uncertainDetections.length} düşük güvenli madde otomatik DÖF'e eklenmedi.</div>
+            <div style={{ marginTop: 10, fontSize: 12, color: "var(--isg-warning)" }}>Manuel kontrol önerilir: {uncertainDetections.length} düşük güvenli madde otomatik DÖF&apos;e eklenmedi.</div>
           )}
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 12 }}>
             <select style={{ ...styles.select, maxWidth: 360 }} value={manualChecklistId} onChange={e => setManualChecklistId(e.target.value)}>
-              <option value="">Checklist'ten manuel madde ekle...</option>
+              <option value="">Checklist&apos;ten manuel madde ekle...</option>
               {CHECKLIST.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
             <button type="button" style={styles.btnSecondary} onClick={addManualDetection}>Manuel Ekle</button>
@@ -420,6 +423,16 @@ export function DofTab({
           )}
         </div>
       </div>
+      <DofActionPipelinePanel
+        styles={styles}
+        companies={companies}
+        dofs={filteredDofs}
+        risks={risks}
+        createRiskFromDof={createRiskFromDof}
+        setActiveTab={setActiveTab}
+        setDofAddStatus={setDofAddStatus}
+        setSelectedCompanyId={setSelectedCompanyId}
+      />
       <div style={styles.searchBar}>
         <input style={{ ...styles.input, maxWidth: 240 }} placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
         <select style={{ ...styles.select, maxWidth: 180 }} value={selectedCompanyId} onChange={e => setSelectedCompanyId(e.target.value)}><option value="all">Tüm Firmalar</option>{companies.map(c => <option key={c.id} value={c.id}>{c.nickName}</option>)}</select>

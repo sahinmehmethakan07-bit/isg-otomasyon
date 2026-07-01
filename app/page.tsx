@@ -459,6 +459,7 @@ export default function Page() {
             generateDofPDF={generateDofPDF}
             deleteDof={deleteDof}
             handleImageToBase64={handleImageToBase64}
+            setActiveTab={setActiveTab}
           />
         )}
 

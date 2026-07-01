@@ -2,6 +2,7 @@ import React from "react";
 import { IsoTarihSecici } from "./TarihSecici";
 import { documentTemplates } from "./constants";
 import { daysUntil, getDateStatus, statusColor } from "./dashboardUtils";
+import { DocumentCompliancePanel } from "./DocumentCompliancePanel";
 import { formatDate, formatRelativeDays } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
 import { buildValidityCalendar } from "./validityCalendar";
@@ -23,6 +24,7 @@ type DocumentsTabProps = {
   companies: Company[];
   employees: Employee[];
   trainings: TrainingRecord[];
+  documents: DocumentRecord[];
   filteredDocuments: DocumentRecord[];
   newDocument: DocumentDraft;
   setNewDocument: React.Dispatch<React.SetStateAction<DocumentDraft>>;
@@ -62,6 +64,7 @@ export function DocumentsTab({
   companies,
   employees,
   trainings,
+  documents,
   filteredDocuments,
   newDocument,
   setNewDocument,
@@ -136,6 +139,12 @@ export function DocumentsTab({
         </div>
         <div style={{ marginTop: 12 }}><button style={styles.btnPrimary} onClick={addDocument}>Belge Ekle</button></div>
       </div>
+      <DocumentCompliancePanel
+        styles={styles}
+        companies={filteredCompanies}
+        documents={documents}
+        setSelectedCompanyId={setSelectedCompanyId}
+      />
       <div style={styles.card} className="isg-card">
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
           <div>
@@ -230,7 +239,7 @@ export function DocumentsTab({
           </div>
         ))}
       </div>
-      <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
+      <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"] }}>
         <table style={styles.table}>
           <thead><tr>{["Belge Türü", "Firma", "Personel", "Düzenleme", "Geçerlilik", "Durum", "İşlem"].map(h => <th key={h} style={styles.th} className="isg-th">{h}</th>)}</tr></thead>
           <tbody>

@@ -408,6 +408,7 @@ export default function Page() {
             companies={companies}
             employees={employees}
             trainings={trainings}
+            documents={documents}
             filteredDocuments={filteredDocuments}
             newDocument={newDocument}
             setNewDocument={setNewDocument}

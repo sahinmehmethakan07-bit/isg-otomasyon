@@ -1,6 +1,7 @@
 import React from "react";
 import { formatDate } from "./dateUtils";
 import { EmptyTableRow } from "./EmptyState";
+import { NotificationCenterPanel } from "./NotificationCenterPanel";
 import type { Company, TaskEscalation, TaskItem, TaskPriority } from "./types";
 
 type GorevlerTabProps = {
@@ -92,11 +93,19 @@ export function GorevlerTab({
       <div style={styles.card} className="isg-card">
         <p style={styles.sectionTitle} className="isg-text-muted">Görev / Takip Paneli</p>
         <div style={{ color: "var(--isg-text-muted)", fontSize: 13, lineHeight: 1.55 }}>
-          Bu panel, mevcut kayıtlardan otomatik görev çıkarır: süresi yaklaşan belgeler, açık DÖF'ler,
+          Bu panel, mevcut kayıtlardan otomatik görev çıkarır: süresi yaklaşan belgeler, açık DÖF&apos;ler,
           yüksek riskler, eksik onboarding adımları, yaklaşan eğitimler, açık iş kazası raporları ve
           firma ziyaret takipleri.
         </div>
       </div>
+
+      <NotificationCenterPanel
+        styles={styles}
+        taskItems={taskItems}
+        companies={companies}
+        setActiveTab={setActiveTab}
+        setSelectedCompanyId={setSelectedCompanyId}
+      />
 
       <div style={styles.searchBar}>
         <input
@@ -172,7 +181,7 @@ export function GorevlerTab({
         </div>
       </div>
 
-      <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as any }}>
+      <div style={{ ...styles.card, padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"] }}>
         <table style={styles.table}>
           <thead>
             <tr>

@@ -383,15 +383,60 @@ export function usePageState() {
   function getCompanyIndicator(companyId: string) {
     return selectCompanyIndicator(documents, companyId);
   }
-  function handleImageToBase64(
+
+  function compressImageFile(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      if (!file.type.startsWith("image/")) {
+        reject(new Error("Lütfen geçerli bir fotoğraf seçin."));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Fotoğraf okunamadı."));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("Fotoğraf işlenemedi."));
+        img.onload = () => {
+          const maxSide = 1600;
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const width = Math.max(1, Math.round(img.width * scale));
+          const height = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            reject(new Error("Fotoğraf işlenemedi."));
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.78));
+        };
+        img.src = String(reader.result || "");
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleImageToBase64(
     event: ChangeEvent<HTMLInputElement>,
     callback: (base64: string) => void
   ) {
     const file = event.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => callback(String(reader.result || ""));
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImageFile(file);
+      if (compressed.length > 900 * 1024) {
+        alert("Fotoğraf hâlâ çok büyük. Lütfen daha düşük çözünürlüklü bir fotoğraf seçin.");
+        return;
+      }
+      callback(compressed);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Fotoğraf yüklenemedi.";
+      alert(message);
+    } finally {
+      event.target.value = "";
+    }
   }
   function printEmployeeCertificate(employee: Employee, company: Company | null) {
     if (!company || !employee.checklist.isgCertificateDate) return;

@@ -1,19 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminAuth, getAdminDb } from "../../../../lib/firebaseAdmin";
+import { getAdminDb } from "../../../../lib/firebaseAdmin";
+import { requireAuthenticatedUser, securityErrorResponse } from "../../../../lib/serverSecurity";
 
 export const runtime = "nodejs";
 
 async function verifyAdmin(req: NextRequest) {
-  const token = (req.headers.get("authorization") || "").replace("Bearer ", "");
-  if (!token) throw new Error("Oturum doğrulaması gerekli.");
-  const adminAuth = getAdminAuth();
-  const adminDb = getAdminDb();
-  const decoded = await adminAuth.verifyIdToken(token);
-  const snap = await adminDb.collection("users").doc(decoded.uid).get();
-  const data = snap.data();
-  const roles = Array.isArray(data?.roles) ? data.roles : [data?.role || ""];
-  if (!roles.includes("admin")) throw new Error("Admin yetkisi gerekli.");
-  return adminDb;
+  await requireAuthenticatedUser(req, ["admin"]);
+  return getAdminDb();
+}
+
+function cleanCompanyIds(value: unknown) {
+  return Array.isArray(value)
+    ? Array.from(new Set(value.filter((item): item is string => typeof item === "string" && item.length > 0)))
+    : undefined;
+}
+
+function cleanPlan(value: unknown) {
+  return value === "free" || value === "uzman" || value === "osgb" ? value : undefined;
+}
+
+function cleanPatch(data: Record<string, unknown>) {
+  const patch: Record<string, unknown> = {};
+
+  if (typeof data.name === "string" && data.name.trim()) {
+    patch.name = data.name.trim();
+  }
+
+  const plan = cleanPlan(data.plan);
+  if (plan) patch.plan = plan;
+
+  const companyIds = cleanCompanyIds(data.companyIds);
+  if (companyIds) patch.companyIds = companyIds;
+
+  return patch;
 }
 
 // PATCH /api/admin/accounts/[id] — hesabı güncelle
@@ -22,9 +41,20 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     const { id } = await context.params;
     const db = await verifyAdmin(req);
     const data = await req.json();
-    await db.collection("accounts").doc(id).update(data);
+    const patch = cleanPatch(data);
+
+    if (Object.keys(patch).length === 0) {
+      return NextResponse.json({ error: "Güncellenecek geçerli alan yok." }, { status: 400 });
+    }
+
+    await db.collection("accounts").doc(id).update({
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    });
     return NextResponse.json({ success: true });
   } catch (e: any) {
+    const securityResponse = securityErrorResponse(e);
+    if (securityResponse) return securityResponse;
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
@@ -37,6 +67,8 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     await db.collection("accounts").doc(id).delete();
     return NextResponse.json({ success: true });
   } catch (e: any) {
+    const securityResponse = securityErrorResponse(e);
+    if (securityResponse) return securityResponse;
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

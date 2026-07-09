@@ -70,7 +70,12 @@ export async function requireAuthenticatedUser(
       throw new ApiSecurityError(403, "Bu işlem için yetkiniz yok.");
     }
 
-    return { uid: decoded.uid, roles };
+    const companyIds = Array.isArray(data?.companyIds)
+      ? data.companyIds.filter((companyId: unknown): companyId is string => typeof companyId === "string")
+      : [];
+    const accountId = typeof data?.accountId === "string" ? data.accountId : undefined;
+
+    return { uid: decoded.uid, roles, companyIds, accountId };
   } catch (error) {
     if (error instanceof ApiSecurityError) throw error;
     throw new ApiSecurityError(401, "Oturum doğrulanamadı.");

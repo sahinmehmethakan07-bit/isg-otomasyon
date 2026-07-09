@@ -1,0 +1,48 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && (
+          (userDoc().data.roles is list && userDoc().data.roles.hasAny(['admin']))
+          || userDoc().data.role == 'admin'
+        );
+    }
+
+    function canAccessCompany(companyId) {
+      return isAdmin()
+        || (
+          signedIn()
+          && userDoc().data.companyIds is list
+          && companyId in userDoc().data.companyIds
+        );
+    }
+
+    match /dofs/{companyId}/{allPaths=**} {
+      allow read: if canAccessCompany(companyId);
+      allow write: if canAccessCompany(companyId)
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /employees/{companyId}/{allPaths=**} {
+      allow read: if canAccessCompany(companyId);
+      allow write: if canAccessCompany(companyId)
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf');
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

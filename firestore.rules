@@ -1,0 +1,206 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function profile() {
+      return get(userPath(request.auth.uid));
+    }
+
+    function roles() {
+      return signedIn() && profile().data.roles is list
+        ? profile().data.roles
+        : signedIn() && profile().data.role is string
+          ? [profile().data.role]
+          : [];
+    }
+
+    function isAdmin() {
+      return signedIn() && roles().hasAny(['admin']);
+    }
+
+    function isHumanResources() {
+      return signedIn() && roles().hasAny(['human_resources']);
+    }
+
+    function isDoctor() {
+      return signedIn() && roles().hasAny(['doctor']);
+    }
+
+    function companyIds() {
+      return signedIn() && profile().data.companyIds is list
+        ? profile().data.companyIds
+        : [];
+    }
+
+    function canAccessCompany(companyId) {
+      return isAdmin() || (signedIn() && companyId is string && companyId in companyIds());
+    }
+
+    function canReadCompanyRecord() {
+      return canAccessCompany(resource.data.companyId);
+    }
+
+    function canCreateCompanyRecord() {
+      return canAccessCompany(request.resource.data.companyId)
+        && request.resource.data.createdBy == request.auth.uid;
+    }
+
+    function canUpdateCompanyRecord() {
+      return canAccessCompany(resource.data.companyId)
+        && request.resource.data.companyId == resource.data.companyId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'checklist', 'onboarding', 'trainingComplete',
+          'beforePhoto', 'afterPhoto', 'updatedBy', 'updatedAsRole', 'updatedAt',
+          'notes', 'returnDate'
+        ]);
+    }
+
+    function canDeleteCompanyRecord() {
+      return isAdmin();
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isAdmin();
+      allow update: if isAdmin()
+        || (signedIn()
+          && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeRole', 'activeCompanyId']));
+      allow delete: if isAdmin() && request.auth.uid != uid;
+    }
+
+    match /accounts/{accountId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    match /companies/{companyId} {
+      allow read: if canAccessCompany(companyId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /employees/{id} {
+      allow read: if canReadCompanyRecord();
+      allow create: if isAdmin() || isHumanResources() || canCreateCompanyRecord();
+      allow update: if isAdmin() || isHumanResources() || canUpdateCompanyRecord();
+      allow delete: if canDeleteCompanyRecord();
+    }
+
+    match /documents/{id} {
+      allow read: if canReadCompanyRecord();
+      allow create: if canCreateCompanyRecord();
+      allow update: if isAdmin() || canUpdateCompanyRecord();
+      allow delete: if canDeleteCompanyRecord();
+    }
+
+    match /dofs/{id} {
+      allow read: if canReadCompanyRecord();
+      allow create: if canCreateCompanyRecord();
+      allow update: if isAdmin() || canUpdateCompanyRecord();
+      allow delete: if canDeleteCompanyRecord();
+    }
+
+    match /risks/{id} {
+      allow read: if canReadCompanyRecord();
+      allow create: if canCreateCompanyRecord();
+      allow update: if isAdmin() || canUpdateCompanyRecord();
+      allow delete: if canDeleteCompanyRecord();
+    }
+
+    match /signers/{id} {
+      allow read: if canReadCompanyRecord();
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    match /annualPlans/{id} {
+      allow read: if canReadCompanyRecord();
+      allow create: if canCreateCompanyRecord();
+      allow update: if isAdmin() || canUpdateCompanyRecord();
+      allow delete: if canDeleteCompanyRecord();
+    }
+
+    match /trainings/{id} {
+      allow read: if canReadCompanyRecord();
+      allow create: if canCreateCompanyRecord();
+      allow update: if isAdmin() || canUpdateCompanyRecord();
+      allow delete: if canDeleteCompanyRecord();
+    }
+
+    match /ppeRecords/{id} {
+      allow read: if canReadCompanyRecord();
+      allow create: if canCreateCompanyRecord();
+      allow update: if isAdmin() || canUpdateCompanyRecord();
+      allow delete: if canDeleteCompanyRecord();
+    }
+
+    match /emergencyPlans/{id} {
+      allow read: if canReadCompanyRecord();
+      allow create: if canCreateCompanyRecord();
+      allow update: if isAdmin() || canUpdateCompanyRecord();
+      allow delete: if canDeleteCompanyRecord();
+    }
+
+    match /committeeMeetings/{id} {
+      allow read: if canReadCompanyRecord();
+      allow create: if canCreateCompanyRecord();
+      allow update: if isAdmin() || canUpdateCompanyRecord();
+      allow delete: if canDeleteCompanyRecord();
+    }
+
+    match /accidentReports/{id} {
+      allow read: if canReadCompanyRecord();
+      allow create: if canCreateCompanyRecord();
+      allow update: if isAdmin() || canUpdateCompanyRecord();
+      allow delete: if canDeleteCompanyRecord();
+    }
+
+    match /companyVisits/{id} {
+      allow read: if canReadCompanyRecord();
+      allow create: if canCreateCompanyRecord();
+      allow update: if isAdmin() || canUpdateCompanyRecord();
+      allow delete: if canDeleteCompanyRecord();
+    }
+
+    match /ek2forms/{id} {
+      allow read: if canReadCompanyRecord();
+      allow create: if isDoctor() && canCreateCompanyRecord();
+      allow update: if isAdmin()
+        || (isDoctor()
+          && canAccessCompany(resource.data.companyId)
+          && request.resource.data.companyId == resource.data.companyId);
+      allow delete: if isAdmin() || (isDoctor() && canAccessCompany(resource.data.companyId));
+    }
+
+    match /observers/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /sessions/{uid} {
+      allow read, create, update, delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /settings/{settingId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /emailLogs/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

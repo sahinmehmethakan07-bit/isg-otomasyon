@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "../../../lib/firebaseAdmin";
+import { requireAuthenticatedUser, securityErrorResponse } from "../../../lib/serverSecurity";
 
 export const runtime = "nodejs";
 
@@ -12,11 +13,7 @@ function rolesFrom(data: FirebaseFirestore.DocumentData | undefined) {
 
 export async function POST(req: NextRequest) {
   try {
-    const authHeader = req.headers.get("authorization") || "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-    if (!token) {
-      return NextResponse.json({ error: "Oturum dogrulamasi gerekli." }, { status: 401 });
-    }
+    const requester = await requireAuthenticatedUser(req, ["admin"]);
 
     const { uid } = await req.json();
     if (!uid || typeof uid !== "string") {
@@ -25,16 +22,9 @@ export async function POST(req: NextRequest) {
 
     const adminAuth = getAdminAuth();
     const adminDb = getAdminDb();
-    const decoded = await adminAuth.verifyIdToken(token);
 
-    if (decoded.uid === uid) {
+    if (requester.uid === uid) {
       return NextResponse.json({ error: "Kendi hesabinizi buradan silemezsiniz." }, { status: 400 });
-    }
-
-    const requesterSnap = await adminDb.collection("users").doc(decoded.uid).get();
-    const requesterRoles = rolesFrom(requesterSnap.data());
-    if (!requesterRoles.includes("admin")) {
-      return NextResponse.json({ error: "Bu islem icin admin yetkisi gerekli." }, { status: 403 });
     }
 
     const targetRef = adminDb.collection("users").doc(uid);
@@ -64,6 +54,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, authDeleted });
   } catch (error: any) {
+    const securityResponse = securityErrorResponse(error);
+    if (securityResponse) return securityResponse;
     return NextResponse.json({ error: error?.message || "Kullanici silinemedi." }, { status: 500 });
   }
 }

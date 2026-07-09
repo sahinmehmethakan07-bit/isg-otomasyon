@@ -1,13 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { initializeApp, deleteApp } from "firebase/app";
-import { createUserWithEmailAndPassword, getAuth, signOut } from "firebase/auth";
-import { auth, db, firebaseConfig } from "../../lib/firebase";
+import { auth, db } from "../../lib/firebase";
 import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import {
   getAllUsers,
-  setUserProfile,
   updateUserPlan,
   UserProfile,
   UserRole,
@@ -114,46 +111,30 @@ function AddUserForm({
     }
 
     setCreating(true);
-    let secondaryApp: ReturnType<typeof initializeApp> | null = null;
     try {
-      secondaryApp = initializeApp(firebaseConfig, `add-user-${Date.now()}`);
-      const secondaryAuth = getAuth(secondaryApp);
-      const cred = await createUserWithEmailAndPassword(secondaryAuth, form.email, form.password);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error("Oturum doğrulaması gerekli.");
 
-      await setUserProfile(cred.user.uid, {
-        email: form.email,
-        displayName: form.displayName,
-        role: form.role,
-        roles: [form.role],
-        companyIds: form.companyIds,
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          displayName: form.displayName,
+          role: form.role,
+          companyIds: form.companyIds,
+          accountId: account.id,
+          plan: account.plan,
+        }),
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Kullanıcı oluşturulamadı.");
 
-      // accountId ata
-      await updateDoc(doc(db, "users", cred.user.uid), {
-        accountId: account.id,
-        plan: account.plan,
-      });
-
-      await signOut(secondaryAuth);
-      await deleteApp(secondaryApp);
-      secondaryApp = null;
-
-      onCreated({
-        uid: cred.user.uid,
-        email: form.email,
-        displayName: form.displayName,
-        role: form.role,
-        roles: [form.role],
-        activeRole: form.role,
-        companyIds: form.companyIds,
-        accountId: account.id,
-        plan: account.plan,
-        createdAt: null,
-      });
+      onCreated(data.user as UserProfile);
     } catch (err: any) {
       setError(`❌ ${err.message}`);
     } finally {
-      if (secondaryApp) await deleteApp(secondaryApp).catch(() => {});
       setCreating(false);
     }
   }

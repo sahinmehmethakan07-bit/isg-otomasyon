@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm run build",
+    "firebase:test:rules": "firebase emulators:exec --only firestore --project demo-isg-otomasyon \"npm run typecheck\"",
+    "firebase:deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage"
   },
   "dependencies": {
     "firebase": "^12.12.1",

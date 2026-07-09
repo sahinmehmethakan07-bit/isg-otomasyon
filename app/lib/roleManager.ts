@@ -179,7 +179,23 @@ export async function setUserProfile(
  * Kullanıcının paketini günceller.
  */
 export async function updateUserPlan(uid: string, plan: PlanId): Promise<void> {
-  await updateDoc(doc(db, "users", uid), { plan });
+  await updateManagedUser(uid, { plan });
+}
+
+export async function updateManagedUser(
+  uid: string,
+  patch: { plan?: PlanId; accountId?: string }
+): Promise<void> {
+  const token = await import("../../lib/firebase").then(module => module.auth.currentUser?.getIdToken());
+  if (!token) throw new Error("Oturum doğrulaması gerekli.");
+
+  const res = await fetch(`/api/admin/users/${uid}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(patch),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Kullanıcı güncellenemedi.");
 }
 
 /**

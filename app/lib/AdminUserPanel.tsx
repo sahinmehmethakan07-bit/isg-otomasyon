@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { auth, db } from "../../lib/firebase";
-import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { auth } from "../../lib/firebase";
 import {
   getAllUsers,
+  updateManagedUser,
   updateUserPlan,
   UserProfile,
   UserRole,
@@ -721,7 +721,7 @@ export function AdminUserPanel({ styles, companies }: Props) {
                     onChange={async e => {
                       const accountId = e.target.value;
                       if (!accountId) return;
-                      await updateDoc(doc(db, "users", user.uid), { accountId });
+                      await updateManagedUser(user.uid, { accountId });
                       setUsers(prev => prev.map(u => u.uid === user.uid ? { ...u, accountId } : u));
                       setStatus(`✅ ${user.displayName || user.email} hesaba atandı.`);
                       setTimeout(() => setStatus(null), 3000);
